@@ -39,6 +39,9 @@ RugBuster-Avalanche/
     avalanche/
       adapter.py                 # DEX pair monitor and metadata collector
       risk_engine.py             # Temporary deterministic risk rules
+  scripts/
+    deploy_fuji.py               # Deploy registry to Avalanche Fuji
+    simulate_analysis.py         # Send demo batchUpdate transaction
   data/
     .gitkeep                     # Local CSV output directory
   .env.example
@@ -60,9 +63,49 @@ RugBuster-Avalanche/
 
 The contract includes `batchUpdate` so the scanner can publish multiple token reports in one transaction. This keeps writes efficient while still producing meaningful Avalanche C-Chain activity.
 
-## Avalanche Adapter
+## Fuji Demo Workflow
+
+```bash
+python -m venv .venv
+. .venv/Scripts/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+```
+
+Edit `.env` and set a Fuji-funded test wallet private key:
+
+```txt
+PRIVATE_KEY=your_fuji_test_wallet_private_key
+FUJI_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
+```
+
+Deploy the registry:
+
+```bash
+python scripts/deploy_fuji.py
+```
+
+Copy the printed contract address into `.env`:
+
+```txt
+REGISTRY_ADDRESS=0x...
+```
+
+Run the batch scoring demo:
+
+```bash
+python scripts/simulate_analysis.py
+```
+
+The simulation scores five demo token addresses, sends one `batchUpdate` transaction to Fuji, and prints gas used for the video.
+
+## Live Monitor
 
 `chains/avalanche/adapter.py` monitors DEX factory `PairCreated` events and writes enriched token candidates to CSV.
+
+```bash
+python chains/avalanche/adapter.py
+```
 
 Initial supported factory targets:
 
@@ -77,24 +120,14 @@ The first version uses deterministic risk rules in `risk_engine.py` so demos can
 
 Later phases replace or augment this with a fine-tuned RugBusterAI model trained on Avalanche-specific token data.
 
-## Local Setup
-
-```bash
-python -m venv .venv
-. .venv/Scripts/activate  # Windows
-pip install -r requirements.txt
-copy .env.example .env
-python chains/avalanche/adapter.py
-```
-
 ## Roadmap
 
 - [x] Avalanche grant repository skeleton
 - [x] On-chain safety score registry
 - [x] DEX pair monitoring adapter
 - [x] Temporary risk rules engine
-- [ ] Fuji deployment script
-- [ ] Batch publisher for registry writes
+- [x] Fuji deployment script
+- [x] Batch publisher simulation
 - [ ] Avalanche-specific dataset collection
 - [ ] Evaluation harness for AI scoring
 - [ ] Wallet and dashboard API integrations
