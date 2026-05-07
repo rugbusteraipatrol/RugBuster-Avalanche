@@ -20,6 +20,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from web3 import Web3
@@ -87,6 +88,10 @@ def require_env(name: str) -> str:
     return value
 
 
+def raw_transaction(signed_tx: Any) -> bytes:
+    return getattr(signed_tx, "raw_transaction", None) or getattr(signed_tx, "rawTransaction")
+
+
 def metadata_hash(payload: dict) -> bytes:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).digest()
@@ -96,7 +101,6 @@ def load_abi() -> list[dict]:
     if ABI_PATH.exists():
         return json.loads(ABI_PATH.read_text(encoding="utf-8"))
 
-    # Minimal ABI fallback for users who only copied the source without artifacts.
     return [
         {
             "inputs": [
@@ -149,7 +153,7 @@ def main() -> None:
     tx["maxPriorityFeePerGas"] = web3.to_wei(2, "gwei")
 
     signed = account.sign_transaction(tx)
-    tx_hash = web3.eth.send_raw_transaction(signed.rawTransaction)
+    tx_hash = web3.eth.send_raw_transaction(raw_transaction(signed))
     print(f"Batch update sent: {tx_hash.hex()}")
 
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
