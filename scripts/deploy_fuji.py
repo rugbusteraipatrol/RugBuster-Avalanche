@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from solcx import compile_standard, install_solc, set_solc_version
@@ -34,6 +35,10 @@ def require_env(name: str) -> str:
     return value
 
 
+def raw_transaction(signed_tx: Any) -> bytes:
+    return getattr(signed_tx, "raw_transaction", None) or getattr(signed_tx, "rawTransaction")
+
+
 def compile_contract() -> tuple[list[dict], str]:
     source = CONTRACT_PATH.read_text(encoding="utf-8")
     install_solc(SOLC_VERSION)
@@ -45,11 +50,7 @@ def compile_contract() -> tuple[list[dict], str]:
             "sources": {"RugBusterRegistry.sol": {"content": source}},
             "settings": {
                 "optimizer": {"enabled": True, "runs": 200},
-                "outputSelection": {
-                    "*": {
-                        "*": ["abi", "evm.bytecode.object"]
-                    }
-                },
+                "outputSelection": {"*": {"*": ["abi", "evm.bytecode.object"]}},
             },
         }
     )
@@ -94,7 +95,7 @@ def main() -> None:
     tx["maxPriorityFeePerGas"] = web3.to_wei(2, "gwei")
 
     signed = account.sign_transaction(tx)
-    tx_hash = web3.eth.send_raw_transaction(signed.rawTransaction)
+    tx_hash = web3.eth.send_raw_transaction(raw_transaction(signed))
     print(f"Deploy sent: {tx_hash.hex()}")
 
     receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
