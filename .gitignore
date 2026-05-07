@@ -1,0 +1,31 @@
+# Secrets
+.env
+*.key
+*.pem
+
+# Local data outputs
+data/*.csv
+data/*.jsonl
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Solidity / tooling
+cache/
+out/
+artifacts/
+typechain-types/
+node_modules/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
