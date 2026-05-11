@@ -1,10 +1,10 @@
-"""Deploy RugBusterRegistry to Avalanche Fuji testnet.
+"""Deploy RugBusterRegistry to Avalanche.
 
 Usage:
     python scripts/deploy_fuji.py
 
 Required .env values:
-    FUJI_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
+    RUGBUSTER_NETWORK=fuji or mainnet
     PRIVATE_KEY=your_test_wallet_private_key
 
 The script compiles contracts/RugBusterRegistry.sol with solcx, deploys it,
@@ -21,8 +21,8 @@ from typing import Any
 from dotenv import load_dotenv
 from solcx import compile_standard, install_solc, set_solc_version
 from web3 import Web3
+from network_config import ROOT, NETWORKS, load_env, resolve_network, resolve_rpc
 
-ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "contracts" / "RugBusterRegistry.sol"
 ARTIFACT_DIR = ROOT / "artifacts"
 SOLC_VERSION = "0.8.20"
@@ -66,19 +66,20 @@ def compile_contract() -> tuple[list[dict], str]:
 
 
 def main() -> None:
-    load_dotenv(ROOT / ".env")
-    rpc_url = os.getenv("FUJI_RPC_URL") or os.getenv("AVALANCHE_RPC_URL") or "https://api.avax-test.network/ext/bc/C/rpc"
+    load_env()
+    network = resolve_network()
+    rpc_url = resolve_rpc(network)
     private_key = require_env("PRIVATE_KEY")
 
     web3 = Web3(Web3.HTTPProvider(rpc_url, request_kwargs={"timeout": 60}))
     if not web3.is_connected():
-        raise RuntimeError(f"Could not connect to Fuji RPC: {rpc_url}")
+        raise RuntimeError(f"Could not connect to {NETWORKS[network]['label']} RPC: {rpc_url}")
 
     account = web3.eth.account.from_key(private_key)
     chain_id = web3.eth.chain_id
     balance = web3.eth.get_balance(account.address)
     if balance == 0:
-        raise RuntimeError(f"Wallet {account.address} has no Fuji AVAX for gas")
+        raise RuntimeError(f"Wallet {account.address} has no AVAX for gas on {NETWORKS[network]['label']}")
 
     abi, bytecode = compile_contract()
     registry = web3.eth.contract(abi=abi, bytecode=bytecode)
@@ -103,6 +104,7 @@ def main() -> None:
         raise RuntimeError(f"Deploy failed: {tx_hash.hex()}")
 
     print("RugBusterRegistry deployed")
+    print(f"Network: {NETWORKS[network]['label']}")
     print(f"Contract: {receipt.contractAddress}")
     print(f"Deployer: {account.address}")
     print(f"Network chainId: {chain_id}")

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RugBuster Avalanche Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="grid-shell"></div>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Avalanche Fuji Security Layer</p>
+        <h1>RugBuster Registry Console</h1>
+        <p class="lede">
+          AI-assisted token scoring, public on-chain certification, and batch-published
+          security signals for Avalanche C-Chain.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" id="contract-link" target="_blank" rel="noreferrer">Open Contract</a>
+          <a class="button secondary" id="batch-link" target="_blank" rel="noreferrer">Open Batch Tx</a>
+        </div>
+      </div>
+      <aside class="hero-panel">
+        <p class="panel-label">Live Deployment</p>
+        <div class="stat-stack">
+          <div>
+            <span class="stat-label">Network</span>
+            <strong id="network-name"></strong>
+          </div>
+          <div>
+            <span class="stat-label">Contract</span>
+            <strong class="mono" id="contract-address"></strong>
+          </div>
+          <div>
+            <span class="stat-label">Reviewer</span>
+            <strong class="mono" id="reviewer-address"></strong>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="summary-band">
+      <article class="metric-card">
+        <span class="metric-label">Deploy Gas</span>
+        <strong id="deploy-gas"></strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Batch Gas</span>
+        <strong id="batch-gas"></strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Tokens Scored</span>
+        <strong id="token-count"></strong>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Danger Flags</span>
+        <strong id="danger-count"></strong>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <section class="surface wide">
+        <div class="surface-head">
+          <div>
+            <p class="surface-kicker">Batch Analysis</p>
+            <h2>Latest Token Decisions</h2>
+          </div>
+          <div class="legend">
+            <span class="pill good">GOOD</span>
+            <span class="pill warn">WARN</span>
+            <span class="pill danger">DANGER</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Project</th>
+                <th>Score</th>
+                <th>Verdict</th>
+                <th>Token</th>
+              </tr>
+            </thead>
+            <tbody id="token-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="surface">
+        <div class="surface-head">
+          <div>
+            <p class="surface-kicker">Proof Layer</p>
+            <h2>Explorer Links</h2>
+          </div>
+        </div>
+        <div class="link-list" id="proof-links"></div>
+      </section>
+
+      <section class="surface">
+        <div class="surface-head">
+          <div>
+            <p class="surface-kicker">Why It Matters</p>
+            <h2>Grant Narrative</h2>
+          </div>
+        </div>
+        <ul class="narrative-list">
+          <li>Turns token screening into a public Avalanche-native certification layer.</li>
+          <li>Publishes multiple security decisions in one `batchUpdate` transaction.</li>
+          <li>Creates verifiable on-chain evidence that wallets and dashboards can reuse.</li>
+          <li>Extends Solana fraud-detection experience into Avalanche infrastructure.</li>
+        </ul>
+      </section>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

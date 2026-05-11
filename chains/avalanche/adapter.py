@@ -32,10 +32,16 @@ POLL_SECONDS = int(os.getenv("POLL_SECONDS", "12"))
 START_BLOCK_LOOKBACK = int(os.getenv("START_BLOCK_LOOKBACK", "250"))
 OUTPUT_CSV = Path(os.getenv("OUTPUT_CSV", "data/avalanche_tokens.csv"))
 
-# Uniswap V2-style Avalanche factories. Override or extend through DEX_FACTORIES_JSON.
-DEFAULT_FACTORIES = {
+# Uniswap V2-style Avalanche factories for mainnet.
+MAINNET_FACTORIES = {
     "trader_joe_v1": "0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10",
     "pangolin_v1": "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",
+}
+
+# Fuji testnet factories for live grant/demo monitoring.
+FUJI_FACTORIES = {
+    "trader_joe_fuji": "0xFf06D441D352F33041926D451a5118742880017D",
+    "pangolin_fuji": "0xefa94DE7a4659D7836704329a8ca30E89e599d14",
 }
 
 PAIR_CREATED_ABI = json.loads(
@@ -105,7 +111,9 @@ def utc_now() -> str:
 def load_factories() -> dict[str, str]:
     raw = os.getenv("DEX_FACTORIES_JSON")
     if not raw:
-        return DEFAULT_FACTORIES
+        rpc_hint = AVALANCHE_RPC_URL.lower()
+        defaults = FUJI_FACTORIES if "avax-test" in rpc_hint or "43113" in rpc_hint else MAINNET_FACTORIES
+        return {str(name): Web3.to_checksum_address(address) for name, address in defaults.items()}
     custom = json.loads(raw)
     return {str(name): Web3.to_checksum_address(address) for name, address in custom.items()}
 

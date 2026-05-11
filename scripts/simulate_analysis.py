@@ -1,4 +1,4 @@
-"""Simulate RugBusterAI batch analysis on Avalanche Fuji.
+"""Simulate RugBusterAI batch analysis on Avalanche.
 
 This sends one batchUpdate transaction with 5 demo token addresses. It is built
 for recording a simple demo: scores are generated locally, written on-chain, and
@@ -8,7 +8,7 @@ Usage:
     python scripts/simulate_analysis.py
 
 Required .env values:
-    FUJI_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
+    RUGBUSTER_NETWORK=fuji or mainnet
     PRIVATE_KEY=your_test_wallet_private_key
     REGISTRY_ADDRESS=deployed_registry_address
 """
@@ -24,8 +24,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 from web3 import Web3
+from network_config import ROOT, NETWORKS, load_env, resolve_network, resolve_rpc
 
-ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "chains" / "avalanche"))
 
 from risk_engine import score_token  # noqa: E402
@@ -117,14 +117,15 @@ def load_abi() -> list[dict]:
 
 
 def main() -> None:
-    load_dotenv(ROOT / ".env")
-    rpc_url = os.getenv("FUJI_RPC_URL") or os.getenv("AVALANCHE_RPC_URL") or "https://api.avax-test.network/ext/bc/C/rpc"
+    load_env()
+    network = resolve_network()
+    rpc_url = resolve_rpc(network)
     private_key = require_env("PRIVATE_KEY")
     registry_address = Web3.to_checksum_address(require_env("REGISTRY_ADDRESS"))
 
     web3 = Web3(Web3.HTTPProvider(rpc_url, request_kwargs={"timeout": 60}))
     if not web3.is_connected():
-        raise RuntimeError(f"Could not connect to Fuji RPC: {rpc_url}")
+        raise RuntimeError(f"Could not connect to {NETWORKS[network]['label']} RPC: {rpc_url}")
 
     account = web3.eth.account.from_key(private_key)
     registry = web3.eth.contract(address=registry_address, abi=load_abi())
@@ -133,7 +134,7 @@ def main() -> None:
     scores: list[int] = []
     hashes: list[bytes] = []
 
-    print("Simulated RugBusterAI analysis")
+    print(f"Simulated RugBusterAI analysis on {NETWORKS[network]['label']}")
     for item in DEMO_TOKENS:
         risk = score_token(item)
         tokens.append(Web3.to_checksum_address(item["token"]))
@@ -161,6 +162,7 @@ def main() -> None:
         raise RuntimeError(f"Batch update failed: {tx_hash.hex()}")
 
     print("Batch update confirmed")
+    print(f"Network: {NETWORKS[network]['label']}")
     print(f"Registry: {registry_address}")
     print(f"Reviewer: {account.address}")
     print(f"Tokens scored: {len(tokens)}")
