@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from web3 import Web3
 from web3.contract import Contract
 
+from bridge import publish_score, send_telegram_alert, should_alert, should_publish
 from risk_engine import score_token
 
 load_dotenv()
@@ -31,6 +32,10 @@ AVALANCHE_RPC_URL = os.getenv("AVALANCHE_RPC_URL", "https://api.avax.network/ext
 POLL_SECONDS = int(os.getenv("POLL_SECONDS", "12"))
 START_BLOCK_LOOKBACK = int(os.getenv("START_BLOCK_LOOKBACK", "250"))
 OUTPUT_CSV = Path(os.getenv("OUTPUT_CSV", "data/avalanche_tokens.csv"))
+REGISTRY_ADDRESS = os.getenv("REGISTRY_ADDRESS")
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Uniswap V2-style Avalanche factories for mainnet.
 MAINNET_FACTORIES = {
@@ -190,6 +195,61 @@ def append_candidates(path: Path, candidates: Iterable[TokenCandidate]) -> None:
         writer.writerows(rows)
 
 
+def build_alert_message(candidate: TokenCandidate) -> str:
+    return (
+        "*RugBuster Avalanche Alert*\n"
+        f"`{candidate.label}` score *{candidate.score}*\n"
+        f"Token: `{candidate.symbol}`\n"
+        f"Address: `{candidate.token}`\n"
+        f"DEX: `{candidate.dex}`\n"
+        f"Pair: `{candidate.pair}`\n"
+        f"Reasons: {candidate.reasons}"
+    )
+
+
+def handle_candidate_actions(web3: Web3, candidate: TokenCandidate) -> None:
+    payload = {
+        "observed_at": candidate.observed_at,
+        "dex": candidate.dex,
+        "token": candidate.token,
+        "pair": candidate.pair,
+        "score": candidate.score,
+        "label": candidate.label,
+        "reasons": candidate.reasons,
+    }
+
+    if should_publish():
+        if not PRIVATE_KEY or not REGISTRY_ADDRESS:
+            print(f"[publish skipped] Missing PRIVATE_KEY or REGISTRY_ADDRESS for {candidate.token}")
+        else:
+            try:
+                result = publish_score(
+                    web3=web3,
+                    private_key=PRIVATE_KEY,
+                    registry_address=REGISTRY_ADDRESS,
+                    token=candidate.token,
+                    score=candidate.score,
+                    payload=payload,
+                )
+                print(f"[published] {candidate.symbol} -> {result['tx_hash']} gas={result['gas_used']}")
+            except Exception as exc:
+                print(f"[publish failed] {candidate.token}: {exc}")
+
+    if should_alert():
+        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+            print(f"[telegram skipped] Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID for {candidate.token}")
+        else:
+            try:
+                send_telegram_alert(
+                    bot_token=TELEGRAM_BOT_TOKEN,
+                    chat_id=TELEGRAM_CHAT_ID,
+                    message=build_alert_message(candidate),
+                )
+                print(f"[telegram sent] {candidate.symbol} {candidate.token}")
+            except Exception as exc:
+                print(f"[telegram failed] {candidate.token}: {exc}")
+
+
 def build_contracts(web3: Web3, factories: dict[str, str]) -> dict[str, Contract]:
     return {
         name: web3.eth.contract(address=Web3.to_checksum_address(address), abi=PAIR_CREATED_ABI)
@@ -212,6 +272,7 @@ def run_once(web3: Web3, contracts: dict[str, Contract], from_block: int, to_blo
             total += len(candidates)
             for candidate in candidates:
                 print(f"{candidate.label} {candidate.score:03d} {candidate.symbol} {candidate.token}")
+                handle_candidate_actions(web3, candidate)
 
     return total
 

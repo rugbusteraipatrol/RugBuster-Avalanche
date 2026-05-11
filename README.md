@@ -114,6 +114,39 @@ Initial supported factory targets:
 
 The adapter is intentionally configurable through `.env`, so additional Avalanche DEX factories can be added without changing core logic.
 
+## Local Scan API
+
+To power the website and local demos with a real RugBuster backend, start the local API:
+
+```bash
+python api/server.py
+```
+
+Endpoints:
+
+- `GET /health`
+- `POST /api/scan`
+
+Example request:
+
+```json
+{
+  "address": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+  "publish": false,
+  "notify": false
+}
+```
+
+The API:
+
+- reads Avalanche token metadata through RPC
+- reads live market structure from DexScreener
+- scores the token through `risk_engine.py`
+- can optionally publish the result to `RugBusterRegistry`
+- can optionally send a Telegram alert
+
+If the website is open locally, its Apex scanner will try this API first at `http://127.0.0.1:8787`, then fall back to direct DexScreener reads if the API is not running.
+
 ## Temporary AI Bridge
 
 The first version uses deterministic risk rules in `risk_engine.py` so demos can run end-to-end immediately.

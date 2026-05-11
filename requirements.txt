@@ -3,3 +3,4 @@ python-dotenv>=1.0.1
 requests>=2.31.0
 eth-utils>=4.1.1
 py-solc-x>=2.0.3
+Flask>=3.0.3
