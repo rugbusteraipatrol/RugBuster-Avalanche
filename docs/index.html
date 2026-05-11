@@ -1724,6 +1724,11 @@
 
   function normalizeApexApiReport(report) {
     const reasons = Array.isArray(report.reasons) ? report.reasons : [];
+    const safetyScore = Math.max(0, Math.min(100, Number(report.score || 0)));
+    const riskScore = 100 - safetyScore;
+    const dangerPattern = /invalid|suspicious|collapsed|heavy sell|very low|thin detected liquidity/i;
+    const warnPattern = /missing|unknown|unavailable|no visible|down|low 24h volume/i;
+
     return {
       tokenName: `${report.token_name || 'Unknown Token'}${report.symbol ? ` (${report.symbol})` : ''}`,
       tokenImage: report.image_url || null,
@@ -1738,9 +1743,12 @@
       sells24h: Number(report.sells24h || 0),
       pairAddress: report.pair_address || '',
       pairUrl: report.pair_url || '',
-      dangerFlags: reasons.filter(reason => /low|invalid|missing|unknown|suspicious|collapsed|heavy sell/i.test(reason)).map(reason => `✗ ${reason}`),
-      warnFlags: reasons.filter(reason => !/low|invalid|missing|unknown|suspicious|collapsed|heavy sell/i.test(reason)).map(reason => `⚡ ${reason}`),
-      risk: Number(report.score || 0),
+      dangerFlags: reasons.filter(reason => dangerPattern.test(reason)).map(reason => `✗ ${reason}`),
+      warnFlags: reasons.filter(reason => !dangerPattern.test(reason) && warnPattern.test(reason)).map(reason => `⚡ ${reason}`),
+      positiveSignals: reasons.filter(reason => !dangerPattern.test(reason) && !warnPattern.test(reason)),
+      risk: riskScore,
+      safety: safetyScore,
+      label: report.label || '',
       source: 'RugBuster API'
     };
   }
