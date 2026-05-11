@@ -449,6 +449,44 @@
     background: rgba(0,245,255,0.03);
   }
 
+  .portfolio-panel {
+    max-width: 1280px;
+    margin: 28px auto 0;
+    border: 1px solid rgba(0,245,255,0.14);
+    background: rgba(10,15,30,0.82);
+    padding: 22px;
+    box-shadow: inset 0 0 24px rgba(0,245,255,0.03);
+  }
+
+  .portfolio-panel.alert {
+    border-color: rgba(255,61,61,0.5);
+    box-shadow: inset 0 0 24px rgba(255,61,61,0.05), 0 0 28px rgba(255,61,61,0.08);
+  }
+
+  .portfolio-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.2fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr);
+    gap: 12px;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid rgba(0,245,255,0.08);
+    background: rgba(0,245,255,0.03);
+  }
+
+  .portfolio-row + .portfolio-row {
+    margin-top: 10px;
+  }
+
+  .portfolio-row.risk {
+    border-color: rgba(255,61,61,0.35);
+    background: rgba(255,61,61,0.06);
+  }
+
+  .portfolio-row.warn {
+    border-color: rgba(255,153,0,0.28);
+    background: rgba(255,153,0,0.05);
+  }
+
   .terminal {
     background: #020408;
     border: 1px solid rgba(0, 245, 255, 0.2);
@@ -794,6 +832,7 @@
     .how-grid { grid-template-columns: 1fr 1fr; }
     .terminal-wrap { grid-template-columns: 1fr; gap: 40px; }
     .monitor-grid { grid-template-columns: 1fr; }
+    .portfolio-row { grid-template-columns: 1fr; }
     .stats-bar { grid-template-columns: repeat(2, 1fr); }
     section { padding: 60px 24px; }
     .terminal-section { padding: 60px 24px; }
@@ -1274,6 +1313,39 @@
       When a new pair appears, RugBuster captures the token address, runs live risk analysis, and prepares the result for on-chain certification.
     </div>
   </div>
+
+  <div class="portfolio-panel z1" id="portfolioPanel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// my portfolio scan</div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Wallet Threat Surface</div>
+      </div>
+      <div id="portfolioState" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;">CONNECT AN AVALANCHE WALLET TO START</div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+      <button id="portfolioConnectBtn" onclick="connectApexWallet()" class="btn-secondary" style="font-size:11px;padding:12px 24px;">CONNECT AVALANCHE WALLET</button>
+      <button id="portfolioRefreshBtn" onclick="scanPortfolio()" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:11px;
+        letter-spacing:2px;
+        padding:12px 20px;
+        background:transparent;
+        border:1px solid rgba(0,245,255,0.2);
+        color:var(--text-muted);
+        cursor:crosshair;
+        transition:all 0.2s;
+      " disabled>REFRESH PORTFOLIO</button>
+      <div id="portfolioWallet" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1px;"></div>
+    </div>
+
+    <div id="portfolioSummary" style="display:none;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1px;"></div>
+
+    <div id="portfolioList" style="display:none;"></div>
+    <div id="portfolioEmpty" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
+      Connect an Avalanche wallet and we will pull your token balances, score each asset with the Rug Engine, and flag suspicious positions without guessing market data.
+    </div>
+  </div>
 </div>
 
 <!-- CRITICAL ALERT MODAL -->
@@ -1440,6 +1512,7 @@
   let currentPrice = 0;
   let lastScannedAddress = null;
   let lastScanData = null;
+  let apexPortfolioAddress = null;
 
   function connectWallet() {
     document.getElementById('walletModal').style.display = 'flex';
@@ -1662,6 +1735,16 @@
     return address.length > 16 ? address.slice(0, 8) + '...' + address.slice(-6) : address;
   }
 
+  function formatCompactTokenBalance(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return 'UNKNOWN';
+    const num = Number(value);
+    if (num >= 1000000) return `${(num / 1000000).toFixed(2)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(2)}K`;
+    if (num >= 1) return num.toFixed(4);
+    if (num === 0) return '0';
+    return num.toPrecision(4);
+  }
+
   function termLine(html) {
     const body = document.getElementById('terminalBody');
     const line = document.createElement('div');
@@ -1733,6 +1816,154 @@
         if (current >= score) clearInterval(step);
       }, 20);
     }, 100);
+  }
+
+  function portfolioRowClass(report) {
+    if (report.rug_status === 'HIGH' || report.rug_status === 'ELEVATED' || report.speculation_status === 'HIGH') return 'risk';
+    if (report.rug_status === 'UNKNOWN' || report.speculation_status === 'UNKNOWN' || report.speculation_status === 'ELEVATED') return 'warn';
+    return '';
+  }
+
+  function portfolioVerdict(report) {
+    if (report.rug_status === 'HIGH') return 'HARD RUG FLAGS';
+    if (report.speculation_status === 'HIGH') return 'HIGH SPECULATION';
+    if (report.rug_status === 'UNKNOWN' || report.speculation_status === 'UNKNOWN') return 'UNKNOWN / REVIEW';
+    return 'LOOKS CLEAN';
+  }
+
+  async function connectApexWallet() {
+    if (!window.ethereum) {
+      document.getElementById('portfolioState').textContent = 'NO EVM WALLET DETECTED';
+      return;
+    }
+
+    try {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xa86a' }]
+        });
+      } catch (switchErr) {
+        console.warn('Could not switch to Avalanche automatically:', switchErr);
+      }
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (!accounts || !accounts.length) {
+        throw new Error('Wallet connection returned no accounts');
+      }
+
+      apexPortfolioAddress = accounts[0];
+      document.getElementById('portfolioWallet').textContent = `WALLET // ${shortAddress(apexPortfolioAddress)}`;
+      document.getElementById('portfolioState').textContent = 'PORTFOLIO LINKED — SCANNING LIVE HOLDINGS';
+      document.getElementById('portfolioRefreshBtn').disabled = false;
+      document.getElementById('portfolioConnectBtn').textContent = 'CONNECTED';
+      document.getElementById('portfolioConnectBtn').style.borderColor = 'rgba(0,255,136,0.45)';
+      document.getElementById('portfolioConnectBtn').style.color = 'var(--neon-green)';
+      await scanPortfolio();
+    } catch (err) {
+      document.getElementById('portfolioState').textContent = `WALLET CONNECT FAILED // ${err.message}`;
+    }
+  }
+
+  async function fetchPortfolioScanFromApi(address) {
+    const res = await fetch(`${RUGBUSTER_API}/api/portfolio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok || !Array.isArray(data.entries)) {
+      throw new Error(data.error || `HTTP ${res.status} — Portfolio scan unavailable`);
+    }
+    return data;
+  }
+
+  function renderPortfolio(entries, suspicious) {
+    const panel = document.getElementById('portfolioPanel');
+    const list = document.getElementById('portfolioList');
+    const empty = document.getElementById('portfolioEmpty');
+    const summary = document.getElementById('portfolioSummary');
+    const state = document.getElementById('portfolioState');
+
+    panel.classList.toggle('alert', Boolean(suspicious));
+    empty.style.display = 'none';
+    list.style.display = 'block';
+    summary.style.display = 'block';
+
+    const suspiciousCount = entries.filter(entry =>
+      ['HIGH', 'ELEVATED'].includes(entry.report.rug_status) || entry.report.speculation_status === 'HIGH'
+    ).length;
+    const unknownCount = entries.filter(entry =>
+      entry.report.rug_status === 'UNKNOWN' || entry.report.speculation_status === 'UNKNOWN'
+    ).length;
+
+    state.textContent = suspicious
+      ? 'PORTFOLIO STATUS — SUSPICIOUS ASSETS DETECTED'
+      : 'PORTFOLIO STATUS — NO HARD RUG SIGNALS DETECTED';
+    state.style.color = suspicious ? '#ff5f57' : 'var(--neon-green)';
+
+    summary.innerHTML = `
+      <span style="color:var(--neon-cyan);">TOKENS:</span> ${entries.length}
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span style="color:${suspiciousCount ? '#ff5f57' : 'var(--neon-green)'};">SUSPICIOUS:</span> ${suspiciousCount}
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      <span style="color:${unknownCount ? 'var(--neon-orange)' : 'var(--text-muted)'};">UNKNOWN:</span> ${unknownCount}
+    `;
+
+    list.innerHTML = entries.map(({ token, report }) => `
+      <div class="portfolio-row ${portfolioRowClass(report)}">
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${report.image_url ? `<img src="${report.image_url}" alt="" style="width:34px;height:34px;border:1px solid rgba(0,245,255,0.2);background:rgba(0,245,255,0.04);object-fit:cover;">` : `<div style="width:34px;height:34px;border:1px solid rgba(0,245,255,0.15);background:rgba(0,245,255,0.04);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;color:var(--neon-cyan);">${(report.symbol || '?').slice(0,3)}</div>`}
+          <div>
+            <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">${report.token_name || token.name}</div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-cyan);letter-spacing:2px;">${report.symbol || token.symbol}</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">BALANCE</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">${formatCompactTokenBalance(token.balance)}</div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">VALUE</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">${formatUsd(token.value_usd)}</div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">RUG</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:${report.rug_status === 'HIGH' ? '#ff5f57' : report.rug_status === 'ELEVATED' ? 'var(--neon-orange)' : report.rug_status === 'LOW' ? 'var(--neon-green)' : 'var(--text-muted)'};">${report.rug_score === null ? 'UNKNOWN' : report.rug_score} // ${report.rug_status}</div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">SPEC</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;color:${report.speculation_status === 'HIGH' ? '#ff5f57' : report.speculation_status === 'ELEVATED' ? 'var(--neon-orange)' : report.speculation_status === 'LOW' ? 'var(--neon-green)' : 'var(--text-muted)'};">${report.speculation_score === null ? 'UNKNOWN' : report.speculation_score} // ${report.speculation_status}</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:4px;">${portfolioVerdict(report)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function scanPortfolio() {
+    if (!apexPortfolioAddress) {
+      document.getElementById('portfolioState').textContent = 'CONNECT AN AVALANCHE WALLET FIRST';
+      return;
+    }
+
+    const refreshBtn = document.getElementById('portfolioRefreshBtn');
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = 'SCANNING...';
+    document.getElementById('portfolioState').textContent = 'QUERYING WALLET BALANCES AND SCORING TOKENS';
+
+    try {
+      const data = await fetchPortfolioScanFromApi(apexPortfolioAddress);
+      renderPortfolio(data.entries, data.suspicious);
+    } catch (err) {
+      document.getElementById('portfolioPanel').classList.remove('alert');
+      document.getElementById('portfolioEmpty').style.display = 'block';
+      document.getElementById('portfolioList').style.display = 'none';
+      document.getElementById('portfolioSummary').style.display = 'none';
+      document.getElementById('portfolioState').textContent = `PORTFOLIO SCAN FAILED // ${err.message}`;
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = 'REFRESH PORTFOLIO';
+    }
   }
 
   function showCriticalAlert(title, body) {
