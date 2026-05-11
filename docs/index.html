@@ -1134,46 +1134,7 @@
           cursor:crosshair;
           transition:all 0.2s;
         " onmouseover="this.style.color='var(--neon-cyan)'" onmouseout="this.style.color='var(--text-muted)'">
-          TRY APEX
-        </button>
-        <button onclick="loadExample('usdc')" style="
-          font-family:'Share Tech Mono',monospace;
-          font-size:11px;
-          letter-spacing:2px;
-          padding:12px 20px;
-          background:transparent;
-          border:1px solid rgba(0,245,255,0.2);
-          color:var(--text-muted);
-          cursor:crosshair;
-          transition:all 0.2s;
-        " onmouseover="this.style.color='var(--neon-cyan)'" onmouseout="this.style.color='var(--text-muted)'">
-          TRY USDC
-        </button>
-        <button onclick="loadExample('usdt')" style="
-          font-family:'Share Tech Mono',monospace;
-          font-size:11px;
-          letter-spacing:2px;
-          padding:12px 20px;
-          background:transparent;
-          border:1px solid rgba(0,245,255,0.2);
-          color:var(--text-muted);
-          cursor:crosshair;
-          transition:all 0.2s;
-        " onmouseover="this.style.color='var(--neon-cyan)'" onmouseout="this.style.color='var(--text-muted)'">
-          TRY USDT
-        </button>
-        <button onclick="loadExample('weth')" style="
-          font-family:'Share Tech Mono',monospace;
-          font-size:11px;
-          letter-spacing:2px;
-          padding:12px 20px;
-          background:transparent;
-          border:1px solid rgba(0,245,255,0.2);
-          color:var(--text-muted);
-          cursor:crosshair;
-          transition:all 0.2s;
-        " onmouseover="this.style.color='var(--neon-cyan)'" onmouseout="this.style.color='var(--text-muted)'">
-          TRY WETH
+          TRY EXAMPLE
         </button>
       </div>
 
@@ -1630,10 +1591,7 @@
 
   function loadExample(type) {
     const examples = {
-      apex: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
-      usdc: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
-      usdt: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
-      weth: '0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB'
+      apex: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'
     };
     document.getElementById('scanInput').value = examples[type] || examples.apex;
   }
