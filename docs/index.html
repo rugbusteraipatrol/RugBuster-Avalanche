@@ -1119,15 +1119,28 @@
         </div>
       </div>
 
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <button onclick="runScan()" class="btn-primary" style="font-size:11px;padding:13px 32px;border:none;cursor:crosshair;">
-          ⚡ SCAN TOKEN
-        </button>
-        <button onclick="loadExample('apex')" style="
-          font-family:'Share Tech Mono',monospace;
-          font-size:11px;
-          letter-spacing:2px;
-          padding:12px 20px;
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button onclick="runScan()" class="btn-primary" style="font-size:11px;padding:13px 32px;border:none;cursor:crosshair;">
+            ⚡ SCAN TOKEN
+          </button>
+          <button id="sendAlertBtn" onclick="sendTelegramAlert()" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
+            background:transparent;
+            border:1px solid rgba(0,255,136,0.22);
+            color:rgba(0,255,136,0.55);
+            cursor:crosshair;
+            transition:all 0.2s;
+          " onmouseover="if(!this.disabled){this.style.color='var(--neon-green)'}" onmouseout="if(!this.disabled){this.style.color='rgba(0,255,136,0.55)'}" disabled>
+            SEND ALERT
+          </button>
+          <button onclick="loadExample('apex')" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
           background:transparent;
           border:1px solid rgba(0,245,255,0.2);
           color:var(--text-muted);
@@ -1408,6 +1421,8 @@
   let selectedCurrency = 'SOL';
   let currentPlan = null;
   let currentPrice = 0;
+  let lastScannedAddress = null;
+  let lastScanData = null;
 
   function connectWallet() {
     document.getElementById('walletModal').style.display = 'flex';
@@ -1650,6 +1665,15 @@
     body.innerHTML = '';
   }
 
+  function setAlertButtonState(enabled, text = 'SEND ALERT') {
+    const btn = document.getElementById('sendAlertBtn');
+    btn.disabled = !enabled;
+    btn.textContent = text;
+    btn.style.opacity = enabled ? '1' : '0.6';
+    btn.style.borderColor = enabled ? 'rgba(0,255,136,0.45)' : 'rgba(0,255,136,0.22)';
+    btn.style.color = enabled ? 'var(--neon-green)' : 'rgba(0,255,136,0.55)';
+  }
+
   function scorePresentation(status) {
     if (status === 'HIGH') {
       return { color: '#ff3d3d', label: 'HIGH', text: '⚠ HIGH RISK — HARD EVIDENCE LOOKS BAD' };
@@ -1810,8 +1834,21 @@
     if (!res.ok || !data.ok || !data.report) {
       throw new Error(data.error || `HTTP ${res.status} — RugBuster API unavailable`);
     }
-    return normalizeApexApiReport(data.report);
-  }
+      return normalizeApexApiReport(data.report);
+    }
+
+    async function postTelegramAlert(address) {
+      const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, notify: true })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `HTTP ${res.status} — Telegram alert failed`);
+      }
+      return data;
+    }
 
   async function fetchApexScanFromDex(address) {
     const res = await fetch(`${DEXSCREENER_API}/${encodeURIComponent(address)}`);
@@ -1978,6 +2015,9 @@
     clearTerminal();
     document.getElementById('scoreBoard').style.display = 'none';
     document.getElementById('tokenImageWrap').style.display = 'none';
+    setAlertButtonState(false, 'SEND ALERT');
+    lastScannedAddress = null;
+    lastScanData = null;
 
     const short = shortAddress(address);
     const isAPEX = isApexAddress(address);
@@ -2079,6 +2119,9 @@
     setScoreMeter('rugScore', apexData.rugScore, apexData.rugStatus, '· UNKNOWN — ON-CHAIN FACTS ARE INCOMPLETE');
     setScoreMeter('specScore', apexData.speculationScore, apexData.speculationStatus, '· UNKNOWN — NO LIVE LIQUIDITY EVIDENCE');
     showTokenImage(apexData.tokenImage, apexData.tokenName, address);
+    lastScannedAddress = address;
+    lastScanData = apexData;
+    setAlertButtonState(true, 'SEND ALERT');
 
     if (apexData.rugStatus === 'HIGH' || apexData.speculationStatus === 'HIGH') {
       const dangerList = [...apexData.rugReasons.high, ...apexData.speculationReasons.high].map(flag => `• ${flag.replace(/^[✗⚡·]\s*/, '')}`).join('<br>');
@@ -2096,6 +2139,35 @@
       }, 800);
     }
     return;
+  }
+
+  async function sendTelegramAlert() {
+    if (!lastScannedAddress || !lastScanData) {
+      termLine(`<span class="t-warn">⚡ Scan a token first before sending an alert.</span>`);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      return;
+    }
+
+    setAlertButtonState(false, 'SENDING...');
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">send-alert ${shortAddress(lastScannedAddress)} --telegram</span>`);
+    await termLineDelay(`<span class="t-out">Packaging final readout for Telegram...</span>`, 220);
+
+    try {
+      const response = await postTelegramAlert(lastScannedAddress);
+      if (!response.telegram || response.telegram.ok !== true) {
+        throw new Error('Telegram API did not confirm delivery');
+      }
+      await termLineDelay(`<span class="t-success">✓ Telegram alert delivered successfully.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Final readout sent to your configured Telegram channel.</span>`, 120);
+      setAlertButtonState(true, 'ALERT SENT');
+      setTimeout(() => setAlertButtonState(true, 'SEND ALERT'), 2400);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ TELEGRAM ALERT FAILED: ${err.message}</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Check TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.</span>`, 120);
+      setAlertButtonState(true, 'SEND ALERT');
+    }
+
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
   }
 </script>
 

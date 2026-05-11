@@ -121,11 +121,17 @@ def api_scan():
 
     publish_result = None
     if publish:
-        publish_result = publish_report(report)
+        try:
+            publish_result = publish_report(report)
+        except Exception as exc:
+            return jsonify({"ok": False, "error": f"Registry publish failed: {exc}", "report": report}), 400
 
     telegram_result = None
     if notify:
-        telegram_result = notify_report(report, publish_result)
+        try:
+            telegram_result = notify_report(report, publish_result)
+        except Exception as exc:
+            return jsonify({"ok": False, "error": f"Telegram alert failed: {exc}", "report": report}), 400
 
     return jsonify(
         {
@@ -135,6 +141,12 @@ def api_scan():
             "telegram": telegram_result,
         }
     )
+
+
+@app.route("/health/telegram", methods=["GET"])
+def telegram_health():
+    ready = bool(os.getenv("TELEGRAM_BOT_TOKEN")) and bool(os.getenv("TELEGRAM_CHAT_ID"))
+    return jsonify({"ok": True, "telegram_ready": ready})
 
 
 def require_env(name: str) -> str:
@@ -404,27 +416,30 @@ def notify_report(report: dict[str, Any], publish_result: dict[str, Any] | None)
     bot_token = require_env("TELEGRAM_BOT_TOKEN")
     chat_id = require_env("TELEGRAM_CHAT_ID")
     lines = [
-        "*RugBuster Apex Scan*",
-        f"Token: `{report['token_name']} ({report['symbol']})`",
-        f"Address: `{report['address']}`",
-        f"Rug Score: *{report['rug_score']}* `{report['rug_status']}`",
-        f"Speculation Score: *{report['speculation_score'] if report['speculation_score'] is not None else 'UNKNOWN'}* `{report['speculation_status']}`",
-        f"DEX: `{report['dex_id']}`",
-        f"Liquidity: `{format_liquidity(report['liquidity_usd'])}`",
+        "🛡️ <b>RugBuster Apex Alert</b>",
+        f"💎 <b>Token:</b> {escape_html(report['token_name'])} ({escape_html(report['symbol'])})",
+        f"📉 <b>Rug Risk:</b> {format_score(report['rug_score'])} ({escape_html(report['rug_status'])})",
+        f"📊 <b>Speculation:</b> {format_score(report['speculation_score'])} ({escape_html(report['speculation_status'])})",
+        f"💰 <b>Liq:</b> {escape_html(format_liquidity(report['liquidity_usd']))}",
+        f"✅ <b>Verdict:</b> {escape_html(verdict_text(report))}",
     ]
     if publish_result:
-        lines.append(f"Registry tx: `{publish_result['tx_hash']}`")
+        lines.append(f"⛓️ <b>Registry TX:</b> <code>{publish_result['tx_hash']}</code>")
     if report.get("pair_url"):
-        lines.append(f"[DexScreener Pair]({report['pair_url']})")
-    all_reasons = list(report.get("rug_reasons") or []) + list(report.get("speculation_reasons") or [])
-    if all_reasons:
+        lines.append(f"🔗 <a href=\"{report['pair_url']}\">Pair URL</a>")
+
+    high_signal_reasons = list(report.get("rug_reasons") or [])[:3] + list(report.get("speculation_reasons") or [])[:3]
+    clean_reasons = [reason for reason in high_signal_reasons if reason]
+    if clean_reasons:
         lines.append("")
-        lines.extend([f"- {reason}" for reason in all_reasons[:6]])
+        lines.append("<b>Signals:</b>")
+        lines.extend([f"• {escape_html(reason)}" for reason in clean_reasons[:6]])
 
     result = send_telegram_alert(
         bot_token=bot_token,
         chat_id=chat_id,
         message="\n".join(lines),
+        parse_mode="HTML",
     )
     return {"ok": True, "response": result.get("ok", False)}
 
@@ -433,6 +448,38 @@ def format_liquidity(value: float | None) -> str:
     if value is None:
         return "UNKNOWN"
     return f"${value:,.0f}"
+
+
+def format_score(value: int | None) -> str:
+    if value is None:
+        return "UNKNOWN"
+    return str(value)
+
+
+def verdict_text(report: dict[str, Any]) -> str:
+    rug_status = report.get("rug_status") or "UNKNOWN"
+    speculation_status = report.get("speculation_status") or "UNKNOWN"
+
+    if rug_status == "HIGH":
+        return "High rug risk. Hard on-chain facts look bad."
+    if speculation_status == "HIGH":
+        return "High speculation. Market structure looks dangerous."
+    if speculation_status == "UNKNOWN":
+        return "Rug score available, but no live liquidity evidence yet."
+    if rug_status == "LOW" and speculation_status == "LOW":
+        return "Safe and stable by current on-chain and market checks."
+    if rug_status == "LOW" and speculation_status == "ELEVATED":
+        return "Low rug risk, but speculative market conditions."
+    return "Mixed signals. Manual review recommended."
+
+
+def escape_html(value: Any) -> str:
+    text = str(value)
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
 
 
 if __name__ == "__main__":
