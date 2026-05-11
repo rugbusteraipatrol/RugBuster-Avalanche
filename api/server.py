@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -81,6 +82,26 @@ PAIR_ABI = json.loads(
 )
 
 app = Flask(__name__)
+SCAN_CACHE_TTL_SECONDS = 180
+SCAN_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def cache_key(address: str) -> str:
+    return Web3.to_checksum_address(address)
+
+
+def get_cached_report(address: str) -> dict[str, Any] | None:
+    entry = SCAN_CACHE.get(cache_key(address))
+    if not entry:
+        return None
+    if time.time() - entry["ts"] > SCAN_CACHE_TTL_SECONDS:
+        SCAN_CACHE.pop(cache_key(address), None)
+        return None
+    return entry["report"]
+
+
+def put_cached_report(address: str, report: dict[str, Any]) -> None:
+    SCAN_CACHE[cache_key(address)] = {"ts": time.time(), "report": report}
 
 
 def cors(response):
@@ -110,14 +131,18 @@ def api_scan():
     address = str(payload.get("address") or "").strip()
     publish = bool(payload.get("publish"))
     notify = bool(payload.get("notify"))
+    use_cached = bool(payload.get("use_cached"))
 
     if not Web3.is_address(address):
         return jsonify({"ok": False, "error": "Invalid Avalanche token address"}), 400
 
-    try:
-        report = scan_token(address)
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 400
+    report = get_cached_report(address) if use_cached else None
+    if report is None:
+        try:
+            report = scan_token(address)
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        put_cached_report(address, report)
 
     publish_result = None
     if publish:

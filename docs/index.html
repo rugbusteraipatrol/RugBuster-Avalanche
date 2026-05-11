@@ -1837,11 +1837,11 @@
       return normalizeApexApiReport(data.report);
     }
 
-    async function postTelegramAlert(address) {
+  async function postTelegramAlert(address) {
       const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, notify: true })
+        body: JSON.stringify({ address, notify: true, use_cached: true })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
@@ -2163,7 +2163,11 @@
       setTimeout(() => setAlertButtonState(true, 'SEND ALERT'), 2400);
     } catch (err) {
       await termLineDelay(`<span class="t-danger">✗ TELEGRAM ALERT FAILED: ${err.message}</span>`, 220);
-      await termLineDelay(`<span class="t-out">// Check TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.</span>`, 120);
+      if (String(err.message || '').includes('429')) {
+        await termLineDelay(`<span class="t-out">// Market data source is rate-limiting us. Retry in a moment or re-scan later.</span>`, 120);
+      } else {
+        await termLineDelay(`<span class="t-out">// Check TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, and bot access in Railway.</span>`, 120);
+      }
       setAlertButtonState(true, 'SEND ALERT');
     }
 
