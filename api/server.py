@@ -21,6 +21,41 @@ from network_config import NETWORKS, load_env, resolve_network, resolve_rpc  # n
 load_env()
 
 DEXSCREENER_API = "https://api.dexscreener.com/latest/dex/tokens"
+STABLE_QUOTES = {
+    "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E": 1.0,  # USDC
+    "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7": 1.0,  # USDT.e
+}
+COMMON_QUOTES = [
+    "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",  # WAVAX
+    "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",  # USDC
+    "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",  # USDT.e
+    "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",  # WETH.e
+]
+MAINNET_FACTORIES = {
+    "TRADERJOE": "0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10",
+    "PANGOLIN": "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",
+}
+FUJI_FACTORIES = {
+    "TRADERJOE_FUJI": "0xFf06D441D352F33041926D451a5118742880017D",
+    "PANGOLIN_FUJI": "0xefa94DE7a4659D7836704329a8ca30E89e599d14",
+}
+
+FACTORY_ABI = json.loads(
+    """
+    [
+      {
+        "constant": true,
+        "inputs": [
+          {"name": "tokenA", "type": "address"},
+          {"name": "tokenB", "type": "address"}
+        ],
+        "name": "getPair",
+        "outputs": [{"name": "pair", "type": "address"}],
+        "type": "function"
+      }
+    ]
+    """
+)
 ERC20_ABI = json.loads(
     """
     [
@@ -28,6 +63,19 @@ ERC20_ABI = json.loads(
       {"constant": true, "inputs": [], "name": "symbol", "outputs": [{"name": "", "type": "string"}], "type": "function"},
       {"constant": true, "inputs": [], "name": "decimals", "outputs": [{"name": "", "type": "uint8"}], "type": "function"},
       {"constant": true, "inputs": [], "name": "totalSupply", "outputs": [{"name": "", "type": "uint256"}], "type": "function"}
+    ]
+    """
+)
+PAIR_ABI = json.loads(
+    """
+    [
+      {"constant": true, "inputs": [], "name": "token0", "outputs": [{"name": "", "type": "address"}], "type": "function"},
+      {"constant": true, "inputs": [], "name": "token1", "outputs": [{"name": "", "type": "address"}], "type": "function"},
+      {"constant": true, "inputs": [], "name": "getReserves", "outputs": [
+        {"name": "_reserve0", "type": "uint112"},
+        {"name": "_reserve1", "type": "uint112"},
+        {"name": "_blockTimestampLast", "type": "uint32"}
+      ], "type": "function"}
     ]
     """
 )
@@ -122,26 +170,149 @@ def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
     }
 
 
-def get_market_data(address: str) -> dict[str, Any]:
+def fetch_dexscreener_pairs(address: str) -> list[dict[str, Any]]:
     response = requests.get(f"{DEXSCREENER_API}/{address}", timeout=20)
     response.raise_for_status()
     data = response.json()
-    avalanche_pairs = [pair for pair in (data.get("pairs") or []) if (pair.get("chainId") or "").lower() == "avalanche"]
+    return [pair for pair in (data.get("pairs") or []) if (pair.get("chainId") or "").lower() == "avalanche"]
+
+ 
+def get_market_data(address: str) -> dict[str, Any]:
+    avalanche_pairs = fetch_dexscreener_pairs(address)
     if not avalanche_pairs:
         raise RuntimeError("Token not found on Avalanche liquidity venues")
 
-    best_pair = sorted(
+    return sorted(
         avalanche_pairs,
         key=lambda pair: float(pair.get("liquidity", {}).get("usd") or 0),
         reverse=True,
     )[0]
-    return best_pair
+
+
+def quote_price_usd(quote_address: str) -> float | None:
+    checksum = Web3.to_checksum_address(quote_address)
+    if checksum in STABLE_QUOTES:
+        return STABLE_QUOTES[checksum]
+
+    try:
+        pairs = fetch_dexscreener_pairs(checksum)
+    except Exception:
+        return None
+
+    if not pairs:
+        return None
+
+    best_pair = sorted(
+        pairs,
+        key=lambda pair: float(pair.get("liquidity", {}).get("usd") or 0),
+        reverse=True,
+    )[0]
+    price = best_pair.get("priceUsd")
+    return float(price) if price is not None else None
+
+
+def load_factory_map() -> dict[str, str]:
+    network = resolve_network()
+    defaults = FUJI_FACTORIES if network == "fuji" else MAINNET_FACTORIES
+    return {name: Web3.to_checksum_address(address) for name, address in defaults.items()}
+
+
+def get_token_decimals(web3: Web3, address: str) -> int:
+    token = web3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)
+    decimals = call_optional(token, "decimals")
+    return int(decimals) if decimals is not None else 18
+
+
+def get_pair_from_factories(web3: Web3, token_address: str, total_supply: int | None) -> dict[str, Any] | None:
+    token_checksum = Web3.to_checksum_address(token_address)
+    factories = load_factory_map()
+
+    best_result: dict[str, Any] | None = None
+
+    for dex_name, factory_address in factories.items():
+        factory = web3.eth.contract(address=factory_address, abi=FACTORY_ABI)
+        for quote in COMMON_QUOTES:
+            if token_checksum == Web3.to_checksum_address(quote):
+                continue
+
+            try:
+                pair_address = factory.functions.getPair(token_checksum, Web3.to_checksum_address(quote)).call()
+            except Exception:
+                continue
+
+            if not pair_address or int(pair_address, 16) == 0:
+                continue
+
+            pair = web3.eth.contract(address=Web3.to_checksum_address(pair_address), abi=PAIR_ABI)
+            try:
+                token0 = Web3.to_checksum_address(pair.functions.token0().call())
+                token1 = Web3.to_checksum_address(pair.functions.token1().call())
+                reserve0, reserve1, _ = pair.functions.getReserves().call()
+            except Exception:
+                continue
+
+            quote_checksum = Web3.to_checksum_address(quote)
+            quote_decimals = get_token_decimals(web3, quote_checksum)
+            token_decimals = get_token_decimals(web3, token_checksum)
+
+            if token0 == quote_checksum:
+                quote_reserve_raw = reserve0
+                token_reserve_raw = reserve1
+            elif token1 == quote_checksum:
+                quote_reserve_raw = reserve1
+                token_reserve_raw = reserve0
+            else:
+                continue
+
+            if quote_reserve_raw <= 0 or token_reserve_raw <= 0:
+                continue
+
+            quote_reserve = float(quote_reserve_raw) / (10 ** quote_decimals)
+            token_reserve = float(token_reserve_raw) / (10 ** token_decimals)
+            if token_reserve <= 0:
+                continue
+
+            quote_usd = quote_price_usd(quote_checksum)
+            liquidity_usd = None if quote_usd is None else quote_reserve * quote_usd * 2
+            token_price_usd = None if quote_usd is None else (quote_reserve / token_reserve) * quote_usd
+            fdv = None
+            if token_price_usd is not None and total_supply:
+                fdv = (float(total_supply) / (10 ** token_decimals)) * token_price_usd
+
+            candidate = {
+                "dexId": dex_name,
+                "pairAddress": Web3.to_checksum_address(pair_address),
+                "liquidity": {"usd": liquidity_usd or 0},
+                "fdv": fdv or 0,
+                "marketCap": fdv or 0,
+                "volume": {"h24": 0},
+                "priceChange": {"h24": 0},
+                "txns": {"h24": {"buys": 0, "sells": 0}},
+                "baseToken": {"address": token_checksum},
+                "quoteToken": {"address": quote_checksum},
+                "url": None,
+                "info": {"socials": [], "websites": [], "imageUrl": None},
+                "pairCreatedAt": None,
+                "_source": "onchain_pair_lookup",
+            }
+
+            if best_result is None or (candidate["liquidity"]["usd"] or 0) > (best_result["liquidity"]["usd"] or 0):
+                best_result = candidate
+
+    return best_result
 
 
 def scan_token(address: str) -> dict[str, Any]:
     web3 = get_web3()
     onchain = get_onchain_metadata(web3, address)
-    best_pair = get_market_data(address)
+    try:
+        best_pair = get_market_data(address)
+        pair_source = "dexscreener"
+    except RuntimeError:
+        best_pair = get_pair_from_factories(web3, address, onchain.get("total_supply"))
+        if not best_pair:
+            raise
+        pair_source = "onchain_pair_lookup"
 
     liquidity_usd = float(best_pair.get("liquidity", {}).get("usd") or 0)
     fdv = float(best_pair.get("fdv") or best_pair.get("marketCap") or 0)
@@ -210,6 +381,7 @@ def scan_token(address: str) -> dict[str, Any]:
         "dex_id": metadata["dex_id"],
         "image_url": metadata["image_url"],
         "network": NETWORKS[resolve_network()]["label"],
+        "source": pair_source,
     }
 
 

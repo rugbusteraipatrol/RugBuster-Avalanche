@@ -23,6 +23,9 @@ KNOWN_TOKENS = [
     ScanExpectation("USDC", "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", "GOOD", 30),
     ScanExpectation("USDT.e", "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7", "GOOD", 30),
     ScanExpectation("WETH.e", "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB", "GOOD", 35),
+    ScanExpectation("JOE", "0x6e84a6216ea6dacc71ee8e6b0a5b7322eebc0fdd", "GOOD", 35),
+    ScanExpectation("QI", "0x8729438eb15e2c8b576fcc6aecda6a148776c0f5", "GOOD", 40),
+    ScanExpectation("COQ", "0x420fca0121dc28039145009570975747295f2329", "GOOD", 40),
 ]
 
 
