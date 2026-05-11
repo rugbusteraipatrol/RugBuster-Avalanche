@@ -1156,17 +1156,31 @@
         </div>
       </div>
 
-      <!-- RISK METER -->
-      <div id="riskMeter" style="display:none;margin-top:32px;">
-        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">RISK SCORE</div>
-        <div style="display:flex;align-items:center;gap:16px;">
-          <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);position:relative;overflow:hidden;">
-            <div id="riskBar" style="height:100%;width:0%;transition:width 1s ease;background:var(--neon-cyan);"></div>
+        <!-- SCOREBOARD -->
+        <div id="scoreBoard" style="display:none;margin-top:32px;">
+          <div style="display:grid;grid-template-columns:1fr;gap:18px;">
+            <div style="border:1px solid rgba(0,245,255,0.12);padding:16px 16px 14px;background:rgba(0,245,255,0.02);">
+              <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">RUG SCORE // ON-CHAIN FACTS</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);position:relative;overflow:hidden;">
+                  <div id="rugScoreBar" style="height:100%;width:0%;transition:width 1s ease;background:var(--neon-cyan);"></div>
+                </div>
+                <div id="rugScoreValue" style="font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--neon-cyan);min-width:84px;text-align:right;">UNKNOWN</div>
+              </div>
+              <div id="rugScoreLabel" style="font-family:'Share Tech Mono',monospace;font-size:12px;margin-top:8px;letter-spacing:2px;"></div>
+            </div>
+            <div style="border:1px solid rgba(255,0,200,0.12);padding:16px 16px 14px;background:rgba(255,0,200,0.02);">
+              <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">SPECULATION SCORE // MARKET DATA</div>
+              <div style="display:flex;align-items:center;gap:16px;">
+                <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);position:relative;overflow:hidden;">
+                  <div id="specScoreBar" style="height:100%;width:0%;transition:width 1s ease;background:var(--neon-pink);"></div>
+                </div>
+                <div id="specScoreValue" style="font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--neon-pink);min-width:84px;text-align:right;">UNKNOWN</div>
+              </div>
+              <div id="specScoreLabel" style="font-family:'Share Tech Mono',monospace;font-size:12px;margin-top:8px;letter-spacing:2px;"></div>
+            </div>
           </div>
-          <div id="riskScore" style="font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--neon-cyan);min-width:50px;text-align:right;">0</div>
         </div>
-        <div id="riskLabel" style="font-family:'Share Tech Mono',monospace;font-size:12px;margin-top:8px;letter-spacing:2px;"></div>
-      </div>
 
       <div style="
         margin-top:32px;
@@ -1597,8 +1611,9 @@
   }
 
   function formatUsd(value) {
-    const num = Number(value || 0);
-    if (!Number.isFinite(num) || num <= 0) return 'n/a';
+    if (value === null || value === undefined || value === '') return 'UNKNOWN';
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 'UNKNOWN';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -1635,33 +1650,41 @@
     body.innerHTML = '';
   }
 
-  function setRiskMeter(score) {
-    const meter = document.getElementById('riskMeter');
-    const bar = document.getElementById('riskBar');
-    const scoreEl = document.getElementById('riskScore');
-    const label = document.getElementById('riskLabel');
-    meter.style.display = 'block';
+  function scorePresentation(status) {
+    if (status === 'HIGH') {
+      return { color: '#ff3d3d', label: 'HIGH', text: '⚠ HIGH RISK — HARD EVIDENCE LOOKS BAD' };
+    }
+    if (status === 'ELEVATED') {
+      return { color: 'var(--neon-orange)', label: 'ELEVATED', text: '⚡ ELEVATED RISK — REVIEW BEFORE ACTION' };
+    }
+    if (status === 'LOW') {
+      return { color: 'var(--neon-green)', label: 'LOW', text: '✓ LOW RISK — EVIDENCE LOOKS CLEAN' };
+    }
+    return { color: 'var(--text-muted)', label: 'UNKNOWN', text: '· UNKNOWN — NOT ENOUGH EVIDENCE YET' };
+  }
 
-    let color, labelText;
-    if (score >= 75) {
-      color = '#ff3d3d';
-      labelText = '⚠ HIGH RISK — LIKELY RUG / SCAM';
-    } else if (score >= 45) {
-      color = 'var(--neon-orange)';
-      labelText = '⚡ MEDIUM RISK — PROCEED WITH CAUTION';
-    } else {
-      color = 'var(--neon-green)';
-      labelText = '✓ LOW RISK — LOOKS CLEAN';
+  function setScoreMeter(prefix, score, status, emptyText) {
+    const board = document.getElementById('scoreBoard');
+    const bar = document.getElementById(`${prefix}Bar`);
+    const scoreEl = document.getElementById(`${prefix}Value`);
+    const label = document.getElementById(`${prefix}Label`);
+    board.style.display = 'block';
+
+    const present = scorePresentation(status);
+    bar.style.background = present.color;
+    scoreEl.style.color = present.color;
+    scoreEl.style.textShadow = `0 0 20px ${present.color}`;
+    label.style.color = present.color;
+    label.textContent = score === null ? emptyText : present.text;
+
+    if (score === null) {
+      bar.style.width = '0%';
+      scoreEl.textContent = 'UNKNOWN';
+      return;
     }
 
-    bar.style.background = color;
-    scoreEl.style.color = color;
-    scoreEl.style.textShadow = `0 0 20px ${color}`;
-    label.style.color = color;
-    label.textContent = labelText;
-
     setTimeout(() => {
-      bar.style.width = score + '%';
+      bar.style.width = `${score}%`;
       let current = 0;
       const step = setInterval(() => {
         current += 2;
@@ -1722,34 +1745,58 @@
     wrap.style.display  = 'block';
   }
 
+  function toNumberOrNull(value) {
+    return value === null || value === undefined || value === '' ? null : Number(value);
+  }
+
+  function normalizeReasons(reasons, highPattern, mediumPattern) {
+    const list = Array.isArray(reasons) ? reasons : [];
+    return {
+      high: list.filter(reason => highPattern.test(reason)).map(reason => `✗ ${reason}`),
+      medium: list.filter(reason => !highPattern.test(reason) && mediumPattern.test(reason)).map(reason => `⚡ ${reason}`),
+      neutral: list.filter(reason => !highPattern.test(reason) && !mediumPattern.test(reason)),
+    };
+  }
+
   function normalizeApexApiReport(report) {
-    const reasons = Array.isArray(report.reasons) ? report.reasons : [];
-    const safetyScore = Math.max(0, Math.min(100, Number(report.score || 0)));
-    const riskScore = 100 - safetyScore;
-    const dangerPattern = /invalid|suspicious|collapsed|heavy sell|very low|thin detected liquidity/i;
-    const warnPattern = /missing|unknown|unavailable|no visible|down|low 24h volume/i;
+    const sourceMap = {
+      dexscreener: 'RugBuster API (DexScreener + on-chain)',
+      onchain_pair_lookup: 'RugBuster API (factory pair lookup)',
+      none: 'RugBuster API (on-chain only, no live market evidence)'
+    };
+    const rugReasons = normalizeReasons(
+      report.rug_reasons,
+      /invalid|suspicious|zero or invalid|unusual/i,
+      /unavailable|unknown/i
+    );
+    const speculationReasons = normalizeReasons(
+      report.speculation_reasons,
+      /very thin|under 1%|heavy sell|very high/i,
+      /thin|low|elevated|unavailable|unknown/i
+    );
 
     return {
       tokenName: `${report.token_name || 'Unknown Token'}${report.symbol ? ` (${report.symbol})` : ''}`,
       tokenImage: report.image_url || null,
       dexId: String(report.dex_id || 'unknown').toUpperCase(),
       pairLabel: report.symbol ? `${report.symbol} / AVAX` : 'TOKEN / AVAX',
-      liquidityUsd: Number(report.liquidity_usd || 0),
-      fdv: Number(report.fdv || 0),
-      marketCap: Number(report.fdv || 0),
-      volume24h: Number(report.volume24h || 0),
-      priceChange24h: Number(report.price_change24h || 0),
-      buys24h: Number(report.buys24h || 0),
-      sells24h: Number(report.sells24h || 0),
+      liquidityUsd: toNumberOrNull(report.liquidity_usd),
+      fdv: toNumberOrNull(report.fdv),
+      marketCap: toNumberOrNull(report.fdv),
+      volume24h: toNumberOrNull(report.volume24h),
+      priceChange24h: toNumberOrNull(report.price_change24h),
+      buys24h: toNumberOrNull(report.buys24h),
+      sells24h: toNumberOrNull(report.sells24h),
       pairAddress: report.pair_address || '',
       pairUrl: report.pair_url || '',
-      dangerFlags: reasons.filter(reason => dangerPattern.test(reason)).map(reason => `✗ ${reason}`),
-      warnFlags: reasons.filter(reason => !dangerPattern.test(reason) && warnPattern.test(reason)).map(reason => `⚡ ${reason}`),
-      positiveSignals: reasons.filter(reason => !dangerPattern.test(reason) && !warnPattern.test(reason)),
-      risk: riskScore,
-      safety: safetyScore,
-      label: report.label || '',
-      source: 'RugBuster API'
+      rugScore: toNumberOrNull(report.rug_score),
+      rugStatus: report.rug_status || 'UNKNOWN',
+      rugReasons,
+      speculationScore: toNumberOrNull(report.speculation_score),
+      speculationStatus: report.speculation_status || 'UNKNOWN',
+      speculationReasons,
+      hasLiquidityEvidence: Boolean(report.has_liquidity_evidence),
+      source: sourceMap[report.source] || `RugBuster API (${report.source || 'live market + on-chain'})`
     };
   }
 
@@ -1786,94 +1833,130 @@
     const tokenSide = [bestPair.baseToken, bestPair.quoteToken].find(token => (token?.address || '').toLowerCase() === normalized) || bestPair.baseToken;
     const pairSide = tokenSide === bestPair.baseToken ? bestPair.quoteToken : bestPair.baseToken;
 
-    const liquidityUsd = Number(bestPair.liquidity?.usd || 0);
-    const fdv = Number(bestPair.fdv || bestPair.marketCap || 0);
-    const marketCap = Number(bestPair.marketCap || 0);
-    const volume24h = Number(bestPair.volume?.h24 || 0);
-    const priceChange24h = Number(bestPair.priceChange?.h24 || 0);
-    const txns24h = bestPair.txns?.h24 || {};
-    const buys24h = Number(txns24h.buys || 0);
-    const sells24h = Number(txns24h.sells || 0);
-    const socials = bestPair.info?.socials || [];
-    const websites = bestPair.info?.websites || [];
-    const imageUrl = bestPair.info?.imageUrl || null;
-    const ageHours = bestPair.pairCreatedAt ? (Date.now() - Number(bestPair.pairCreatedAt)) / 3600000 : null;
+      const liquidityUsd = toNumberOrNull(bestPair.liquidity?.usd);
+      const fdv = toNumberOrNull(bestPair.fdv || bestPair.marketCap);
+      const marketCap = toNumberOrNull(bestPair.marketCap);
+      const volume24h = toNumberOrNull(bestPair.volume?.h24);
+      const priceChange24h = toNumberOrNull(bestPair.priceChange?.h24);
+      const txns24h = bestPair.txns?.h24 || {};
+      const buys24h = toNumberOrNull(txns24h.buys);
+      const sells24h = toNumberOrNull(txns24h.sells);
+      const imageUrl = bestPair.info?.imageUrl || null;
+      const rugScore = null;
+      const rugStatus = 'UNKNOWN';
+      const rugReasons = {
+        high: [],
+        medium: ['⚡ Rug score unavailable in client-only fallback'],
+        neutral: []
+      };
 
-    const dangerFlags = [];
-    const warnFlags = [];
-    let risk = 18;
+      const speculationReasons = { high: [], medium: [], neutral: [] };
+      let speculationScore = 28;
 
-    if (liquidityUsd < 5000) {
-      dangerFlags.push(`✗ Liquidity is only ${formatUsd(liquidityUsd)} — thin exit path`);
-      risk += 38;
-    } else if (liquidityUsd < 25000) {
-      warnFlags.push(`⚡ Liquidity is thin at ${formatUsd(liquidityUsd)}`);
-      risk += 18;
-    } else {
-      risk -= 8;
-    }
+      if (liquidityUsd === null) {
+        speculationScore = null;
+        speculationReasons.medium.push('⚡ No priced liquidity evidence available');
+      } else {
+        if (liquidityUsd < 5000) {
+          speculationReasons.high.push(`✗ Liquidity is only ${formatUsd(liquidityUsd)} — thin exit path`);
+          speculationScore += 38;
+        } else if (liquidityUsd < 25000) {
+          speculationReasons.medium.push(`⚡ Liquidity is thin at ${formatUsd(liquidityUsd)}`);
+          speculationScore += 18;
+        } else if (liquidityUsd >= 100000) {
+          speculationScore -= 10;
+          speculationReasons.neutral.push(`Deep live liquidity at ${formatUsd(liquidityUsd)}`);
+        } else {
+          speculationScore -= 4;
+          speculationReasons.neutral.push(`Meaningful live liquidity at ${formatUsd(liquidityUsd)}`);
+        }
 
-    if (fdv > 0) {
-      const liquidityRatio = liquidityUsd / fdv;
-      if (liquidityRatio < 0.01) {
-        dangerFlags.push('✗ Liquidity to FDV ratio is under 1%');
-        risk += 25;
-      } else if (liquidityRatio < 0.03) {
-        warnFlags.push('⚡ Liquidity to FDV ratio is low');
-        risk += 12;
+        if (fdv && fdv > 0) {
+          const liquidityRatio = liquidityUsd / fdv;
+          if (liquidityRatio < 0.01) {
+            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 1%');
+            speculationScore += 20;
+          } else if (liquidityRatio < 0.03) {
+            speculationReasons.medium.push('⚡ Liquidity to FDV ratio is low');
+            speculationScore += 10;
+          } else if (liquidityRatio >= 0.1) {
+            speculationScore -= 4;
+            speculationReasons.neutral.push('Liquidity to FDV ratio is healthy');
+          }
+        }
+
+        if (volume24h === null) {
+          speculationReasons.medium.push('⚡ 24h volume unavailable');
+        } else if (volume24h < 10000) {
+          speculationReasons.medium.push(`⚡ Low 24h volume at ${formatUsd(volume24h)}`);
+          speculationScore += 10;
+        } else if (volume24h >= 100000) {
+          speculationScore -= 4;
+          speculationReasons.neutral.push(`Strong 24h volume at ${formatUsd(volume24h)}`);
+        }
+
+        if (priceChange24h === null) {
+          speculationReasons.medium.push('⚡ 24h price change unavailable');
+        } else {
+          const absMove = Math.abs(priceChange24h);
+          if (absMove >= 60) {
+            speculationReasons.high.push(`✗ Very high 24h volatility at ${priceChange24h.toFixed(1)}%`);
+            speculationScore += 18;
+          } else if (absMove >= 25) {
+            speculationReasons.medium.push(`⚡ Elevated 24h volatility at ${priceChange24h.toFixed(1)}%`);
+            speculationScore += 8;
+          } else {
+            speculationReasons.neutral.push(`24h volatility is moderate at ${priceChange24h.toFixed(1)}%`);
+          }
+        }
+
+        if (buys24h === null || sells24h === null) {
+          speculationReasons.medium.push('⚡ 24h buy/sell flow unavailable');
+        } else {
+          if (sells24h > buys24h * 3 && sells24h > 20) {
+            speculationReasons.high.push(`✗ Heavy sell pressure: ${sells24h} sells vs ${buys24h} buys`);
+            speculationScore += 8;
+          } else if (buys24h > sells24h * 2 && buys24h > 20) {
+            speculationScore -= 2;
+            speculationReasons.neutral.push(`Buy-side demand leads: ${buys24h} buys vs ${sells24h} sells`);
+          }
+        }
+
+        speculationScore = Math.max(0, Math.min(100, Math.round(speculationScore)));
       }
+
+      const speculationStatus = speculationScore === null
+        ? 'UNKNOWN'
+        : speculationScore >= 75
+          ? 'HIGH'
+          : speculationScore >= 45
+            ? 'ELEVATED'
+            : 'LOW';
+
+      return {
+        tokenName: `${tokenSide?.name || 'Unknown Token'}${tokenSide?.symbol ? ` (${tokenSide.symbol})` : ''}`,
+        tokenImage: imageUrl,
+        dexId: (bestPair.dexId || 'unknown').toUpperCase(),
+        pairLabel: `${pairSide?.symbol || 'PAIR'} / ${tokenSide?.symbol || 'TOKEN'}`,
+        liquidityUsd,
+        fdv,
+        marketCap,
+        volume24h,
+        priceChange24h,
+        buys24h,
+        sells24h,
+        pairAddress: bestPair.pairAddress,
+        pairUrl: bestPair.url,
+        rugScore,
+        rugStatus,
+        rugReasons,
+        speculationScore,
+        speculationStatus,
+        speculationReasons,
+        hasLiquidityEvidence: liquidityUsd !== null || Boolean(bestPair.pairAddress),
+        source: 'DexScreener fallback'
+      };
     }
-
-    if (priceChange24h <= -60) {
-      dangerFlags.push(`✗ Price collapsed ${priceChange24h.toFixed(1)}% in 24h`);
-      risk += 22;
-    } else if (priceChange24h <= -25) {
-      warnFlags.push(`⚡ Price is down ${priceChange24h.toFixed(1)}% in 24h`);
-      risk += 10;
-    }
-
-    if (sells24h > buys24h * 3 && sells24h > 20) {
-      warnFlags.push(`⚡ Heavy sell pressure: ${sells24h} sells vs ${buys24h} buys`);
-      risk += 10;
-    }
-
-    if (volume24h < 10000) {
-      warnFlags.push(`⚡ Low 24h volume at ${formatUsd(volume24h)}`);
-      risk += 8;
-    }
-
-    if (ageHours !== null && ageHours < 6) {
-      warnFlags.push(`⚡ Pair is fresh: ${ageHours.toFixed(1)}h old`);
-      risk += 8;
-    }
-
-    if (!socials.length && !websites.length) {
-      warnFlags.push('⚡ No visible project socials or website in market metadata');
-      risk += 8;
-    }
-
-    risk = Math.max(6, Math.min(95, Math.round(risk)));
-
-    return {
-      tokenName: `${tokenSide?.name || 'Unknown Token'}${tokenSide?.symbol ? ` (${tokenSide.symbol})` : ''}`,
-      tokenImage: imageUrl,
-      dexId: (bestPair.dexId || 'unknown').toUpperCase(),
-      pairLabel: `${pairSide?.symbol || 'PAIR'} / ${tokenSide?.symbol || 'TOKEN'}`,
-      liquidityUsd,
-      fdv,
-      marketCap,
-      volume24h,
-      priceChange24h,
-      buys24h,
-      sells24h,
-      pairAddress: bestPair.pairAddress,
-      pairUrl: bestPair.url,
-      dangerFlags,
-      warnFlags,
-      risk,
-      source: 'DexScreener fallback'
-    };
-  }
 
   async function fetchApexScan(address) {
     try {
@@ -1893,7 +1976,7 @@
     }
 
     clearTerminal();
-    document.getElementById('riskMeter').style.display = 'none';
+    document.getElementById('scoreBoard').style.display = 'none';
     document.getElementById('tokenImageWrap').style.display = 'none';
 
     const short = shortAddress(address);
@@ -1923,67 +2006,92 @@
       return;
     }
 
-    const allFlags = [...apexData.dangerFlags, ...apexData.warnFlags];
+      const rugFlags = [
+        ...apexData.rugReasons.high,
+        ...apexData.rugReasons.medium,
+        ...apexData.rugReasons.neutral.map(reason => `· ${reason}`)
+      ];
+      const speculationFlags = [
+        ...apexData.speculationReasons.high,
+        ...apexData.speculationReasons.medium,
+        ...apexData.speculationReasons.neutral.map(reason => `· ${reason}`)
+      ];
 
-    await termLineDelay(`<span class="t-cyan">✓ Network:</span>  <span class="t-cmd">APEX / AVALANCHE</span>`, 200);
-    await termLineDelay(`<span class="t-cyan">✓ Token:</span>    <span class="t-cmd">${apexData.tokenName}</span>`, 220);
-    await termLineDelay(`<span class="t-cyan">✓ Address:</span>  <span class="t-out">${short}</span>`, 180);
-    await termLineDelay(`<span class="t-cyan">✓ Primary DEX:</span> <span class="t-cmd">${apexData.dexId}</span>`, 180);
-    await termLineDelay(`<span class="t-cyan">✓ Pair:</span>     <span class="t-out">${apexData.pairLabel}</span>`, 180);
-    await termLineDelay(`<span class="t-cyan">✓ Liquidity:</span> <span class="t-cmd">${formatUsd(apexData.liquidityUsd)}</span>`, 180);
-    await termLineDelay(`<span class="t-cyan">✓ FDV:</span>      <span class="t-cmd">${formatUsd(apexData.fdv)}</span>`, 180);
-    await termLineDelay(`<span class="t-cyan">✓ 24h Volume:</span> <span class="t-cmd">${formatUsd(apexData.volume24h)}</span>`, 180);
-    await termLineDelay(`<span class="t-cyan">✓ 24h Flow:</span> <span class="t-out">${apexData.buys24h} buys / ${apexData.sells24h} sells</span>`, 180);
-    await termLineDelay(`<span class="t-cyan">✓ 24h Price:</span> <span class="${apexData.priceChange24h < 0 ? 't-warn' : 't-success'}">${apexData.priceChange24h.toFixed(1)}%</span>`, 180);
-    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
-    await termLineDelay(`<span class="t-out">── LIVE RISK FLAGS ───────────────────────</span>`, 260);
+      await termLineDelay(`<span class="t-cyan">✓ Network:</span>  <span class="t-cmd">APEX / AVALANCHE</span>`, 200);
+      await termLineDelay(`<span class="t-cyan">✓ Token:</span>    <span class="t-cmd">${apexData.tokenName}</span>`, 220);
+      await termLineDelay(`<span class="t-cyan">✓ Address:</span>  <span class="t-out">${short}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ Primary DEX:</span> <span class="t-cmd">${apexData.dexId}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ Pair:</span>     <span class="t-out">${apexData.pairLabel}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ Liquidity:</span> <span class="t-cmd">${formatUsd(apexData.liquidityUsd)}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ FDV:</span>      <span class="t-cmd">${formatUsd(apexData.fdv)}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ 24h Volume:</span> <span class="t-cmd">${formatUsd(apexData.volume24h)}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ 24h Flow:</span> <span class="t-out">${apexData.buys24h === null || apexData.sells24h === null ? 'UNKNOWN' : `${apexData.buys24h} buys / ${apexData.sells24h} sells`}</span>`, 180);
+      await termLineDelay(`<span class="t-cyan">✓ 24h Price:</span> <span class="${apexData.priceChange24h !== null && apexData.priceChange24h < 0 ? 't-warn' : 't-success'}">${apexData.priceChange24h === null ? 'UNKNOWN' : `${apexData.priceChange24h.toFixed(1)}%`}</span>`, 180);
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-out">── RUG SCORE // ON-CHAIN FACTS ───────────</span>`, 260);
+      await termLineDelay(`<span class="${apexData.rugStatus === 'HIGH' ? 't-danger' : apexData.rugStatus === 'ELEVATED' ? 't-warn' : apexData.rugStatus === 'LOW' ? 't-success' : 't-out'}">  ${apexData.rugStatus} : ${apexData.rugScore === null ? 'UNKNOWN' : apexData.rugScore}</span>`, 180);
+      if (!rugFlags.length) {
+        await termLineDelay(`<span class="t-success">  ✓ No hard-fact rug flags detected</span>`, 220);
+      }
+      for (let i = 0; i < rugFlags.length; i++) {
+        const flag = rugFlags[i];
+        const cls = flag.startsWith('✗') ? 't-danger' : flag.startsWith('⚡') ? 't-warn' : 't-out';
+        await termLineDelay(`<span class="${cls}">  ${flag}</span>`, 90 + i * 60);
+      }
 
-    if (!allFlags.length) {
-      await termLineDelay(`<span class="t-success">  ✓ No live danger flags detected from market structure</span>`, 220);
-    }
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-out">── SPECULATION SCORE // MARKET DATA ──────</span>`, 200);
+      await termLineDelay(`<span class="${apexData.speculationStatus === 'HIGH' ? 't-danger' : apexData.speculationStatus === 'ELEVATED' ? 't-warn' : apexData.speculationStatus === 'LOW' ? 't-success' : 't-out'}">  ${apexData.speculationStatus} : ${apexData.speculationScore === null ? 'UNKNOWN' : apexData.speculationScore}</span>`, 180);
+      if (!speculationFlags.length) {
+        await termLineDelay(`<span class="t-success">  ✓ No market-structure speculation flags detected</span>`, 220);
+      }
+      for (let i = 0; i < speculationFlags.length; i++) {
+        const flag = speculationFlags[i];
+        const cls = flag.startsWith('✗') ? 't-danger' : flag.startsWith('⚡') ? 't-warn' : 't-out';
+        await termLineDelay(`<span class="${cls}">  ${flag}</span>`, 90 + i * 60);
+      }
 
-    for (let i = 0; i < allFlags.length; i++) {
-      const flag = allFlags[i];
-      const cls = flag.startsWith('✗') ? 't-danger' : 't-warn';
-      await termLineDelay(`<span class="${cls}">  ${flag}</span>`, 90 + i * 60);
-    }
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-out">── FINAL READOUT ──────────────────────────</span>`, 200);
 
-    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
-    await termLineDelay(`<span class="t-out">── VERDICT ────────────────────────────────</span>`, 200);
+      if (apexData.rugStatus === 'HIGH') {
+        await termLineDelay(`<span class="t-danger">  ⚠ RUG STATUS   : HIGH</span>`, 230);
+        await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : HARD ON-CHAIN FACTS LOOK BAD</span>`, 200);
+        await termLineDelay(`<span class="t-danger">  ✗ DO NOT INTERACT WITHOUT MANUAL REVIEW</span>`, 180);
+      } else if (apexData.speculationStatus === 'HIGH') {
+        await termLineDelay(`<span class="t-danger">  ⚠ SPECULATION  : HIGH</span>`, 230);
+        await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : MARKET STRUCTURE LOOKS DANGEROUS</span>`, 200);
+      } else if (apexData.speculationStatus === 'UNKNOWN') {
+        await termLineDelay(`<span class="t-out">  · SPECULATION  : UNKNOWN</span>`, 230);
+        await termLineDelay(`<span class="t-out">  · RESULT       : NO LIQUIDITY EVIDENCE, DO NOT GUESS</span>`, 200);
+      } else {
+        await termLineDelay(`<span class="t-success">  ✓ RUG STATUS   : ${apexData.rugStatus}</span>`, 230);
+        await termLineDelay(`<span class="t-success">  ✓ SPECULATION  : ${apexData.speculationStatus}</span>`, 200);
+      }
 
-    if (apexData.risk >= 75) {
-      await termLineDelay(`<span class="t-danger">  ⚠ THREAT LEVEL : CRITICAL</span>`, 230);
-      await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : HIGH RISK — APEX TOKEN FAILS LIVE CHECKS</span>`, 200);
-      await termLineDelay(`<span class="t-danger">  ✗ DO NOT INTERACT WITHOUT MANUAL REVIEW</span>`, 180);
-    } else if (apexData.risk >= 45) {
-      await termLineDelay(`<span class="t-warn">  ⚡ THREAT LEVEL : ELEVATED</span>`, 230);
-      await termLineDelay(`<span class="t-warn">  ⚡ RESULT       : MEDIUM RISK — MIXED AVALANCHE SIGNALS</span>`, 200);
-    } else {
-      await termLineDelay(`<span class="t-success">  ✓ THREAT LEVEL : LOW</span>`, 230);
-      await termLineDelay(`<span class="t-success">  ✓ RESULT       : HEALTHY MARKET STRUCTURE</span>`, 200);
-    }
-
-    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
-    await termLineDelay(`<span class="t-success">✓ Scan complete · Powered by ${apexData.source || 'RugBuster Avalanche data'}</span>`, 200);
+      await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+      await termLineDelay(`<span class="t-success">✓ Scan complete · Powered by ${apexData.source || 'RugBuster Avalanche data'}</span>`, 200);
     if (apexData.pairUrl) {
       await termLineDelay(`<span class="t-out">// Pair URL: ${apexData.pairUrl}</span>`, 120);
     }
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
 
-    setRiskMeter(apexData.risk);
+    setScoreMeter('rugScore', apexData.rugScore, apexData.rugStatus, '· UNKNOWN — ON-CHAIN FACTS ARE INCOMPLETE');
+    setScoreMeter('specScore', apexData.speculationScore, apexData.speculationStatus, '· UNKNOWN — NO LIVE LIQUIDITY EVIDENCE');
     showTokenImage(apexData.tokenImage, apexData.tokenName, address);
 
-    if (apexData.risk >= 75) {
-      const dangerList = apexData.dangerFlags.map(flag => `• ${flag}`).join('<br>');
+    if (apexData.rugStatus === 'HIGH' || apexData.speculationStatus === 'HIGH') {
+      const dangerList = [...apexData.rugReasons.high, ...apexData.speculationReasons.high].map(flag => `• ${flag.replace(/^[✗⚡·]\s*/, '')}`).join('<br>');
       setTimeout(() => {
         showCriticalAlert(
-          'HIGH RISK APEX TOKEN DETECTED',
+          apexData.rugStatus === 'HIGH' ? 'HIGH RUG RISK DETECTED' : 'HIGH SPECULATION DETECTED',
           `Token: <span style="color:#ff3d3d">${apexData.tokenName}</span><br>
            Address: <span style="color:var(--text-muted)">${short}</span><br>
-           Risk Score: <span style="color:#ff3d3d;font-size:18px">${apexData.risk}%</span><br><br>
+           Rug Score: <span style="color:#ff3d3d;font-size:18px">${apexData.rugScore === null ? 'UNKNOWN' : `${apexData.rugScore}%`}</span><br>
+           Speculation Score: <span style="color:#ff3d3d;font-size:18px">${apexData.speculationScore === null ? 'UNKNOWN' : `${apexData.speculationScore}%`}</span><br><br>
            ${dangerList ? `<span style="color:#ff3d3d">${dangerList}</span><br><br>` : ''}
-           <span style="color:#ff3d3d">⚠ LIVE AVALANCHE MARKET SIGNALS LOOK DANGEROUS</span><br>
-           Review liquidity, FDV, and sell pressure before touching this token.`
+           <span style="color:#ff3d3d">⚠ REVIEW THE HARD FACTS AND MARKET EVIDENCE BEFORE TOUCHING THIS TOKEN</span><br>
+           Unknown is allowed. Guessing is not.`
         );
       }, 800);
     }

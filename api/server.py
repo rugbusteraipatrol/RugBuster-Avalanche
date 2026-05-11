@@ -282,16 +282,16 @@ def get_pair_from_factories(web3: Web3, token_address: str, total_supply: int | 
             candidate = {
                 "dexId": dex_name,
                 "pairAddress": Web3.to_checksum_address(pair_address),
-                "liquidity": {"usd": liquidity_usd or 0},
-                "fdv": fdv or 0,
-                "marketCap": fdv or 0,
-                "volume": {"h24": 0},
-                "priceChange": {"h24": 0},
-                "txns": {"h24": {"buys": 0, "sells": 0}},
+                "liquidity": {"usd": liquidity_usd},
+                "fdv": fdv,
+                "marketCap": fdv,
+                "volume": {"h24": None},
+                "priceChange": {"h24": None},
+                "txns": {"h24": {"buys": None, "sells": None}},
                 "baseToken": {"address": token_checksum},
                 "quoteToken": {"address": quote_checksum},
                 "url": None,
-                "info": {"socials": [], "websites": [], "imageUrl": None},
+                "info": {"socials": None, "websites": None, "imageUrl": None},
                 "pairCreatedAt": None,
                 "_source": "onchain_pair_lookup",
             }
@@ -305,24 +305,31 @@ def get_pair_from_factories(web3: Web3, token_address: str, total_supply: int | 
 def scan_token(address: str) -> dict[str, Any]:
     web3 = get_web3()
     onchain = get_onchain_metadata(web3, address)
+    pair_source = "none"
     try:
         best_pair = get_market_data(address)
         pair_source = "dexscreener"
     except RuntimeError:
         best_pair = get_pair_from_factories(web3, address, onchain.get("total_supply"))
-        if not best_pair:
-            raise
-        pair_source = "onchain_pair_lookup"
+        if best_pair:
+            pair_source = "onchain_pair_lookup"
 
-    liquidity_usd = float(best_pair.get("liquidity", {}).get("usd") or 0)
-    fdv = float(best_pair.get("fdv") or best_pair.get("marketCap") or 0)
-    volume24h = float(best_pair.get("volume", {}).get("h24") or 0)
-    price_change24h = float(best_pair.get("priceChange", {}).get("h24") or 0)
-    txns24h = best_pair.get("txns", {}).get("h24") or {}
-    buys24h = int(txns24h.get("buys") or 0)
-    sells24h = int(txns24h.get("sells") or 0)
-    socials = best_pair.get("info", {}).get("socials") or []
-    websites = best_pair.get("info", {}).get("websites") or []
+    pair_data = best_pair or {}
+    liquidity_raw = pair_data.get("liquidity", {}).get("usd")
+    fdv_raw = pair_data.get("fdv") or pair_data.get("marketCap")
+    volume_raw = pair_data.get("volume", {}).get("h24")
+    price_change_raw = pair_data.get("priceChange", {}).get("h24")
+    liquidity_usd = float(liquidity_raw) if liquidity_raw is not None else None
+    fdv = float(fdv_raw) if fdv_raw is not None else None
+    volume24h = float(volume_raw) if volume_raw is not None else None
+    price_change24h = float(price_change_raw) if price_change_raw is not None else None
+    txns24h = pair_data.get("txns", {}).get("h24") or {}
+    buys_raw = txns24h.get("buys")
+    sells_raw = txns24h.get("sells")
+    buys24h = int(buys_raw) if buys_raw is not None else None
+    sells24h = int(sells_raw) if sells_raw is not None else None
+    socials = pair_data.get("info", {}).get("socials") or []
+    websites = pair_data.get("info", {}).get("websites") or []
 
     metadata = {
         "token": Web3.to_checksum_address(address),
@@ -331,45 +338,35 @@ def scan_token(address: str) -> dict[str, Any]:
         "decimals": onchain["decimals"],
         "total_supply": onchain["total_supply"],
         "deployer": None,
+        "has_liquidity_evidence": bool(pair_data.get("pairAddress")),
         "liquidity_usd": liquidity_usd,
         "fdv": fdv,
         "volume24h": volume24h,
         "price_change_24h": price_change24h,
         "buys24h": buys24h,
         "sells24h": sells24h,
-        "pair_address": best_pair.get("pairAddress"),
-        "pair_url": best_pair.get("url"),
-        "dex_id": str(best_pair.get("dexId") or "unknown").upper(),
+        "pair_address": pair_data.get("pairAddress"),
+        "pair_url": pair_data.get("url"),
+        "dex_id": str(pair_data.get("dexId") or "unknown").upper(),
         "social_count": len(socials),
         "website_count": len(websites),
-        "image_url": best_pair.get("info", {}).get("imageUrl"),
+        "image_url": pair_data.get("info", {}).get("imageUrl"),
         "contract_tx_count": web3.eth.get_transaction_count(Web3.to_checksum_address(address)),
     }
 
-    risk = score_token(metadata)
-    reasons = list(risk.reasons)
-
-    if price_change24h <= -60:
-        reasons.append(f"Price collapsed {price_change24h:.1f}% in 24h")
-    elif price_change24h <= -25:
-        reasons.append(f"Price is down {price_change24h:.1f}% in 24h")
-
-    if sells24h > buys24h * 3 and sells24h > 20:
-        reasons.append(f"Heavy sell pressure: {sells24h} sells vs {buys24h} buys")
-
-    if volume24h < 10_000:
-        reasons.append(f"Low 24h volume at ${volume24h:,.0f}")
-
-    if not socials and not websites:
-        reasons.append("No visible project socials or website in market metadata")
+    scores = score_token(metadata)
 
     return {
         "address": metadata["token"],
         "token_name": metadata["name"],
         "symbol": metadata["symbol"],
-        "score": risk.score,
-        "label": risk.label,
-        "reasons": reasons,
+        "rug_score": scores.rug.score,
+        "rug_status": scores.rug.status,
+        "rug_reasons": list(scores.rug.reasons),
+        "speculation_score": scores.speculation.score,
+        "speculation_status": scores.speculation.status,
+        "speculation_reasons": list(scores.speculation.reasons),
+        "has_liquidity_evidence": metadata["has_liquidity_evidence"],
         "liquidity_usd": liquidity_usd,
         "fdv": fdv,
         "volume24h": volume24h,
@@ -390,12 +387,15 @@ def publish_report(report: dict[str, Any]) -> dict[str, Any]:
     private_key = require_env("PRIVATE_KEY")
     registry_address = require_env("REGISTRY_ADDRESS")
     payload = {"report": report}
+    rug_score = report.get("rug_score")
+    if rug_score is None:
+        raise RuntimeError("Cannot publish a registry score without a rug score")
     return publish_score(
         web3=web3,
         private_key=private_key,
         registry_address=registry_address,
         token=report["address"],
-        score=report["score"],
+        score=rug_score,
         payload=payload,
     )
 
@@ -407,17 +407,19 @@ def notify_report(report: dict[str, Any], publish_result: dict[str, Any] | None)
         "*RugBuster Apex Scan*",
         f"Token: `{report['token_name']} ({report['symbol']})`",
         f"Address: `{report['address']}`",
-        f"Score: *{report['score']}* `{report['label']}`",
+        f"Rug Score: *{report['rug_score']}* `{report['rug_status']}`",
+        f"Speculation Score: *{report['speculation_score'] if report['speculation_score'] is not None else 'UNKNOWN'}* `{report['speculation_status']}`",
         f"DEX: `{report['dex_id']}`",
-        f"Liquidity: `${report['liquidity_usd']:,.0f}`",
+        f"Liquidity: `{format_liquidity(report['liquidity_usd'])}`",
     ]
     if publish_result:
         lines.append(f"Registry tx: `{publish_result['tx_hash']}`")
     if report.get("pair_url"):
         lines.append(f"[DexScreener Pair]({report['pair_url']})")
-    if report.get("reasons"):
+    all_reasons = list(report.get("rug_reasons") or []) + list(report.get("speculation_reasons") or [])
+    if all_reasons:
         lines.append("")
-        lines.extend([f"- {reason}" for reason in report["reasons"][:6]])
+        lines.extend([f"- {reason}" for reason in all_reasons[:6]])
 
     result = send_telegram_alert(
         bot_token=bot_token,
@@ -425,6 +427,12 @@ def notify_report(report: dict[str, Any], publish_result: dict[str, Any] | None)
         message="\n".join(lines),
     )
     return {"ok": True, "response": result.get("ok", False)}
+
+
+def format_liquidity(value: float | None) -> str:
+    if value is None:
+        return "UNKNOWN"
+    return f"${value:,.0f}"
 
 
 if __name__ == "__main__":
