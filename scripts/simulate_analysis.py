@@ -92,6 +92,17 @@ def raw_transaction(signed_tx: Any) -> bytes:
     return getattr(signed_tx, "raw_transaction", None) or getattr(signed_tx, "rawTransaction")
 
 
+def apply_fee_strategy(web3: Web3, tx: dict) -> dict:
+    latest_block = web3.eth.get_block("latest")
+    base_fee = int(latest_block.get("baseFeePerGas", 0) or 0)
+    network_gas_price = int(web3.eth.gas_price)
+    priority_fee = min(web3.to_wei(2, "gwei"), max(network_gas_price // 2, 1))
+    max_fee = max(network_gas_price * 2, base_fee * 2 + priority_fee, priority_fee + 1)
+    tx["maxPriorityFeePerGas"] = priority_fee
+    tx["maxFeePerGas"] = max_fee
+    return tx
+
+
 def metadata_hash(payload: dict) -> bytes:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).digest()
@@ -150,8 +161,7 @@ def main() -> None:
         }
     )
     tx["gas"] = web3.eth.estimate_gas(tx)
-    tx["maxFeePerGas"] = web3.eth.gas_price * 2
-    tx["maxPriorityFeePerGas"] = web3.to_wei(2, "gwei")
+    tx = apply_fee_strategy(web3, tx)
 
     signed = account.sign_transaction(tx)
     tx_hash = web3.eth.send_raw_transaction(raw_transaction(signed))
