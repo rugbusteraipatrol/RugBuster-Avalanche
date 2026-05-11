@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RugBuster Apex — Avalanche Security Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --neon-cyan: #00f5ff;
+    --neon-pink: #ff00c8;
+    --neon-green: #00ff88;
+    --neon-orange: #ff6b00;
+    --dark-bg: #050811;
+    --dark-panel: #0a0f1e;
+    --dark-card: #0d1527;
+    --grid-line: rgba(0, 245, 255, 0.06);
+    --text-primary: #e8f4ff;
+    --text-muted: #5a7a9a;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--dark-bg);
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .z1 { position: relative; z-index: 2; }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 48px;
+    background: rgba(5, 8, 17, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.15);
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.7), 0 0 60px rgba(0, 245, 255, 0.3);
+    letter-spacing: 3px;
+    text-decoration: none;
+  }
+
+  .logo span { color: var(--neon-pink); text-shadow: 0 0 20px rgba(255,0,200,0.7); }
+
+  nav ul {
+    display: flex;
+    gap: 36px;
+    list-style: none;
+  }
+
+  nav a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s, text-shadow 0.2s;
+  }
+
+  nav a:hover {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px rgba(0, 245, 255, 0.6);
+  }
+
+  .nav-cta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--neon-pink) !important;
+    border: 1px solid var(--neon-pink);
+    padding: 8px 20px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s !important;
+    text-shadow: 0 0 8px rgba(255,0,200,0.4) !important;
+  }
+
+  .nav-cta:hover {
+    background: var(--neon-pink);
+    color: var(--dark-bg) !important;
+    text-shadow: none !important;
+    box-shadow: 0 0 30px rgba(255,0,200,0.5);
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 120px 48px 80px;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 6px;
+    color: var(--neon-green);
+    text-shadow: 0 0 10px rgba(0,255,136,0.6);
+    margin-bottom: 24px;
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .hero-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(52px, 8vw, 96px);
+    font-weight: 900;
+    line-height: 0.95;
+    margin-bottom: 8px;
+    letter-spacing: -2px;
+  }
+
+  .hero-title .line1 {
+    display: block;
+    color: var(--text-primary);
+    text-shadow: 0 0 40px rgba(232,244,255,0.2);
+    animation: glitch 8s infinite;
+  }
+
+  .hero-title .line2 {
+    display: block;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 30px rgba(0, 245, 255, 0.8), 0 0 80px rgba(0, 245, 255, 0.4);
+  }
+
+  @keyframes glitch {
+    0%, 90%, 100% { transform: translate(0); clip-path: none; }
+    91% { transform: translate(-3px, 1px); }
+    92% { transform: translate(3px, -1px); clip-path: inset(20% 0 30% 0); }
+    93% { transform: translate(0); clip-path: none; }
+    94% { transform: translate(2px, 2px); }
+    95% { transform: translate(0); }
+  }
+
+  .hero-sub {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(16px, 2.5vw, 22px);
+    font-weight: 300;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 24px auto 48px;
+    letter-spacing: 1px;
+    line-height: 1.7;
+  }
+
+  .hero-sub strong {
+    color: var(--neon-pink);
+    font-weight: 600;
+  }
+
+  .hero-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: var(--neon-cyan);
+    color: var(--dark-bg);
+    border: none;
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: 0 0 30px rgba(0, 245, 255, 0.4), 0 0 80px rgba(0, 245, 255, 0.1);
+  }
+
+  .btn-primary:hover {
+    background: #fff;
+    box-shadow: 0 0 50px rgba(0, 245, 255, 0.8), 0 0 120px rgba(0, 245, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 15px 40px;
+    background: transparent;
+    color: var(--neon-pink);
+    border: 1px solid var(--neon-pink);
+    cursor: pointer;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-shadow: 0 0 10px rgba(255,0,200,0.5);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255,0,200,0.1);
+    box-shadow: 0 0 30px rgba(255,0,200,0.4);
+    transform: translateY(-2px);
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    background: var(--dark-panel);
+    border-top: 1px solid rgba(0, 245, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.1);
+    padding: 28px 48px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+
+  .stat-item {
+    text-align: center;
+    padding: 12px 24px;
+    border-right: 1px solid rgba(0, 245, 255, 0.08);
+  }
+
+  .stat-item:last-child { border-right: none; }
+
+  .stat-number {
+    font-family: 'Orbitron', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.6);
+    display: block;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* SECTION */
+  section {
+    padding: 100px 48px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--neon-pink);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    text-shadow: 0 0 8px rgba(255,0,200,0.4);
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+  }
+
+  .section-title span { color: var(--neon-cyan); text-shadow: 0 0 20px rgba(0,245,255,0.5); }
+
+  .section-desc {
+    font-size: 17px;
+    color: var(--text-muted);
+    max-width: 560px;
+    line-height: 1.8;
+    font-weight: 300;
+  }
+
+  /* FEATURES */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    margin-top: 64px;
+    border: 1px solid rgba(0, 245, 255, 0.08);
+  }
+
+  .feature-card {
+    background: var(--dark-card);
+    padding: 40px 36px;
+    border: 1px solid rgba(0, 245, 255, 0.06);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-card:hover {
+    background: rgba(0, 245, 255, 0.03);
+    border-color: rgba(0, 245, 255, 0.2);
+    transform: translateY(-4px);
+  }
+
+  .feature-icon {
+    width: 52px;
+    height: 52px;
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    font-size: 22px;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    background: rgba(0, 245, 255, 0.05);
+  }
+
+  .feature-card.pink .feature-icon {
+    border-color: rgba(255, 0, 200, 0.3);
+    background: rgba(255, 0, 200, 0.05);
+  }
+
+  .feature-card.green .feature-icon {
+    border-color: rgba(0, 255, 136, 0.3);
+    background: rgba(0, 255, 136, 0.05);
+  }
+
+  .feature-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .feature-desc {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    font-weight: 300;
+  }
+
+  /* TERMINAL */
+  .terminal-section {
+    background: var(--dark-panel);
+    border-top: 1px solid rgba(0, 245, 255, 0.08);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.08);
+    padding: 100px 48px;
+  }
+
+  .terminal-wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .terminal {
+    background: #020408;
+    border: 1px solid rgba(0, 245, 255, 0.2);
+    padding: 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    box-shadow: 0 0 60px rgba(0, 245, 255, 0.08), inset 0 0 30px rgba(0, 245, 255, 0.02);
+  }
+
+  .terminal-bar {
+    background: rgba(0, 245, 255, 0.05);
+    border-bottom: 1px solid rgba(0, 245, 255, 0.15);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .t-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .t-dot.r { background: #ff5f57; }
+  .t-dot.y { background: #febc2e; }
+  .t-dot.g { background: #28c840; }
+
+  .terminal-title {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    margin-left: 8px;
+  }
+
+  .terminal-body {
+    padding: 24px;
+    line-height: 2;
+  }
+
+  .t-prompt { color: var(--neon-green); }
+  .t-cmd { color: var(--text-primary); }
+  .t-out { color: var(--text-muted); }
+  .t-warn { color: var(--neon-orange); }
+  .t-danger { color: #ff3d3d; }
+  .t-success { color: var(--neon-green); }
+  .t-cyan { color: var(--neon-cyan); }
+  .t-pink { color: var(--neon-pink); }
+
+  .cursor {
+    display: inline-block;
+    width: 9px;
+    height: 15px;
+    background: var(--neon-cyan);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* PRICING */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 64px;
+  }
+
+  .pricing-card {
+    background: var(--dark-card);
+    border: 1px solid rgba(0, 245, 255, 0.08);
+    padding: 40px 32px;
+    position: relative;
+    transition: all 0.3s;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  }
+
+  .pricing-card.featured {
+    border-color: rgba(0, 245, 255, 0.4);
+    background: rgba(0, 245, 255, 0.03);
+    box-shadow: 0 0 60px rgba(0, 245, 255, 0.08);
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(0, 245, 255, 0.3);
+  }
+
+  .featured-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--dark-bg);
+    background: var(--neon-cyan);
+    padding: 4px 14px;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 24px;
+  }
+
+  .price-tier {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .price-amount {
+    font-family: 'Orbitron', monospace;
+    font-size: 52px;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 30px rgba(0,245,255,0.5);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .price-amount sup {
+    font-size: 24px;
+    vertical-align: top;
+    margin-top: 10px;
+    display: inline-block;
+  }
+
+  .price-period {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+
+  .price-divider {
+    border: none;
+    border-top: 1px solid rgba(0,245,255,0.08);
+    margin-bottom: 28px;
+  }
+
+  .price-features {
+    list-style: none;
+    margin-bottom: 36px;
+  }
+
+  .price-features li {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(0,245,255,0.04);
+  }
+
+  .price-features li::before {
+    content: '▸';
+    color: var(--neon-cyan);
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .price-features li.off { color: rgba(90, 122, 154, 0.4); }
+  .price-features li.off::before { color: rgba(90,122,154,0.3); }
+
+  /* HOW IT WORKS */
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-top: 64px;
+    position: relative;
+  }
+
+  .how-grid::before {
+    content: '';
+    position: absolute;
+    top: 42px;
+    left: calc(12.5% + 20px);
+    right: calc(12.5% + 20px);
+    height: 1px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink), var(--neon-cyan));
+    opacity: 0.3;
+  }
+
+  .how-step {
+    padding: 24px;
+    text-align: center;
+  }
+
+  .how-num {
+    width: 56px;
+    height: 56px;
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 15px rgba(0,245,255,0.6);
+    background: var(--dark-bg);
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    position: relative;
+    z-index: 1;
+  }
+
+  .how-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  .how-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* CTA FOOTER */
+  .cta-section {
+    background: var(--dark-panel);
+    border-top: 1px solid rgba(0, 245, 255, 0.1);
+    text-align: center;
+    padding: 120px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,245,255,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(32px, 5vw, 64px);
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+
+  .cta-title span { color: var(--neon-pink); text-shadow: 0 0 30px rgba(255,0,200,0.6); }
+
+  .cta-sub {
+    font-size: 17px;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+    font-weight: 300;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(0, 245, 255, 0.06);
+    background: rgba(5, 8, 17, 0.9);
+  }
+
+  .footer-copy {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--neon-cyan); }
+
+  /* FLOATING DECO */
+  .hex-bg {
+    position: absolute;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(0, 245, 255, 0.04);
+    pointer-events: none;
+    letter-spacing: 2px;
+    line-height: 2.2;
+    white-space: pre;
+    user-select: none;
+  }
+
+  /* ANIMATE IN */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-eyebrow { animation: fadeUp 0.6s 0.1s both; }
+  .hero-title { animation: fadeUp 0.7s 0.3s both; }
+  .hero-sub { animation: fadeUp 0.7s 0.5s both; }
+  .hero-buttons { animation: fadeUp 0.7s 0.7s both; }
+
+  /* NOISE overlay */
+  .noise {
+    position: fixed;
+    inset: 0;
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 3;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 128px;
+  }
+
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    nav ul { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: 1fr 1fr; }
+    .terminal-wrap { grid-template-columns: 1fr; gap: 40px; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    section { padding: 60px 24px; }
+    .terminal-section { padding: 60px 24px; }
+    footer { flex-direction: column; gap: 20px; text-align: center; }
+    .how-grid::before { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="noise"></div>
+
+<!-- NAV -->
+<nav class="z1">
+  <a href="#" class="logo">RUG<span>BUSTER</span></a>
+  <ul>
+    <li><a href="#features">Protocol</a></li>
+    <li><a href="#scanner">Scanner</a></li>
+    <li><a href="#how">How</a></li>
+    <li><a href="#pricing">Access</a></li>
+    <li><a href="#scanner" class="nav-cta">Scan Now</a></li>
+    <li>
+      <button id="walletBtn" onclick="connectWallet()" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:12px;
+        letter-spacing:2px;
+        padding:8px 20px;
+        background:transparent;
+        border:1px solid var(--neon-green);
+        color:var(--neon-green);
+        cursor:crosshair;
+        text-transform:uppercase;
+        transition:all 0.2s;
+        text-shadow:0 0 8px rgba(0,255,136,0.4);
+        display:flex;align-items:center;gap:8px;
+      " onmouseover="this.style.background='rgba(0,255,136,0.1)'" onmouseout="if(!walletConnected)this.style.background='transparent'">
+        <span style="font-size:16px;">👻</span>
+        <span id="walletBtnText">Connect Wallet</span>
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<!-- WALLET MODAL -->
+<div id="walletModal" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(5,8,17,0.92);
+  z-index:999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:1px solid rgba(0,245,255,0.3);
+    background:var(--dark-card);
+    padding:48px;
+    max-width:460px;width:90%;
+    text-align:center;
+    box-shadow:0 0 80px rgba(0,245,255,0.08);
+    position:relative;
+  ">
+    <button onclick="closeWalletModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:crosshair;">✕</button>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-cyan);margin-bottom:24px;">// SELECT WALLET</div>
+    <div id="walletModalBody">
+      <!-- phantom option -->
+      <div onclick="connectPhantom()" style="
+        border:1px solid rgba(0,245,255,0.15);
+        padding:20px 24px;
+        margin-bottom:12px;
+        cursor:crosshair;
+        display:flex;align-items:center;gap:16px;
+        transition:all 0.2s;
+        background:rgba(0,245,255,0.02);
+      " onmouseover="this.style.borderColor='rgba(0,245,255,0.5)';this.style.background='rgba(0,245,255,0.05)'"
+         onmouseout="this.style.borderColor='rgba(0,245,255,0.15)';this.style.background='rgba(0,245,255,0.02)'">
+        <span style="font-size:32px;">👻</span>
+        <div style="text-align:left;">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Phantom</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">Solana native wallet</div>
+        </div>
+        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-green);letter-spacing:2px;">RECOMMENDED</div>
+      </div>
+      <!-- metamask placeholder -->
+      <div style="
+        border:1px solid rgba(255,255,255,0.04);
+        padding:20px 24px;
+        display:flex;align-items:center;gap:16px;
+        opacity:0.4;
+      ">
+        <span style="font-size:32px;">🦊</span>
+        <div style="text-align:left;">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">MetaMask</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">Apex / Avalanche beta</div>
+        </div>
+        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">SOON</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div id="paymentModal" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(5,8,17,0.95);
+  z-index:1000;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:1px solid rgba(255,0,200,0.3);
+    background:var(--dark-card);
+    padding:48px;
+    max-width:500px;width:90%;
+    text-align:center;
+    box-shadow:0 0 80px rgba(255,0,200,0.08);
+    position:relative;
+  ">
+    <button onclick="closePaymentModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:crosshair;">✕</button>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-pink);margin-bottom:8px;">// ACTIVATE PLAN</div>
+    <div id="payPlanName" style="font-family:'Orbitron',monospace;font-size:28px;font-weight:900;color:var(--text-primary);margin-bottom:4px;"></div>
+    <div id="payPlanPrice" style="font-family:'Orbitron',monospace;font-size:48px;font-weight:900;color:var(--neon-pink);text-shadow:0 0 30px rgba(255,0,200,0.5);margin-bottom:32px;"></div>
+
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--text-muted);margin-bottom:16px;">SELECT CURRENCY</div>
+    <div style="display:flex;gap:12px;margin-bottom:32px;">
+      <div id="paySOL" onclick="selectCurrency('SOL')" style="
+        flex:1;border:1px solid rgba(0,245,255,0.4);padding:16px;cursor:crosshair;
+        background:rgba(0,245,255,0.05);transition:all 0.2s;
+      ">
+        <div style="font-size:24px;margin-bottom:6px;">◎</div>
+        <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--neon-cyan);">SOL</div>
+        <div id="solAmount" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+      </div>
+      <div id="payUSDC" onclick="selectCurrency('USDC')" style="
+        flex:1;border:1px solid rgba(255,255,255,0.08);padding:16px;cursor:crosshair;
+        background:transparent;transition:all 0.2s;
+      ">
+        <div style="font-size:24px;margin-bottom:6px;">💵</div>
+        <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--text-primary);">USDC</div>
+        <div id="usdcAmount" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <div id="walletPayInfo" style="
+      border:1px solid rgba(0,245,255,0.1);
+      padding:12px 16px;
+      margin-bottom:24px;
+      font-family:'Share Tech Mono',monospace;
+      font-size:11px;
+      color:var(--text-muted);
+      letter-spacing:1px;
+      display:none;
+    ">
+      <span style="color:var(--neon-cyan);">FROM:</span> <span id="payFromAddr"></span>
+    </div>
+
+    <button id="payBtn" onclick="simulatePayment()" style="
+      width:100%;
+      font-family:'Orbitron',monospace;
+      font-size:13px;font-weight:700;
+      letter-spacing:3px;padding:16px;
+      background:var(--neon-pink);color:var(--dark-bg);
+      border:none;cursor:crosshair;
+      box-shadow:0 0 30px rgba(255,0,200,0.4);
+      transition:all 0.2s;
+    ">⚡ CONFIRM PAYMENT</button>
+    <div id="connectFirst" style="display:none;margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-orange);">
+      ⚠ Connect your wallet first to proceed
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS MODAL -->
+<div id="successModal" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(5,8,17,0.95);
+  z-index:1001;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:1px solid rgba(0,255,136,0.4);
+    background:var(--dark-card);
+    padding:56px 48px;
+    max-width:500px;width:90%;
+    text-align:center;
+    box-shadow:0 0 100px rgba(0,255,136,0.12);
+  ">
+    <div style="font-size:56px;margin-bottom:16px;animation:pulse-glow 2s infinite;">🛡️</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-green);margin-bottom:12px;">// ACCESS GRANTED</div>
+    <div id="successPlan" style="font-family:'Orbitron',monospace;font-size:32px;font-weight:900;color:var(--text-primary);margin-bottom:8px;"></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text-muted);margin-bottom:32px;line-height:2;">
+      Your wallet has been verified.<br>
+      <span style="color:var(--neon-green);">Full access activated.</span><br>
+      Transaction confirmed on Solana.
+    </div>
+    <div id="successAddr" style="
+      border:1px solid rgba(0,255,136,0.15);
+      padding:12px;margin-bottom:32px;
+      font-family:'Share Tech Mono',monospace;font-size:11px;
+      color:var(--neon-green);letter-spacing:1px;
+    "></div>
+    <button onclick="closeSuccess()" style="
+      font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;
+      padding:14px 40px;background:var(--neon-green);color:var(--dark-bg);
+      border:none;cursor:crosshair;font-weight:700;
+    ">ENTER RUGBUSTER</button>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero z1">
+  <div class="hex-bg" style="top:120px;right:80px;opacity:0.4;">
+    0xDEAD 0xBEEF<br>
+    0x4RUG 0xBUST<br>
+    0xFF00 0xC800<br>
+    0x00F5 0xFF00
+  </div>
+  <div class="hex-bg" style="bottom:100px;left:60px;opacity:0.4;">
+    [SCAN] ACTIVE<br>
+    [SNIFF] PORT 443<br>
+    [FLAG] RUG DETECTED<br>
+    [BUST] INITIATED
+  </div>
+
+  <div class="hero-eyebrow">// AI-POWERED CRYPTO SECURITY PROTOCOL v2.4</div>
+
+  <h1 class="hero-title">
+    <span class="line1">NEVER GET</span>
+    <span class="line2">RUGGED AGAIN</span>
+  </h1>
+
+  <p class="hero-sub">
+    Real-time AI surveillance for DeFi contracts, wallets & launches.
+    We hunt <strong>rugs, honeypots & exit scams</strong> before they hunt you.
+  </p>
+
+  <div class="hero-buttons">
+    <a href="#pricing" class="btn-primary">Activate Shield</a>
+    <a href="#how" class="btn-secondary">See It Live</a>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar z1">
+  <div class="stat-item">
+    <span class="stat-number">247K+</span>
+    <span class="stat-label">Contracts Scanned</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number">4,831</span>
+    <span class="stat-label">Rugs Detected</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number">$12.4M</span>
+    <span class="stat-label">User Funds Saved</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number">99.2%</span>
+    <span class="stat-label">Detection Accuracy</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" class="z1">
+  <div class="section-label">// core protocol</div>
+  <h2 class="section-title">Your AI Security<br><span>Strike Force</span></h2>
+  <p class="section-desc">Six layers of autonomous protection scanning 24/7 across every chain, every launch, every wallet.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">Contract Autopsy</div>
+      <p class="feature-desc">Deep AI analysis of smart contract bytecode. Hidden mints, ownership backdoors, blacklist functions — exposed instantly.</p>
+    </div>
+    <div class="feature-card pink">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Launch Sniper Intel</div>
+      <p class="feature-desc">Monitor every new token launch on ETH, BSC, SOL, BASE. Get risk scores in under 3 seconds before snipers move.</p>
+    </div>
+    <div class="feature-card green">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Wallet Firewall</div>
+      <p class="feature-desc">Connect your wallet. We scan every incoming transaction and alert you before you sign anything dangerous.</p>
+    </div>
+    <div class="feature-card green">
+      <div class="feature-icon">📡</div>
+      <div class="feature-title">Liquidity Radar</div>
+      <p class="feature-desc">Real-time tracking of LP lock status, unlock schedules, and suspicious liquidity movements. Rug pull prediction at scale.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">AI Threat Intel</div>
+      <p class="feature-desc">Our model trained on 50,000+ confirmed rugs. Pattern recognition that evolves daily faster than scammers can adapt.</p>
+    </div>
+    <div class="feature-card pink">
+      <div class="feature-icon">🔔</div>
+      <div class="feature-title">Telegram Alerts</div>
+      <p class="feature-desc">Instant push notifications to your Telegram when threats detected. Configure thresholds, chains, wallets — full control.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WALLET SCANNER SECTION -->
+<div class="terminal-section" id="scanner">
+  <div class="terminal-wrap z1">
+    <div>
+      <div class="section-label">// live threat scanner</div>
+      <h2 class="section-title">Scan Any<br><span>Token Now</span></h2>
+      <p class="section-desc" style="margin-bottom:32px;">Paste any Apex or Avalanche token address. Our engine analyzes live chain and market signals in real-time.</p>
+
+      <!-- INPUT -->
+      <div style="margin-bottom:16px;">
+        <div style="
+          display:flex;
+          border:1px solid rgba(0,245,255,0.3);
+          background:rgba(0,245,255,0.03);
+          overflow:hidden;
+        ">
+          <span style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:13px;
+            color:var(--neon-cyan);
+            padding:14px 16px;
+            border-right:1px solid rgba(0,245,255,0.2);
+            white-space:nowrap;
+          ">RB&gt;</span>
+          <input
+            id="scanInput"
+            type="text"
+            placeholder="Paste token address (Apex / Avalanche)..."
+            style="
+              flex:1;
+              background:transparent;
+              border:none;
+              outline:none;
+              font-family:'Share Tech Mono',monospace;
+              font-size:13px;
+              color:var(--text-primary);
+              padding:14px 16px;
+              letter-spacing:1px;
+            "
+          />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button onclick="runScan()" class="btn-primary" style="font-size:11px;padding:13px 32px;border:none;cursor:crosshair;">
+          ⚡ SCAN TOKEN
+        </button>
+        <button onclick="loadExample('apex')" style="
+          font-family:'Share Tech Mono',monospace;
+          font-size:11px;
+          letter-spacing:2px;
+          padding:12px 20px;
+          background:transparent;
+          border:1px solid rgba(0,245,255,0.2);
+          color:var(--text-muted);
+          cursor:crosshair;
+          transition:all 0.2s;
+        " onmouseover="this.style.color='var(--neon-cyan)'" onmouseout="this.style.color='var(--text-muted)'">
+          TRY APEX
+        </button>
+      </div>
+
+      <!-- TOKEN IMAGE -->
+      <div id="tokenImageWrap" style="display:none;margin-top:28px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">TOKEN</div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <img id="tokenImage" src="" alt="token" style="
+            width:56px;height:56px;
+            border:1px solid rgba(0,245,255,0.3);
+            background:rgba(0,245,255,0.05);
+            object-fit:cover;
+            clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+          "/>
+          <div>
+            <div id="tokenImageName" style="font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--text-primary);"></div>
+            <div id="tokenImageSymbol" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-cyan);letter-spacing:2px;margin-top:4px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RISK METER -->
+      <div id="riskMeter" style="display:none;margin-top:32px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:3px;margin-bottom:10px;">RISK SCORE</div>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);position:relative;overflow:hidden;">
+            <div id="riskBar" style="height:100%;width:0%;transition:width 1s ease;background:var(--neon-cyan);"></div>
+          </div>
+          <div id="riskScore" style="font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--neon-cyan);min-width:50px;text-align:right;">0</div>
+        </div>
+        <div id="riskLabel" style="font-family:'Share Tech Mono',monospace;font-size:12px;margin-top:8px;letter-spacing:2px;"></div>
+      </div>
+
+      <div style="
+        margin-top:32px;
+        border:1px solid rgba(0,245,255,0.14);
+        background:rgba(10,15,30,0.82);
+        padding:22px 22px 18px;
+        box-shadow:inset 0 0 24px rgba(0,245,255,0.03);
+      ">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          <div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// fuji live monitor</div>
+            <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Apex Factory Watchlist</div>
+          </div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-green);letter-spacing:2px;">PAIRCREATED LISTENERS ARMED</div>
+        </div>
+
+        <div style="display:grid;gap:12px;">
+          <div style="border:1px solid rgba(0,245,255,0.1);padding:14px 16px;background:rgba(0,245,255,0.03);">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+              <div>
+                <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Trader Joe Factory</div>
+                <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xFf06D441D352F33041926D451a5118742880017D</div>
+              </div>
+              <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
+            </div>
+          </div>
+
+          <div style="border:1px solid rgba(0,245,255,0.1);padding:14px 16px;background:rgba(0,245,255,0.03);">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+              <div>
+                <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Pangolin Factory</div>
+                <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xefa94DE7a4659D7836704329a8ca30E89e599d14</div>
+              </div>
+              <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
+          Adapter logic listens for <span style="color:var(--neon-cyan);">PairCreated</span> events from these factory contracts.
+          When a new pair appears, RugBuster captures the token address, runs live risk analysis, and prepares the result for on-chain certification.
+        </div>
+      </div>
+    </div>
+
+    <!-- TERMINAL OUTPUT -->
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="t-dot r"></div>
+        <div class="t-dot y"></div>
+        <div class="t-dot g"></div>
+        <span class="terminal-title">RUGBUSTER // THREAT ANALYSIS ENGINE</span>
+      </div>
+      <div class="terminal-body" id="terminalBody" style="min-height:320px;max-height:420px;overflow-y:auto;">
+        <div><span class="t-prompt">RB&gt;</span> <span class="t-out">System ready. Awaiting target address...</span></div>
+        <div><span class="t-out">// Paste an Apex or Avalanche 0x address and hit SCAN</span></div>
+        <div><span class="t-out">// Powered by RugBuster API + Avalanche live market data</span></div>
+        <div><span class="t-pink">// ENGINE: RUGBUSTER APEX v1.0 — ONLINE</span></div>
+        <div>&nbsp;</div>
+        <div><span class="t-prompt">RB&gt;</span> <span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CRITICAL ALERT MODAL -->
+<div id="criticalAlert" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(5,8,17,0.92);
+  z-index:999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    border:2px solid #ff3d3d;
+    background:rgba(255,61,61,0.05);
+    padding:48px;
+    max-width:540px;
+    width:90%;
+    text-align:center;
+    box-shadow:0 0 80px rgba(255,61,61,0.3);
+    position:relative;
+  ">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:#ff3d3d;margin-bottom:16px;animation:pulse-glow 1s infinite;">⚠ CRITICAL THREAT DETECTED ⚠</div>
+    <div id="alertTitle" style="font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:#ff3d3d;margin-bottom:16px;"></div>
+    <div id="alertBody" style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text-muted);line-height:2;margin-bottom:32px;"></div>
+    <button onclick="closeAlert()" style="
+      font-family:'Orbitron',monospace;
+      font-size:12px;
+      letter-spacing:3px;
+      padding:13px 32px;
+      background:#ff3d3d;
+      color:var(--dark-bg);
+      border:none;
+      cursor:crosshair;
+      font-weight:700;
+    ">ACKNOWLEDGED — CLOSE</button>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="z1">
+  <div class="section-label">// deployment sequence</div>
+  <h2 class="section-title">Activate in<br><span>4 Steps</span></h2>
+
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="how-num">01</div>
+      <div class="how-label">Connect</div>
+      <p class="how-desc">Link your wallet, Telegram, and select your chains. Takes 2 minutes.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">02</div>
+      <div class="how-label">Configure</div>
+      <p class="how-desc">Set risk thresholds, alert types, and which token launches to monitor.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">03</div>
+      <div class="how-label">Deploy</div>
+      <p class="how-desc">AI engine goes live. Scanning every new contract and wallet interaction.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">04</div>
+      <div class="how-label">Stay Safe</div>
+      <p class="how-desc">Get instant alerts. Block threats automatically. Sleep while we watch.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="z1">
+  <div class="section-label">// access tiers</div>
+  <h2 class="section-title">Choose Your<br><span>Arsenal</span></h2>
+  <p class="section-desc">No subscriptions that rug you. Cancel anytime. Start free.</p>
+
+  <div class="pricing-grid">
+    <!-- FREE -->
+    <div class="pricing-card">
+      <div class="price-tier">Scout</div>
+      <div class="price-amount"><sup>$</sup>0</div>
+      <div class="price-period">// forever free</div>
+      <hr class="price-divider">
+      <ul class="price-features">
+        <li>10 manual scans / day</li>
+        <li>Basic risk score</li>
+        <li>Solana only (limited)</li>
+        <li>Telegram alerts (delayed)</li>
+        <li class="off">Wallet firewall</li>
+        <li class="off">Launch monitoring</li>
+        <li class="off">AI deep analysis</li>
+      </ul>
+      <a href="#" onclick="openPayment('Scout','0',event)" class="btn-secondary" style="display:block;text-align:center;padding:14px 24px;font-size:11px;clip-path:none;border-radius:0;">Start Free</a>
+    </div>
+
+    <!-- PRO -->
+    <div class="pricing-card featured">
+      <div class="featured-badge">Most Popular</div>
+      <div class="price-tier">Operator</div>
+      <div class="price-amount" style="color:var(--neon-pink);text-shadow:0 0 30px rgba(255,0,200,0.5);"><sup>$</sup>19</div>
+      <div class="price-period">// per month</div>
+      <hr class="price-divider">
+      <ul class="price-features">
+        <li>Unlimited scans</li>
+        <li>Full AI deep analysis</li>
+        <li>Solana + ETH + BSC + BASE + 5 more</li>
+        <li>Real-time Telegram alerts</li>
+        <li>Wallet firewall active</li>
+        <li>New launch monitoring</li>
+        <li class="off">API access</li>
+      </ul>
+      <a href="#" onclick="openPayment('Operator','19',event)" class="btn-primary" style="display:block;text-align:center;padding:14px 24px;font-size:11px;clip-path:none;background:var(--neon-pink);box-shadow:0 0 30px rgba(255,0,200,0.4);">Activate Now</a>
+    </div>
+
+    <!-- ELITE -->
+    <div class="pricing-card">
+      <div class="price-tier">Ghost</div>
+      <div class="price-amount"><sup>$</sup>79</div>
+      <div class="price-period">// per month</div>
+      <hr class="price-divider">
+      <ul class="price-features">
+        <li>Everything in Operator</li>
+        <li>API access (10k calls/mo)</li>
+        <li>Custom alert rules</li>
+        <li>Portfolio tracking</li>
+        <li>Priority scan queue</li>
+        <li>Discord bot included</li>
+        <li>White-label reports</li>
+      </ul>
+      <a href="#" onclick="openPayment('Ghost','79',event)" class="btn-secondary" style="display:block;text-align:center;padding:14px 24px;font-size:11px;clip-path:none;border-radius:0;">Go Ghost</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section z1">
+  <h2 class="cta-title">STOP GETTING<br><span>RUGGED.</span></h2>
+  <p class="cta-sub">Join 14,000+ traders who activated their shield today.</p>
+  <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
+    <a href="#pricing" class="btn-primary">Activate RugBuster</a>
+    <a href="#" class="btn-secondary">View Live Demo</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="z1">
+  <span class="footer-copy">© 2025 RUGBUSTER AI // ALL SYSTEMS OPERATIONAL // <span style="color:var(--neon-pink);">POWERED BY THE SYNDICATE</span></span>
+  <ul class="footer-links">
+    <li><a href="#">Docs</a></li>
+    <li><a href="#">API</a></li>
+    <li><a href="#">Telegram</a></li>
+    <li><a href="#">Privacy</a></li>
+  </ul>
+</footer>
+
+<script>
+  // =====================
+  // WALLET & PAYMENT LOGIC
+  // =====================
+  const RECEIVER = 'GwRUadL58katT5SJAeyNZSPFSgJfMP6Tng2dSQDEkhQA';
+  const SOL_PRICE = 145; // approx USD per SOL for demo
+  let walletConnected = false;
+  let walletAddress = null;
+  let selectedCurrency = 'SOL';
+  let currentPlan = null;
+  let currentPrice = 0;
+
+  function connectWallet() {
+    document.getElementById('walletModal').style.display = 'flex';
+  }
+
+  function closeWalletModal() {
+    document.getElementById('walletModal').style.display = 'none';
+  }
+
+  async function connectPhantom() {
+    const btn = document.getElementById('walletBtn');
+    const btnText = document.getElementById('walletBtnText');
+
+    // Check if Phantom is installed
+    if (!window.solana || !window.solana.isPhantom) {
+      document.getElementById('walletModalBody').innerHTML = `
+        <div style="text-align:center;padding:24px 0;">
+          <div style="font-size:48px;margin-bottom:16px;">👻</div>
+          <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-bottom:12px;">Phantom Not Found</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:24px;line-height:2;">
+            Install Phantom wallet to continue.<br>It's free and takes 2 minutes.
+          </div>
+          <a href="https://phantom.app" target="_blank" class="btn-primary" style="font-size:11px;padding:13px 32px;text-decoration:none;display:inline-block;">
+            Install Phantom →
+          </a>
+        </div>`;
+      return;
+    }
+
+    try {
+      const resp = await window.solana.connect();
+      walletAddress = resp.publicKey.toString();
+      walletConnected = true;
+      closeWalletModal();
+
+      // Update nav button
+      const short = walletAddress.slice(0,4) + '...' + walletAddress.slice(-4);
+      btnText.textContent = short;
+      btn.style.background = 'rgba(0,255,136,0.1)';
+      btn.style.borderColor = 'var(--neon-green)';
+      btn.style.boxShadow = '0 0 20px rgba(0,255,136,0.2)';
+      btn.onclick = disconnectWallet;
+
+      // Auto-fill scanner input if empty
+      const scanInput = document.getElementById('scanInput');
+      if (scanInput && !scanInput.value) {
+        scanInput.placeholder = `Wallet connected: ${short} — paste token address to scan`;
+      }
+
+    } catch(err) {
+      console.log('Wallet connect cancelled');
+    }
+  }
+
+  function disconnectWallet() {
+    if (window.solana) window.solana.disconnect();
+    walletConnected = false;
+    walletAddress = null;
+    const btn = document.getElementById('walletBtn');
+    const btnText = document.getElementById('walletBtnText');
+    btnText.textContent = 'Connect Wallet';
+    btn.style.background = 'transparent';
+    btn.style.boxShadow = 'none';
+    btn.onclick = connectWallet;
+  }
+
+  function openPayment(plan, price, e) {
+    e.preventDefault();
+    currentPlan = plan;
+    currentPrice = parseInt(price);
+
+    document.getElementById('payPlanName').textContent = plan.toUpperCase();
+
+    if (price === '0') {
+      document.getElementById('payPlanPrice').textContent = 'FREE';
+      document.getElementById('payPlanPrice').style.color = 'var(--neon-green)';
+      document.getElementById('payBtn').textContent = '⚡ ACTIVATE FREE PLAN';
+      document.getElementById('payBtn').style.background = 'var(--neon-green)';
+      document.getElementById('paySOL').style.display = 'none';
+      document.getElementById('payUSDC').style.display = 'none';
+    } else {
+      document.getElementById('payPlanPrice').textContent = '$' + price + '/mo';
+      document.getElementById('payPlanPrice').style.color = 'var(--neon-pink)';
+      document.getElementById('payBtn').textContent = '⚡ CONFIRM PAYMENT';
+      document.getElementById('payBtn').style.background = 'var(--neon-pink)';
+      document.getElementById('paySOL').style.display = 'block';
+      document.getElementById('payUSDC').style.display = 'block';
+      const solAmt = (currentPrice / SOL_PRICE).toFixed(3);
+      document.getElementById('solAmount').textContent = `≈ ${solAmt} SOL`;
+      document.getElementById('usdcAmount').textContent = `${currentPrice} USDC`;
+      selectCurrency('SOL');
+    }
+
+    if (walletConnected && walletAddress) {
+      const short = walletAddress.slice(0,6) + '...' + walletAddress.slice(-6);
+      document.getElementById('payFromAddr').textContent = short;
+      document.getElementById('walletPayInfo').style.display = 'block';
+      document.getElementById('connectFirst').style.display = 'none';
+    } else {
+      document.getElementById('walletPayInfo').style.display = 'none';
+      if (currentPrice > 0) document.getElementById('connectFirst').style.display = 'block';
+    }
+
+    document.getElementById('paymentModal').style.display = 'flex';
+  }
+
+  function closePaymentModal() {
+    document.getElementById('paymentModal').style.display = 'none';
+  }
+
+  function selectCurrency(cur) {
+    selectedCurrency = cur;
+    const solEl = document.getElementById('paySOL');
+    const usdcEl = document.getElementById('payUSDC');
+    if (cur === 'SOL') {
+      solEl.style.borderColor = 'rgba(0,245,255,0.6)';
+      solEl.style.background = 'rgba(0,245,255,0.08)';
+      usdcEl.style.borderColor = 'rgba(255,255,255,0.08)';
+      usdcEl.style.background = 'transparent';
+    } else {
+      usdcEl.style.borderColor = 'rgba(0,245,255,0.6)';
+      usdcEl.style.background = 'rgba(0,245,255,0.08)';
+      solEl.style.borderColor = 'rgba(255,255,255,0.08)';
+      solEl.style.background = 'transparent';
+    }
+  }
+
+  async function simulatePayment() {
+    if (currentPrice > 0 && !walletConnected) {
+      document.getElementById('connectFirst').style.display = 'block';
+      connectWallet();
+      return;
+    }
+
+    const btn = document.getElementById('payBtn');
+    btn.textContent = '⏳ PROCESSING...';
+    btn.style.opacity = '0.7';
+    btn.disabled = true;
+
+    // Simulate transaction delay
+    await new Promise(r => setTimeout(r, 2200));
+
+    closePaymentModal();
+    showSuccess(currentPlan);
+  }
+
+  function showSuccess(plan) {
+    document.getElementById('successPlan').textContent = plan.toUpperCase() + ' ACTIVATED';
+    const addr = walletAddress
+      ? walletAddress.slice(0,8) + '...' + walletAddress.slice(-8)
+      : 'DEMO MODE';
+    document.getElementById('successAddr').innerHTML =
+      `<span style="color:var(--text-muted);">WALLET:</span> ${addr}`;
+    document.getElementById('successModal').style.display = 'flex';
+  }
+
+  function closeSuccess() {
+    document.getElementById('successModal').style.display = 'none';
+    const btn = document.getElementById('payBtn');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+
+  // Close modals on backdrop click
+  document.getElementById('walletModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('walletModal')) closeWalletModal();
+  });
+  document.getElementById('paymentModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('paymentModal')) closePaymentModal();
+  });
+
+  const RUGCHECK_API = 'https://api.rugcheck.xyz/v1';
+  const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens';
+  const RUGBUSTER_API = (window.RUGBUSTER_API || 'http://127.0.0.1:8787').replace(/\/$/, '');
+
+  // Glitch effect on stat numbers
+  document.querySelectorAll('.stat-number').forEach(el => {
+    const original = el.textContent;
+    el.addEventListener('mouseenter', () => {
+      let i = 0;
+      const chars = '0123456789ABCDEF$%#@!';
+      const interval = setInterval(() => {
+        el.textContent = original.split('').map((c, idx) =>
+          idx < i ? original[idx] : chars[Math.floor(Math.random() * chars.length)]
+        ).join('');
+        i++;
+        if (i > original.length) { el.textContent = original; clearInterval(interval); }
+      }, 40);
+    });
+  });
+
+  // Enter key on input
+  document.getElementById('scanInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runScan();
+  });
+
+  function loadExample(type) {
+    const examples = {
+      apex: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'
+    };
+    document.getElementById('scanInput').value = examples[type] || examples.apex;
+  }
+
+  function formatUsd(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num) || num <= 0) return 'n/a';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      notation: num >= 1000000 ? 'compact' : 'standard',
+      maximumFractionDigits: num >= 1000 ? 1 : 2
+    }).format(num);
+  }
+
+  function isApexAddress(address) {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  function shortAddress(address) {
+    return address.length > 16 ? address.slice(0, 8) + '...' + address.slice(-6) : address;
+  }
+
+  function termLine(html) {
+    const body = document.getElementById('terminalBody');
+    const line = document.createElement('div');
+    line.innerHTML = html;
+    // Remove old cursor
+    const oldCursor = body.querySelector('.cursor');
+    if (oldCursor) oldCursor.parentElement.remove();
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function termLineDelay(html, delay) {
+    return new Promise(r => setTimeout(() => { termLine(html); r(); }, delay));
+  }
+
+  function clearTerminal() {
+    const body = document.getElementById('terminalBody');
+    body.innerHTML = '';
+  }
+
+  function setRiskMeter(score) {
+    const meter = document.getElementById('riskMeter');
+    const bar = document.getElementById('riskBar');
+    const scoreEl = document.getElementById('riskScore');
+    const label = document.getElementById('riskLabel');
+    meter.style.display = 'block';
+
+    let color, labelText;
+    if (score >= 75) {
+      color = '#ff3d3d';
+      labelText = '⚠ HIGH RISK — LIKELY RUG / SCAM';
+    } else if (score >= 45) {
+      color = 'var(--neon-orange)';
+      labelText = '⚡ MEDIUM RISK — PROCEED WITH CAUTION';
+    } else {
+      color = 'var(--neon-green)';
+      labelText = '✓ LOW RISK — LOOKS CLEAN';
+    }
+
+    bar.style.background = color;
+    scoreEl.style.color = color;
+    scoreEl.style.textShadow = `0 0 20px ${color}`;
+    label.style.color = color;
+    label.textContent = labelText;
+
+    setTimeout(() => {
+      bar.style.width = score + '%';
+      let current = 0;
+      const step = setInterval(() => {
+        current += 2;
+        scoreEl.textContent = Math.min(current, score);
+        if (current >= score) clearInterval(step);
+      }, 20);
+    }, 100);
+  }
+
+  function showCriticalAlert(title, body) {
+    document.getElementById('alertTitle').textContent = title;
+    document.getElementById('alertBody').innerHTML = body;
+    const modal = document.getElementById('criticalAlert');
+    modal.style.display = 'flex';
+  }
+
+  function closeAlert() {
+    document.getElementById('criticalAlert').style.display = 'none';
+  }
+
+  async function showTokenImage(imageUrl, name, address) {
+    const wrap   = document.getElementById('tokenImageWrap');
+    const imgEl  = document.getElementById('tokenImage');
+    const nameEl = document.getElementById('tokenImageName');
+    const symEl  = document.getElementById('tokenImageSymbol');
+
+    // Extract name / symbol from "Name (SYM)" format
+    const match = name.match(/^(.+?)\s*\(([^)]+)\)$/);
+    const displayName = match ? match[1] : name;
+    const displaySym  = match ? match[2] : '';
+
+    nameEl.textContent = displayName;
+    symEl.textContent  = displaySym;
+
+    if (imageUrl) {
+      imgEl.src = imageUrl;
+      imgEl.style.display = 'block';
+      wrap.style.display  = 'block';
+      return;
+    }
+
+    // Fallback: try DexScreener for image
+    try {
+      const dex = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
+      const dexData = await dex.json();
+      const pairs = dexData.pairs || [];
+      const img = pairs[0]?.info?.imageUrl;
+      if (img) {
+        imgEl.src = img;
+        imgEl.style.display = 'block';
+        wrap.style.display  = 'block';
+        return;
+      }
+    } catch(e) { /* silent */ }
+
+    // No image found — show name card only (no img)
+    imgEl.style.display = 'none';
+    wrap.style.display  = 'block';
+  }
+
+  function normalizeApexApiReport(report) {
+    const reasons = Array.isArray(report.reasons) ? report.reasons : [];
+    return {
+      tokenName: `${report.token_name || 'Unknown Token'}${report.symbol ? ` (${report.symbol})` : ''}`,
+      tokenImage: report.image_url || null,
+      dexId: String(report.dex_id || 'unknown').toUpperCase(),
+      pairLabel: report.symbol ? `${report.symbol} / AVAX` : 'TOKEN / AVAX',
+      liquidityUsd: Number(report.liquidity_usd || 0),
+      fdv: Number(report.fdv || 0),
+      marketCap: Number(report.fdv || 0),
+      volume24h: Number(report.volume24h || 0),
+      priceChange24h: Number(report.price_change24h || 0),
+      buys24h: Number(report.buys24h || 0),
+      sells24h: Number(report.sells24h || 0),
+      pairAddress: report.pair_address || '',
+      pairUrl: report.pair_url || '',
+      dangerFlags: reasons.filter(reason => /low|invalid|missing|unknown|suspicious|collapsed|heavy sell/i.test(reason)).map(reason => `✗ ${reason}`),
+      warnFlags: reasons.filter(reason => !/low|invalid|missing|unknown|suspicious|collapsed|heavy sell/i.test(reason)).map(reason => `⚡ ${reason}`),
+      risk: Number(report.score || 0),
+      source: 'RugBuster API'
+    };
+  }
+
+  async function fetchApexScanFromApi(address) {
+    const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok || !data.report) {
+      throw new Error(data.error || `HTTP ${res.status} — RugBuster API unavailable`);
+    }
+    return normalizeApexApiReport(data.report);
+  }
+
+  async function fetchApexScanFromDex(address) {
+    const res = await fetch(`${DEXSCREENER_API}/${encodeURIComponent(address)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status} — token not found or unsupported`);
+
+    const data = await res.json();
+    const avalanchePairs = (data.pairs || []).filter(pair => (pair.chainId || '').toLowerCase() === 'avalanche');
+    if (!avalanchePairs.length) {
+      throw new Error('Token not found on Avalanche liquidity venues');
+    }
+
+    const bestPair = avalanchePairs.sort((a, b) => {
+      const liqA = Number(a.liquidity?.usd || 0);
+      const liqB = Number(b.liquidity?.usd || 0);
+      return liqB - liqA;
+    })[0];
+
+    const normalized = address.toLowerCase();
+    const tokenSide = [bestPair.baseToken, bestPair.quoteToken].find(token => (token?.address || '').toLowerCase() === normalized) || bestPair.baseToken;
+    const pairSide = tokenSide === bestPair.baseToken ? bestPair.quoteToken : bestPair.baseToken;
+
+    const liquidityUsd = Number(bestPair.liquidity?.usd || 0);
+    const fdv = Number(bestPair.fdv || bestPair.marketCap || 0);
+    const marketCap = Number(bestPair.marketCap || 0);
+    const volume24h = Number(bestPair.volume?.h24 || 0);
+    const priceChange24h = Number(bestPair.priceChange?.h24 || 0);
+    const txns24h = bestPair.txns?.h24 || {};
+    const buys24h = Number(txns24h.buys || 0);
+    const sells24h = Number(txns24h.sells || 0);
+    const socials = bestPair.info?.socials || [];
+    const websites = bestPair.info?.websites || [];
+    const imageUrl = bestPair.info?.imageUrl || null;
+    const ageHours = bestPair.pairCreatedAt ? (Date.now() - Number(bestPair.pairCreatedAt)) / 3600000 : null;
+
+    const dangerFlags = [];
+    const warnFlags = [];
+    let risk = 18;
+
+    if (liquidityUsd < 5000) {
+      dangerFlags.push(`✗ Liquidity is only ${formatUsd(liquidityUsd)} — thin exit path`);
+      risk += 38;
+    } else if (liquidityUsd < 25000) {
+      warnFlags.push(`⚡ Liquidity is thin at ${formatUsd(liquidityUsd)}`);
+      risk += 18;
+    } else {
+      risk -= 8;
+    }
+
+    if (fdv > 0) {
+      const liquidityRatio = liquidityUsd / fdv;
+      if (liquidityRatio < 0.01) {
+        dangerFlags.push('✗ Liquidity to FDV ratio is under 1%');
+        risk += 25;
+      } else if (liquidityRatio < 0.03) {
+        warnFlags.push('⚡ Liquidity to FDV ratio is low');
+        risk += 12;
+      }
+    }
+
+    if (priceChange24h <= -60) {
+      dangerFlags.push(`✗ Price collapsed ${priceChange24h.toFixed(1)}% in 24h`);
+      risk += 22;
+    } else if (priceChange24h <= -25) {
+      warnFlags.push(`⚡ Price is down ${priceChange24h.toFixed(1)}% in 24h`);
+      risk += 10;
+    }
+
+    if (sells24h > buys24h * 3 && sells24h > 20) {
+      warnFlags.push(`⚡ Heavy sell pressure: ${sells24h} sells vs ${buys24h} buys`);
+      risk += 10;
+    }
+
+    if (volume24h < 10000) {
+      warnFlags.push(`⚡ Low 24h volume at ${formatUsd(volume24h)}`);
+      risk += 8;
+    }
+
+    if (ageHours !== null && ageHours < 6) {
+      warnFlags.push(`⚡ Pair is fresh: ${ageHours.toFixed(1)}h old`);
+      risk += 8;
+    }
+
+    if (!socials.length && !websites.length) {
+      warnFlags.push('⚡ No visible project socials or website in market metadata');
+      risk += 8;
+    }
+
+    risk = Math.max(6, Math.min(95, Math.round(risk)));
+
+    return {
+      tokenName: `${tokenSide?.name || 'Unknown Token'}${tokenSide?.symbol ? ` (${tokenSide.symbol})` : ''}`,
+      tokenImage: imageUrl,
+      dexId: (bestPair.dexId || 'unknown').toUpperCase(),
+      pairLabel: `${pairSide?.symbol || 'PAIR'} / ${tokenSide?.symbol || 'TOKEN'}`,
+      liquidityUsd,
+      fdv,
+      marketCap,
+      volume24h,
+      priceChange24h,
+      buys24h,
+      sells24h,
+      pairAddress: bestPair.pairAddress,
+      pairUrl: bestPair.url,
+      dangerFlags,
+      warnFlags,
+      risk,
+      source: 'DexScreener fallback'
+    };
+  }
+
+  async function fetchApexScan(address) {
+    try {
+      return await fetchApexScanFromApi(address);
+    } catch (apiErr) {
+      console.warn('RugBuster API unavailable, falling back to DexScreener:', apiErr);
+      return await fetchApexScanFromDex(address);
+    }
+  }
+
+  async function runScan() {
+    const address = document.getElementById('scanInput').value.trim();
+    if (!address) {
+      document.getElementById('scanInput').style.borderColor = '#ff3d3d';
+      setTimeout(() => document.getElementById('scanInput').style.borderColor = '', 1000);
+      return;
+    }
+
+    clearTerminal();
+    document.getElementById('riskMeter').style.display = 'none';
+    document.getElementById('tokenImageWrap').style.display = 'none';
+
+    const short = shortAddress(address);
+    const isAPEX = isApexAddress(address);
+
+    if (!isAPEX) {
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-danger">Unsupported address format</span>`);
+      termLine(`<span class="t-out">// Use an Apex / Avalanche 0x token address.</span>`);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      return;
+    }
+
+    const chain = 'APEX/AVALANCHE';
+
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">scan ${short} --chain ${chain} --deep --ai</span>`);
+    await termLineDelay(`<span class="t-out">Initializing threat engine...</span>`, 300);
+    await termLineDelay(`<span class="t-out">Connecting to Avalanche live market feeds...</span>`, 500);
+    await termLineDelay(`<span class="t-out">Fetching Apex token pairs and liquidity...</span>`, 700);
+
+    let apexData;
+    try {
+      apexData = await fetchApexScan(address);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ SCAN FAILED: ${err.message}</span>`, 400);
+      await termLineDelay(`<span class="t-out">// Ensure this is an Avalanche token address with live liquidity.</span>`, 200);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      return;
+    }
+
+    const allFlags = [...apexData.dangerFlags, ...apexData.warnFlags];
+
+    await termLineDelay(`<span class="t-cyan">✓ Network:</span>  <span class="t-cmd">APEX / AVALANCHE</span>`, 200);
+    await termLineDelay(`<span class="t-cyan">✓ Token:</span>    <span class="t-cmd">${apexData.tokenName}</span>`, 220);
+    await termLineDelay(`<span class="t-cyan">✓ Address:</span>  <span class="t-out">${short}</span>`, 180);
+    await termLineDelay(`<span class="t-cyan">✓ Primary DEX:</span> <span class="t-cmd">${apexData.dexId}</span>`, 180);
+    await termLineDelay(`<span class="t-cyan">✓ Pair:</span>     <span class="t-out">${apexData.pairLabel}</span>`, 180);
+    await termLineDelay(`<span class="t-cyan">✓ Liquidity:</span> <span class="t-cmd">${formatUsd(apexData.liquidityUsd)}</span>`, 180);
+    await termLineDelay(`<span class="t-cyan">✓ FDV:</span>      <span class="t-cmd">${formatUsd(apexData.fdv)}</span>`, 180);
+    await termLineDelay(`<span class="t-cyan">✓ 24h Volume:</span> <span class="t-cmd">${formatUsd(apexData.volume24h)}</span>`, 180);
+    await termLineDelay(`<span class="t-cyan">✓ 24h Flow:</span> <span class="t-out">${apexData.buys24h} buys / ${apexData.sells24h} sells</span>`, 180);
+    await termLineDelay(`<span class="t-cyan">✓ 24h Price:</span> <span class="${apexData.priceChange24h < 0 ? 't-warn' : 't-success'}">${apexData.priceChange24h.toFixed(1)}%</span>`, 180);
+    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+    await termLineDelay(`<span class="t-out">── LIVE RISK FLAGS ───────────────────────</span>`, 260);
+
+    if (!allFlags.length) {
+      await termLineDelay(`<span class="t-success">  ✓ No live danger flags detected from market structure</span>`, 220);
+    }
+
+    for (let i = 0; i < allFlags.length; i++) {
+      const flag = allFlags[i];
+      const cls = flag.startsWith('✗') ? 't-danger' : 't-warn';
+      await termLineDelay(`<span class="${cls}">  ${flag}</span>`, 90 + i * 60);
+    }
+
+    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+    await termLineDelay(`<span class="t-out">── VERDICT ────────────────────────────────</span>`, 200);
+
+    if (apexData.risk >= 75) {
+      await termLineDelay(`<span class="t-danger">  ⚠ THREAT LEVEL : CRITICAL</span>`, 230);
+      await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : HIGH RISK — APEX TOKEN FAILS LIVE CHECKS</span>`, 200);
+      await termLineDelay(`<span class="t-danger">  ✗ DO NOT INTERACT WITHOUT MANUAL REVIEW</span>`, 180);
+    } else if (apexData.risk >= 45) {
+      await termLineDelay(`<span class="t-warn">  ⚡ THREAT LEVEL : ELEVATED</span>`, 230);
+      await termLineDelay(`<span class="t-warn">  ⚡ RESULT       : MEDIUM RISK — MIXED AVALANCHE SIGNALS</span>`, 200);
+    } else {
+      await termLineDelay(`<span class="t-success">  ✓ THREAT LEVEL : LOW</span>`, 230);
+      await termLineDelay(`<span class="t-success">  ✓ RESULT       : HEALTHY MARKET STRUCTURE</span>`, 200);
+    }
+
+    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+    await termLineDelay(`<span class="t-success">✓ Scan complete · Powered by ${apexData.source || 'RugBuster Avalanche data'}</span>`, 200);
+    if (apexData.pairUrl) {
+      await termLineDelay(`<span class="t-out">// Pair URL: ${apexData.pairUrl}</span>`, 120);
+    }
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+
+    setRiskMeter(apexData.risk);
+    showTokenImage(apexData.tokenImage, apexData.tokenName, address);
+
+    if (apexData.risk >= 75) {
+      const dangerList = apexData.dangerFlags.map(flag => `• ${flag}`).join('<br>');
+      setTimeout(() => {
+        showCriticalAlert(
+          'HIGH RISK APEX TOKEN DETECTED',
+          `Token: <span style="color:#ff3d3d">${apexData.tokenName}</span><br>
+           Address: <span style="color:var(--text-muted)">${short}</span><br>
+           Risk Score: <span style="color:#ff3d3d;font-size:18px">${apexData.risk}%</span><br><br>
+           ${dangerList ? `<span style="color:#ff3d3d">${dangerList}</span><br><br>` : ''}
+           <span style="color:#ff3d3d">⚠ LIVE AVALANCHE MARKET SIGNALS LOOK DANGEROUS</span><br>
+           Review liquidity, FDV, and sell pressure before touching this token.`
+        );
+      }, 800);
+    }
+    return;
+
+    let data;
+    try {
+      // Use full /report endpoint — contains complete risks array
+      const res = await fetch(`${RUGCHECK_API}/tokens/${encodeURIComponent(address)}/report`);
+      if (!res.ok) throw new Error(`HTTP ${res.status} — token not found or unsupported`);
+      data = await res.json();
+    } catch(err) {
+      await termLineDelay(`<span class="t-danger">✗ SCAN FAILED: ${err.message}</span>`, 400);
+      await termLineDelay(`<span class="t-out">// Ensure this is a valid Solana mint address.</span>`, 200);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      return;
+    }
+
+    // ── Parse RugCheck report fields (same logic as Telegram bot) ───────
+    const tokenMeta  = data.tokenMeta || data.fileMeta || {};
+    const tokenName  = tokenMeta.name
+      ? `${tokenMeta.name}${tokenMeta.symbol ? ' (' + tokenMeta.symbol + ')' : ''}`
+      : short;
+    const tokenImage = tokenMeta.image || null;
+
+    const tokenData  = data.token || {};
+    const mintAuth   = tokenData.mintAuthority;
+    const freezeAuth = tokenData.freezeAuthority;
+    const topHolders = data.topHolders || [];
+    const markets    = data.markets || [];
+    const lpLocked   = data.lpLockedPct || 0;
+    const mutable    = tokenMeta.mutable || false;
+
+    const SYSTEM_ADDR = '11111111111111111111111111111111';
+    const dangerFlags = [];
+    const warnFlags   = [];
+
+    // Mint authority
+    if (mintAuth && mintAuth !== SYSTEM_ADDR) {
+      dangerFlags.push('✗ Mint Authority Active — dev can print unlimited tokens');
+    }
+    // Freeze authority
+    if (freezeAuth && freezeAuth !== SYSTEM_ADDR) {
+      dangerFlags.push('✗ Freeze Authority Active — wallets can be frozen');
+    }
+    // Top holder concentration
+    if (topHolders.length > 0) {
+      const top1  = topHolders[0].pct || 0;
+      const top5  = topHolders.slice(0,5).reduce((s,h) => s + (h.pct||0), 0);
+      if (top1 > 50)       dangerFlags.push(`✗ Top holder owns ${top1.toFixed(1)}% of supply — extreme concentration`);
+      else if (top1 > 20)  warnFlags.push(`⚡ Top holder owns ${top1.toFixed(1)}% of supply`);
+      if (top5 > 80)       warnFlags.push(`⚡ Top 5 holders own ${top5.toFixed(1)}% of supply`);
+    }
+    // LP lock
+    if (markets.length > 0 && lpLocked === 0) {
+      warnFlags.push('⚡ Liquidity not locked — rug pull possible');
+    } else if (lpLocked > 0 && lpLocked < 50) {
+      warnFlags.push(`⚡ Only ${lpLocked.toFixed(0)}% of LP locked`);
+    }
+    // Mutable metadata
+    if (mutable) warnFlags.push('⚡ Mutable metadata — can be changed by dev');
+
+    // RugCheck risks array (if populated)
+    (data.risks || []).forEach(r => {
+      if (r.level === 'danger') dangerFlags.push(`✗ ${r.name || '?'}`);
+      else if (r.level === 'warn') warnFlags.push(`⚡ ${r.name || '?'}`);
+    });
+
+    // ── Risk classification ─────────────────────────────────────────────
+    const BLUE_CHIPS = ['JUP','BONK','WIF','SOL','USDC','USDT','RAY','ORCA'];
+    const symUpper   = (tokenMeta.symbol || '').toUpperCase();
+    const isKnownSafe = BLUE_CHIPS.some(x => symUpper.includes(x));
+
+    let risk;
+    if (isKnownSafe)              risk = 5;
+    else if (dangerFlags.length)  risk = 85;
+    else if (warnFlags.length >= 2) risk = 65;
+    else if (warnFlags.length)    risk = 45;
+    else                          risk = 15;
+
+    const allFlags = [...dangerFlags, ...warnFlags];
+
+    // ── Terminal output ─────────────────────────────────────────────────
+    await termLineDelay(`<span class="t-cyan">✓ Network:</span>  <span class="t-cmd">SOLANA</span>`, 200);
+    await termLineDelay(`<span class="t-cyan">✓ Token:</span>    <span class="t-cmd">${tokenName}</span>`, 250);
+    await termLineDelay(`<span class="t-cyan">✓ Address:</span>  <span class="t-out">${short}</span>`, 200);
+    await termLineDelay(`<span class="t-cyan">✓ Mint Auth:</span> <span class="${mintAuth && mintAuth !== SYSTEM_ADDR ? 't-danger' : 't-success'}">${mintAuth && mintAuth !== SYSTEM_ADDR ? '🚨 Active' : '✅ Disabled'}</span>`, 200);
+    await termLineDelay(`<span class="t-cyan">✓ Freeze Auth:</span> <span class="${freezeAuth && freezeAuth !== SYSTEM_ADDR ? 't-danger' : 't-success'}">${freezeAuth && freezeAuth !== SYSTEM_ADDR ? '🚨 Active' : '✅ Disabled'}</span>`, 200);
+    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+    await termLineDelay(`<span class="t-out">── RISK FLAGS ─────────────────────────────</span>`, 300);
+
+    if (allFlags.length === 0) {
+      await termLineDelay(`<span class="t-success">  ✓ No risk flags found</span>`, 300);
+    }
+    for (let i = 0; i < allFlags.length; i++) {
+      const f   = allFlags[i];
+      const cls = f.startsWith('✗') ? 't-danger' : 't-warn';
+      await termLineDelay(`<span class="${cls}">  ${f}</span>`, 100 + i * 70);
+    }
+
+    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+    await termLineDelay(`<span class="t-out">── VERDICT ────────────────────────────────</span>`, 200);
+
+    if (risk >= 75) {
+      await termLineDelay(`<span class="t-danger">  ⚠ THREAT LEVEL : CRITICAL</span>`, 250);
+      await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : HIGH RISK — POTENTIAL RUG / SCAM</span>`, 200);
+      await termLineDelay(`<span class="t-danger">  ✗ DO NOT INTERACT WITH THIS TOKEN</span>`, 200);
+    } else if (risk >= 40) {
+      await termLineDelay(`<span class="t-warn">  ⚡ THREAT LEVEL : ELEVATED</span>`, 250);
+      await termLineDelay(`<span class="t-warn">  ⚡ RESULT       : MEDIUM RISK — PROCEED WITH CAUTION</span>`, 200);
+    } else {
+      await termLineDelay(`<span class="t-success">  ✓ THREAT LEVEL : LOW</span>`, 250);
+      await termLineDelay(`<span class="t-success">  ✓ RESULT       : APPEARS CLEAN</span>`, 200);
+    }
+
+    // displayScore for risk meter (0-100)
+    const displayScore = Math.max(0, Math.min(100, risk));
+
+    await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
+    await termLineDelay(`<span class="t-success">✓ Scan complete · Powered by RugCheck.xyz</span>`, 200);
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+
+    setRiskMeter(displayScore);
+
+    // Show token image if available (RugCheck or DexScreener fallback)
+    showTokenImage(tokenImage, tokenName, address);
+
+    // Critical alert popup for high-risk tokens
+    if (risk >= 75) {
+      const dangerList = dangerFlags.map(f => `• ${f}`).join('<br>');
+      setTimeout(() => {
+        showCriticalAlert(
+          'HIGH RISK TOKEN DETECTED',
+          `Token: <span style="color:#ff3d3d">${tokenName}</span><br>
+           Address: <span style="color:var(--text-muted)">${short}</span><br>
+           Risk Score: <span style="color:#ff3d3d;font-size:18px">${risk}%</span><br><br>
+           ${dangerList ? `<span style="color:#ff3d3d">${dangerList}</span><br><br>` : ''}
+           <span style="color:#ff3d3d">⚠ DO NOT BUY — DO NOT INTERACT</span><br>
+           If you hold this token, consider exiting immediately.`
+        );
+      }, 800);
+    }
+  }
+</script>
+
+</body>
+</html>
