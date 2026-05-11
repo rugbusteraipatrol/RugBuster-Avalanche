@@ -147,6 +147,48 @@ The API:
 
 If the website is open locally, its Apex scanner will try this API first at `http://127.0.0.1:8787`, then fall back to direct DexScreener reads if the API is not running.
 
+## Railway Deploy
+
+The API is ready for Railway deployment.
+
+Files already included:
+
+- `Procfile`
+- `requirements.txt`
+- `api/server.py`
+
+Recommended Railway setup:
+
+1. Create a new Railway service from the `RugBuster-Avalanche` repo.
+2. Railway should detect the Python app automatically.
+3. Start command:
+
+```txt
+gunicorn --bind 0.0.0.0:$PORT api.server:app
+```
+
+4. Add environment variables:
+
+```txt
+RUGBUSTER_NETWORK=mainnet
+AVALANCHE_RPC_URL=https://api.avax.network/ext/bc/C/rpc
+REGISTRY_ADDRESS=0x5F30276B3A5079E088Ec3072884286de5a868355
+PRIVATE_KEY=your_registry_reviewer_key
+PUBLISH_TO_REGISTRY=false
+TELEGRAM_ALERTS=false
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+```
+
+5. After deploy, test:
+
+```txt
+GET /health
+POST /api/scan
+```
+
+When the public Railway URL is live, point the website scanner to that URL instead of `127.0.0.1`.
+
 ## Temporary AI Bridge
 
 The first version uses deterministic risk rules in `risk_engine.py` so demos can run end-to-end immediately.

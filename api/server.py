@@ -256,6 +256,6 @@ def notify_report(report: dict[str, Any], publish_result: dict[str, Any] | None)
 
 
 if __name__ == "__main__":
-    host = os.getenv("RUGBUSTER_API_HOST", "127.0.0.1")
-    port = int(os.getenv("RUGBUSTER_API_PORT", "8787"))
+    host = os.getenv("RUGBUSTER_API_HOST", "0.0.0.0")
+    port = int(os.getenv("PORT") or os.getenv("RUGBUSTER_API_PORT", "8787"))
     app.run(host=host, port=port, debug=False)
