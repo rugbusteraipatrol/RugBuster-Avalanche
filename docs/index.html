@@ -428,6 +428,27 @@
     align-items: center;
   }
 
+  .monitor-panel {
+    max-width: 1280px;
+    margin: 28px auto 0;
+    border: 1px solid rgba(0,245,255,0.14);
+    background: rgba(10,15,30,0.82);
+    padding: 22px 22px 18px;
+    box-shadow: inset 0 0 24px rgba(0,245,255,0.03);
+  }
+
+  .monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .monitor-card {
+    border: 1px solid rgba(0,245,255,0.1);
+    padding: 14px 16px;
+    background: rgba(0,245,255,0.03);
+  }
+
   .terminal {
     background: #020408;
     border: 1px solid rgba(0, 245, 255, 0.2);
@@ -772,6 +793,7 @@
     .pricing-grid { grid-template-columns: 1fr; }
     .how-grid { grid-template-columns: 1fr 1fr; }
     .terminal-wrap { grid-template-columns: 1fr; gap: 40px; }
+    .monitor-grid { grid-template-columns: 1fr; }
     .stats-bar { grid-template-columns: repeat(2, 1fr); }
     section { padding: 60px 24px; }
     .terminal-section { padding: 60px 24px; }
@@ -1195,48 +1217,6 @@
           </div>
         </div>
 
-      <div style="
-        margin-top:32px;
-        border:1px solid rgba(0,245,255,0.14);
-        background:rgba(10,15,30,0.82);
-        padding:22px 22px 18px;
-        box-shadow:inset 0 0 24px rgba(0,245,255,0.03);
-      ">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-          <div>
-            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// fuji live monitor</div>
-            <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Apex Factory Watchlist</div>
-          </div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-green);letter-spacing:2px;">PAIRCREATED LISTENERS ARMED</div>
-        </div>
-
-        <div style="display:grid;gap:12px;">
-          <div style="border:1px solid rgba(0,245,255,0.1);padding:14px 16px;background:rgba(0,245,255,0.03);">
-            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-              <div>
-                <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Trader Joe Factory</div>
-                <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xFf06D441D352F33041926D451a5118742880017D</div>
-              </div>
-              <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
-            </div>
-          </div>
-
-          <div style="border:1px solid rgba(0,245,255,0.1);padding:14px 16px;background:rgba(0,245,255,0.03);">
-            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-              <div>
-                <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Pangolin Factory</div>
-                <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xefa94DE7a4659D7836704329a8ca30E89e599d14</div>
-              </div>
-              <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
-          Adapter logic listens for <span style="color:var(--neon-cyan);">PairCreated</span> events from these factory contracts.
-          When a new pair appears, RugBuster captures the token address, runs live risk analysis, and prepares the result for on-chain certification.
-        </div>
-      </div>
     </div>
 
     <!-- TERMINAL OUTPUT -->
@@ -1255,6 +1235,43 @@
         <div>&nbsp;</div>
         <div><span class="t-prompt">RB&gt;</span> <span class="cursor"></span></div>
       </div>
+    </div>
+  </div>
+
+  <div class="monitor-panel z1">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// fuji live monitor</div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Apex Factory Watchlist</div>
+      </div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-green);letter-spacing:2px;">PAIRCREATED LISTENERS ARMED</div>
+    </div>
+
+    <div class="monitor-grid">
+      <div class="monitor-card">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Trader Joe Factory</div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xFf06D441D352F33041926D451a5118742880017D</div>
+          </div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
+        </div>
+      </div>
+
+      <div class="monitor-card">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+          <div>
+            <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Pangolin Factory</div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xefa94DE7a4659D7836704329a8ca30E89e599d14</div>
+          </div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
+      Adapter logic listens for <span style="color:var(--neon-cyan);">PairCreated</span> events from these factory contracts.
+      When a new pair appears, RugBuster captures the token address, runs live risk analysis, and prepares the result for on-chain certification.
     </div>
   </div>
 </div>
