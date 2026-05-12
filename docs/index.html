@@ -1184,6 +1184,19 @@
           <button onclick="runScan()" class="btn-primary" style="font-size:11px;padding:13px 32px;border:none;cursor:crosshair;">
             ⚡ SCAN TOKEN
           </button>
+          <button id="publishBtn" onclick="publishCurrentReport()" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
+            background:transparent;
+            border:1px solid rgba(255,0,200,0.22);
+            color:rgba(255,0,200,0.58);
+            cursor:crosshair;
+            transition:all 0.2s;
+          " onmouseover="if(!this.disabled){this.style.color='var(--neon-pink)'}" onmouseout="if(!this.disabled){this.style.color='rgba(255,0,200,0.58)'}" disabled>
+            PUBLISH REPORT
+          </button>
           <button id="sendAlertBtn" onclick="sendTelegramAlert()" style="
             font-family:'Share Tech Mono',monospace;
             font-size:11px;
@@ -1774,6 +1787,15 @@
     btn.style.color = enabled ? 'var(--neon-green)' : 'rgba(0,255,136,0.55)';
   }
 
+  function setPublishButtonState(enabled, text = 'PUBLISH REPORT') {
+    const btn = document.getElementById('publishBtn');
+    btn.disabled = !enabled;
+    btn.textContent = text;
+    btn.style.opacity = enabled ? '1' : '0.6';
+    btn.style.borderColor = enabled ? 'rgba(255,0,200,0.45)' : 'rgba(255,0,200,0.22)';
+    btn.style.color = enabled ? 'var(--neon-pink)' : 'rgba(255,0,200,0.58)';
+  }
+
   function scorePresentation(status) {
     if (status === 'HIGH') {
       return { color: '#ff3d3d', label: 'HIGH', text: '⚠ HIGH RISK — HARD EVIDENCE LOOKS BAD' };
@@ -2120,6 +2142,19 @@
       return data;
     }
 
+    async function postRegistryPublish(address) {
+      const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, publish: true, use_cached: true })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `HTTP ${res.status} — Registry publish failed`);
+      }
+      return data;
+    }
+
   async function fetchApexScanFromDex(address) {
     const res = await fetch(`${DEXSCREENER_API}/${encodeURIComponent(address)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status} — token not found or unsupported`);
@@ -2286,6 +2321,7 @@
     document.getElementById('scoreBoard').style.display = 'none';
     document.getElementById('tokenImageWrap').style.display = 'none';
     setAlertButtonState(false, 'SEND ALERT');
+    setPublishButtonState(false, 'PUBLISH REPORT');
     lastScannedAddress = null;
     lastScanData = null;
 
@@ -2392,6 +2428,7 @@
     lastScannedAddress = address;
     lastScanData = apexData;
     setAlertButtonState(true, 'SEND ALERT');
+    setPublishButtonState(true, 'PUBLISH REPORT');
 
     if (apexData.rugStatus === 'HIGH' || apexData.speculationStatus === 'HIGH') {
       const dangerList = [...apexData.rugReasons.high, ...apexData.speculationReasons.high].map(flag => `• ${flag.replace(/^[✗⚡·]\s*/, '')}`).join('<br>');
@@ -2439,6 +2476,36 @@
         await termLineDelay(`<span class="t-out">// Check TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, and bot access in Railway.</span>`, 120);
       }
       setAlertButtonState(true, 'SEND ALERT');
+    }
+
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+  }
+
+  async function publishCurrentReport() {
+    if (!lastScannedAddress || !lastScanData) {
+      termLine(`<span class="t-warn">⚡ Scan a token first before publishing to the registry.</span>`);
+      termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      return;
+    }
+
+    setPublishButtonState(false, 'PUBLISHING...');
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">publish ${shortAddress(lastScannedAddress)} --registry</span>`);
+    await termLineDelay(`<span class="t-out">Preparing mainnet registry write...</span>`, 220);
+
+    try {
+      const response = await postRegistryPublish(lastScannedAddress);
+      if (!response.published || !response.published.tx_hash) {
+        throw new Error('Registry API did not confirm on-chain publication');
+      }
+      await termLineDelay(`<span class="t-success">✓ Registry publish confirmed.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// TX: ${response.published.tx_hash}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Gas used: ${response.published.gas_used}</span>`, 120);
+      setPublishButtonState(true, 'PUBLISHED');
+      setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ REGISTRY PUBLISH FAILED: ${err.message}</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Check REGISTRY_ADDRESS, PRIVATE_KEY, and mainnet gas balance.</span>`, 120);
+      setPublishButtonState(true, 'PUBLISH REPORT');
     }
 
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
