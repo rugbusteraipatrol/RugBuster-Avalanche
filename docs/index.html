@@ -1342,7 +1342,7 @@
     <div id="portfolioSummary" style="display:none;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1px;"></div>
 
     <div id="portfolioList" style="display:none;"></div>
-    <div id="portfolioEmpty" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
+    <div id="portfolioEmpty" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;border:1px solid rgba(0,245,255,0.08);background:rgba(0,245,255,0.03);padding:18px 20px;">
       Connect an Avalanche wallet and we will pull your token balances, score each asset with the Rug Engine, and flag suspicious positions without guessing market data.
     </div>
   </div>
@@ -1896,6 +1896,28 @@
     const unknownCount = entries.filter(entry =>
       entry.report.rug_status === 'UNKNOWN' || entry.report.speculation_status === 'UNKNOWN'
     ).length;
+
+    if (!entries.length) {
+      panel.classList.remove('alert');
+      list.style.display = 'none';
+      summary.style.display = 'block';
+      empty.style.display = 'block';
+      state.textContent = 'PORTFOLIO STATUS — NO ERC-20 HOLDINGS DETECTED';
+      state.style.color = 'var(--neon-cyan)';
+      summary.innerHTML = `
+        <span style="color:var(--neon-cyan);">TOKENS:</span> 0
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style="color:var(--text-muted);">SUSPICIOUS:</span> 0
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style="color:var(--text-muted);">UNKNOWN:</span> 0
+      `;
+      empty.innerHTML = `
+        <div style="font-family:'Orbitron',monospace;font-size:18px;color:var(--text-primary);margin-bottom:8px;">Wallet is clean, but empty.</div>
+        <div style="margin-bottom:8px;">No Avalanche ERC-20 holdings were detected in this address.</div>
+        <div style="color:var(--neon-cyan);">That is a valid result — not a scanner error.</div>
+      `;
+      return;
+    }
 
     state.textContent = suspicious
       ? 'PORTFOLIO STATUS — SUSPICIOUS ASSETS DETECTED'
