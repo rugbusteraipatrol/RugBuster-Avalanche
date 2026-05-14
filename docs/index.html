@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RugBuster Apex — Avalanche Security Scanner</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -930,7 +931,8 @@
       </div>
       <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:var(--text-muted);text-align:left;">
         Portfolio scan uses your connected Avalanche wallet.<br>
-        Registry burn from <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> is currently executed by the RugBuster backend wallet.
+        Connected reviewer wallets can publish directly from their own AVAX balance.<br>
+        If no reviewer wallet is connected, <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> falls back to the RugBuster backend wallet.
       </div>
     </div>
   </div>
@@ -1186,6 +1188,19 @@
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           <button onclick="runScan()" class="btn-primary" style="font-size:11px;padding:13px 32px;border:none;cursor:crosshair;">
             ⚡ SCAN TOKEN
+          </button>
+          <button id="authorizeReviewerBtn" onclick="authorizeReviewerWallet()" style="
+            font-family:'Share Tech Mono',monospace;
+            font-size:11px;
+            letter-spacing:2px;
+            padding:12px 20px;
+            background:transparent;
+            border:1px solid rgba(0,245,255,0.22);
+            color:rgba(0,245,255,0.58);
+            cursor:crosshair;
+            transition:all 0.2s;
+          " onmouseover="if(!this.disabled){this.style.color='var(--neon-cyan)'}" onmouseout="if(!this.disabled){this.style.color='rgba(0,245,255,0.58)'}">
+            AUTHORIZE REVIEWER
           </button>
           <button id="publishBtn" onclick="publishCurrentReport()" style="
             font-family:'Share Tech Mono',monospace;
@@ -1520,6 +1535,13 @@
   // WALLET & PAYMENT LOGIC
   // =====================
   const RECEIVER = 'GwRUadL58katT5SJAeyNZSPFSgJfMP6Tng2dSQDEkhQA';
+  const REGISTRY_ADDRESS = '0x5F30276B3A5079E088Ec3072884286de5a868355';
+  const REGISTRY_ABI = [
+    'function owner() view returns (address)',
+    'function authorizedReviewers(address) view returns (bool)',
+    'function setReviewer(address reviewer, bool authorized) external',
+    'function updateScore(address token, uint8 score, bytes32 metadataHash) external'
+  ];
   const SOL_PRICE = 145; // approx USD per SOL for demo
   let walletConnected = false;
   let walletAddress = null;
@@ -1537,6 +1559,33 @@
 
   function closeWalletModal() {
     document.getElementById('walletModal').style.display = 'none';
+  }
+
+  async function ensureAvalancheChain() {
+    if (!window.ethereum) throw new Error('No EVM wallet detected');
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (chainId === '0xa86a') return;
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0xa86a' }]
+      });
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0xa86a',
+            chainName: 'Avalanche C-Chain',
+            nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+            rpcUrls: ['https://api.avax.network/ext/bc/C/rpc'],
+            blockExplorerUrls: ['https://snowtrace.io']
+          }]
+        });
+      } else {
+        throw switchError;
+      }
+    }
   }
 
   async function connectMetaMask() {
@@ -1559,30 +1608,7 @@
     }
 
     try {
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      if (chainId !== '0xa86a') {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xa86a' }]
-          });
-        } catch (switchError) {
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0xa86a',
-                chainName: 'Avalanche C-Chain',
-                nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
-                rpcUrls: ['https://api.avax.network/ext/bc/C/rpc'],
-                blockExplorerUrls: ['https://snowtrace.io']
-              }]
-            });
-          } else {
-            throw switchError;
-          }
-        }
-      }
+      await ensureAvalancheChain();
 
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       walletAddress = accounts[0];
@@ -1776,6 +1802,93 @@
     return address.length > 16 ? address.slice(0, 8) + '...' + address.slice(-6) : address;
   }
 
+  function sortDeep(value) {
+    if (Array.isArray(value)) return value.map(sortDeep);
+    if (value && typeof value === 'object') {
+      return Object.keys(value).sort().reduce((acc, key) => {
+        acc[key] = sortDeep(value[key]);
+        return acc;
+      }, {});
+    }
+    return value;
+  }
+
+  function stableJson(value) {
+    return JSON.stringify(sortDeep(value));
+  }
+
+  async function sha256Bytes32(value) {
+    const encoded = new TextEncoder().encode(stableJson(value));
+    const digest = await crypto.subtle.digest('SHA-256', encoded);
+    const bytes = Array.from(new Uint8Array(digest));
+    return `0x${bytes.map(b => b.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  async function getRegistryContractWithSigner() {
+    if (!window.ethereum || !window.ethers) {
+      throw new Error('MetaMask or another EVM wallet is required');
+    }
+    await ensureAvalancheChain();
+    const provider = new window.ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new window.ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, signer);
+    return { provider, signer, contract };
+  }
+
+  async function isAuthorizedReviewerAddress(address) {
+    const { contract } = await getRegistryContractWithSigner();
+    const [owner, reviewer] = await Promise.all([
+      contract.owner(),
+      contract.authorizedReviewers(address)
+    ]);
+    return owner.toLowerCase() === address.toLowerCase() || Boolean(reviewer);
+  }
+
+  async function authorizeReviewerWallet() {
+    setAuthorizeReviewerButtonState(false, 'AUTHORIZING...');
+    await termLineDelay(`<span class="t-out">RB&gt; authorize-reviewer --mainnet</span>`, 120);
+    await termLineDelay(`<span class="t-out">Preparing reviewer authorization flow...</span>`, 180);
+
+    try {
+      if (!walletConnected || connectedProvider !== 'evm' || !window.ethereum) {
+        throw new Error('Connect your owner MetaMask wallet first');
+      }
+
+      const reviewerInput = window.prompt('Enter the Avalanche C-Chain wallet address to authorize for direct publish:');
+      if (!reviewerInput) {
+        throw new Error('Authorization canceled');
+      }
+
+      const reviewerAddress = window.ethers.getAddress(reviewerInput.trim());
+      const { signer, contract } = await getRegistryContractWithSigner();
+      const signerAddress = await signer.getAddress();
+      const ownerAddress = await contract.owner();
+
+      if (signerAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+        throw new Error(`Connected wallet ${shortAddress(signerAddress)} is not the registry owner`);
+      }
+
+      await termLineDelay(`<span class="t-out">// Owner wallet: ${shortAddress(signerAddress)}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Reviewer wallet: ${shortAddress(reviewerAddress)}</span>`, 120);
+
+      const tx = await contract.setReviewer(reviewerAddress, true);
+      const receipt = await tx.wait();
+
+      await termLineDelay(`<span class="t-success">✓ Reviewer wallet authorized for direct publish.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// TX: ${tx.hash}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Gas used: ${receipt.gasUsed.toString()}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// ${shortAddress(reviewerAddress)} can now publish reports from its own AVAX balance.</span>`, 120);
+      setAuthorizeReviewerButtonState(true, 'AUTHORIZED');
+      setTimeout(() => setAuthorizeReviewerButtonState(true, 'AUTHORIZE REVIEWER'), 2600);
+    } catch (err) {
+      await termLineDelay(`<span class="t-danger">✗ REVIEWER AUTH FAILED: ${err.message}</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Connect the owner wallet and confirm the target Avalanche address.</span>`, 120);
+      setAuthorizeReviewerButtonState(true, 'AUTHORIZE REVIEWER');
+    }
+
+    termLine('');
+  }
+
   function formatCompactTokenBalance(value) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return 'UNKNOWN';
     const num = Number(value);
@@ -1822,6 +1935,16 @@
     btn.style.opacity = enabled ? '1' : '0.6';
     btn.style.borderColor = enabled ? 'rgba(255,0,200,0.45)' : 'rgba(255,0,200,0.22)';
     btn.style.color = enabled ? 'var(--neon-pink)' : 'rgba(255,0,200,0.58)';
+  }
+
+  function setAuthorizeReviewerButtonState(enabled, text = 'AUTHORIZE REVIEWER') {
+    const btn = document.getElementById('authorizeReviewerBtn');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.textContent = text;
+    btn.style.opacity = enabled ? '1' : '0.6';
+    btn.style.borderColor = enabled ? 'rgba(0,245,255,0.45)' : 'rgba(0,245,255,0.22)';
+    btn.style.color = enabled ? 'var(--neon-cyan)' : 'rgba(0,245,255,0.58)';
   }
 
   function scorePresentation(status) {
@@ -2521,18 +2644,47 @@
     await termLineDelay(`<span class="t-out">Preparing mainnet registry write...</span>`, 220);
 
     try {
-      const response = await postRegistryPublish(lastScannedAddress);
-      if (!response.published || !response.published.tx_hash) {
-        throw new Error('Registry API did not confirm on-chain publication');
+      if (walletConnected && connectedProvider === 'evm' && window.ethereum) {
+        const { signer, contract } = await getRegistryContractWithSigner();
+        const signerAddress = await signer.getAddress();
+        const isReviewer = await isAuthorizedReviewerAddress(signerAddress);
+
+        if (!isReviewer) {
+          throw new Error('Connected wallet is not an authorized reviewer yet. Owner must approve it before direct publish.');
+        }
+
+        if (lastScanData.rugScore === null || lastScanData.rugScore === undefined) {
+          throw new Error('Cannot publish without a Rug Score');
+        }
+
+        const metadataHash = await sha256Bytes32({ report: lastScanData });
+        await termLineDelay(`<span class="t-out">// Signing with connected wallet ${shortAddress(signerAddress)}</span>`, 120);
+        const tx = await contract.updateScore(
+          lastScannedAddress,
+          Number(lastScanData.rugScore),
+          metadataHash
+        );
+        const receipt = await tx.wait();
+        await termLineDelay(`<span class="t-success">✓ Registry publish confirmed from connected wallet.</span>`, 220);
+        await termLineDelay(`<span class="t-out">// TX: ${tx.hash}</span>`, 120);
+        await termLineDelay(`<span class="t-out">// Gas used: ${receipt.gasUsed.toString()}</span>`, 120);
+        setPublishButtonState(true, 'PUBLISHED');
+        setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
+      } else {
+        const response = await postRegistryPublish(lastScannedAddress);
+        if (!response.published || !response.published.tx_hash) {
+          throw new Error('Registry API did not confirm on-chain publication');
+        }
+        await termLineDelay(`<span class="t-success">✓ Registry publish confirmed via backend signer.</span>`, 220);
+        await termLineDelay(`<span class="t-out">// TX: ${response.published.tx_hash}</span>`, 120);
+        await termLineDelay(`<span class="t-out">// Gas used: ${response.published.gas_used}</span>`, 120);
+        await termLineDelay(`<span class="t-out">// Connect an authorized Avalanche reviewer wallet to burn gas from your own account.</span>`, 120);
+        setPublishButtonState(true, 'PUBLISHED');
+        setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
       }
-      await termLineDelay(`<span class="t-success">✓ Registry publish confirmed.</span>`, 220);
-      await termLineDelay(`<span class="t-out">// TX: ${response.published.tx_hash}</span>`, 120);
-      await termLineDelay(`<span class="t-out">// Gas used: ${response.published.gas_used}</span>`, 120);
-      setPublishButtonState(true, 'PUBLISHED');
-      setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
     } catch (err) {
       await termLineDelay(`<span class="t-danger">✗ REGISTRY PUBLISH FAILED: ${err.message}</span>`, 220);
-      await termLineDelay(`<span class="t-out">// Check REGISTRY_ADDRESS, PRIVATE_KEY, and mainnet gas balance.</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Check reviewer authorization, REGISTRY_ADDRESS, and Avalanche gas balance.</span>`, 120);
       setPublishButtonState(true, 'PUBLISH REPORT');
     }
 
