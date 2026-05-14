@@ -632,13 +632,13 @@ def verdict_text(report: dict[str, Any]) -> str:
     if rug_status == "HIGH":
         return "High rug risk. Hard on-chain facts look bad."
     if speculation_status == "HIGH":
-        return "High speculation. Market structure looks dangerous."
+        return "High speculation. Market depth looks dangerous and exit liquidity may be too thin."
     if speculation_status == "UNKNOWN":
         return "Rug score available, but no live liquidity evidence yet."
     if rug_status == "LOW" and speculation_status == "LOW":
-        return "Safe and stable by current on-chain and market checks."
+        return "No hard rug signals detected and market depth currently looks healthy."
     if rug_status == "LOW" and speculation_status == "ELEVATED":
-        return "Low rug risk, but speculative market conditions."
+        return "Low rug risk, but shallow liquidity makes this a speculative position."
     return "Mixed signals. Manual review recommended."
 
 

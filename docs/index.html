@@ -2344,35 +2344,47 @@
       };
 
       const speculationReasons = { high: [], medium: [], neutral: [] };
-      let speculationScore = 28;
+      let speculationScore = 20;
 
       if (liquidityUsd === null) {
         speculationScore = null;
         speculationReasons.medium.push('⚡ No priced liquidity evidence available');
       } else {
         if (liquidityUsd < 5000) {
-          speculationReasons.high.push(`✗ Liquidity is only ${formatUsd(liquidityUsd)} — thin exit path`);
-          speculationScore += 38;
+          speculationReasons.high.push(`✗ Very thin live liquidity at ${formatUsd(liquidityUsd)}`);
+          speculationScore += 42;
         } else if (liquidityUsd < 25000) {
-          speculationReasons.medium.push(`⚡ Liquidity is thin at ${formatUsd(liquidityUsd)}`);
-          speculationScore += 18;
-        } else if (liquidityUsd >= 100000) {
+          speculationReasons.high.push(`✗ Thin live liquidity at ${formatUsd(liquidityUsd)}`);
+          speculationScore += 24;
+        } else if (liquidityUsd < 100000) {
+          speculationReasons.medium.push(`⚡ Shallow live liquidity at ${formatUsd(liquidityUsd)}`);
+          speculationScore += 8;
+        } else if (liquidityUsd >= 500000) {
           speculationScore -= 10;
           speculationReasons.neutral.push(`Deep live liquidity at ${formatUsd(liquidityUsd)}`);
         } else {
-          speculationScore -= 4;
+          speculationScore -= 2;
           speculationReasons.neutral.push(`Meaningful live liquidity at ${formatUsd(liquidityUsd)}`);
         }
 
         if (fdv && fdv > 0) {
           const liquidityRatio = liquidityUsd / fdv;
           if (liquidityRatio < 0.01) {
-            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 1%');
-            speculationScore += 20;
+            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 1% — exit liquidity risk is extreme');
+            speculationScore += 45;
           } else if (liquidityRatio < 0.03) {
-            speculationReasons.medium.push('⚡ Liquidity to FDV ratio is low');
-            speculationScore += 10;
-          } else if (liquidityRatio >= 0.1) {
+            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 3% — market depth is dangerously thin');
+            speculationScore += 35;
+          } else if (liquidityRatio < 0.05) {
+            speculationReasons.high.push('✗ Liquidity to FDV ratio is under 5% — exit liquidity looks fragile');
+            speculationScore += 28;
+          } else if (liquidityRatio < 0.15) {
+            speculationReasons.medium.push('⚡ Liquidity to FDV ratio is under 15% — market depth is shallow');
+            speculationScore += 14;
+          } else if (liquidityRatio >= 0.3) {
+            speculationScore -= 8;
+            speculationReasons.neutral.push('Liquidity to FDV ratio is very healthy');
+          } else if (liquidityRatio >= 0.15) {
             speculationScore -= 4;
             speculationReasons.neutral.push('Liquidity to FDV ratio is healthy');
           }
@@ -2557,7 +2569,12 @@
         await termLineDelay(`<span class="t-danger">  ✗ DO NOT INTERACT WITHOUT MANUAL REVIEW</span>`, 180);
       } else if (apexData.speculationStatus === 'HIGH') {
         await termLineDelay(`<span class="t-danger">  ⚠ SPECULATION  : HIGH</span>`, 230);
-        await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : MARKET STRUCTURE LOOKS DANGEROUS</span>`, 200);
+        await termLineDelay(`<span class="t-danger">  ⚠ RESULT       : MARKET DEPTH LOOKS DANGEROUS</span>`, 200);
+        await termLineDelay(`<span class="t-danger">  ✗ EXIT LIQUIDITY MAY BE TOO THIN FOR SAFE SIZE</span>`, 180);
+      } else if (apexData.speculationStatus === 'ELEVATED') {
+        await termLineDelay(`<span class="t-warn">  ⚠ SPECULATION  : ELEVATED</span>`, 230);
+        await termLineDelay(`<span class="t-warn">  ⚠ RESULT       : LOW RUG RISK, BUT MARKET DEPTH IS SHALLOW</span>`, 200);
+        await termLineDelay(`<span class="t-warn">  ⚡ TREAT THIS AS A SPECULATIVE POSITION, NOT A STABLE ONE</span>`, 180);
       } else if (apexData.speculationStatus === 'UNKNOWN') {
         await termLineDelay(`<span class="t-out">  · SPECULATION  : UNKNOWN</span>`, 230);
         await termLineDelay(`<span class="t-out">  · RESULT       : NO LIQUIDITY EVIDENCE, DO NOT GUESS</span>`, 200);

@@ -115,7 +115,7 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
             reasons=["No live liquidity evidence found on supported Avalanche venues"],
         )
 
-    score = 28
+    score = 20
     reasons: list[str] = []
 
     liquidity_usd = metadata.get("liquidity_usd")
@@ -131,16 +131,19 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
     else:
         liq = float(liquidity_usd)
         if liq < 5_000:
-            score += 38
+            score += 42
             reasons.append(f"Very thin live liquidity at ${liq:,.0f}")
         elif liq < 25_000:
-            score += 20
+            score += 24
             reasons.append(f"Thin live liquidity at ${liq:,.0f}")
-        elif liq >= 100_000:
+        elif liq < 100_000:
+            score += 8
+            reasons.append(f"Shallow live liquidity at ${liq:,.0f}")
+        elif liq >= 500_000:
             score -= 10
             reasons.append(f"Deep live liquidity at ${liq:,.0f}")
         else:
-            score -= 4
+            score -= 2
             reasons.append(f"Meaningful live liquidity at ${liq:,.0f}")
 
     if fdv is None:
@@ -150,12 +153,21 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
         if liquidity_usd and fdv_value > 0:
             ratio = float(liquidity_usd) / fdv_value
             if ratio < 0.01:
-                score += 20
-                reasons.append("Liquidity to FDV ratio is under 1%")
+                score += 45
+                reasons.append("Liquidity to FDV ratio is under 1% - exit liquidity risk is extreme")
             elif ratio < 0.03:
-                score += 10
-                reasons.append("Liquidity to FDV ratio is low")
-            elif ratio >= 0.1:
+                score += 35
+                reasons.append("Liquidity to FDV ratio is under 3% - market depth is dangerously thin")
+            elif ratio < 0.05:
+                score += 28
+                reasons.append("Liquidity to FDV ratio is under 5% - exit liquidity looks fragile")
+            elif ratio < 0.15:
+                score += 14
+                reasons.append("Liquidity to FDV ratio is under 15% - market depth is shallow")
+            elif ratio >= 0.3:
+                score -= 8
+                reasons.append("Liquidity to FDV ratio is very healthy")
+            elif ratio >= 0.15:
                 score -= 4
                 reasons.append("Liquidity to FDV ratio is healthy")
 
