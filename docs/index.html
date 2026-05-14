@@ -869,8 +869,8 @@
         text-shadow:0 0 8px rgba(0,255,136,0.4);
         display:flex;align-items:center;gap:8px;
       " onmouseover="this.style.background='rgba(0,255,136,0.1)'" onmouseout="if(!walletConnected)this.style.background='transparent'">
-        <span style="font-size:16px;">👻</span>
-        <span id="walletBtnText">Connect Wallet</span>
+        <span style="font-size:16px;">🦊</span>
+        <span id="walletBtnText">Connect Avalanche Wallet</span>
       </button>
     </li>
   </ul>
@@ -895,10 +895,10 @@
     position:relative;
   ">
     <button onclick="closeWalletModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:crosshair;">✕</button>
-    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-cyan);margin-bottom:24px;">// SELECT WALLET</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-cyan);margin-bottom:24px;">// SELECT AVALANCHE WALLET</div>
     <div id="walletModalBody">
-      <!-- phantom option -->
-      <div onclick="connectPhantom()" style="
+      <!-- metamask option -->
+      <div onclick="connectMetaMask()" style="
         border:1px solid rgba(0,245,255,0.15);
         padding:20px 24px;
         margin-bottom:12px;
@@ -908,26 +908,29 @@
         background:rgba(0,245,255,0.02);
       " onmouseover="this.style.borderColor='rgba(0,245,255,0.5)';this.style.background='rgba(0,245,255,0.05)'"
          onmouseout="this.style.borderColor='rgba(0,245,255,0.15)';this.style.background='rgba(0,245,255,0.02)'">
-        <span style="font-size:32px;">👻</span>
-        <div style="text-align:left;">
-          <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Phantom</div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">Solana native wallet</div>
-        </div>
-        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-green);letter-spacing:2px;">RECOMMENDED</div>
-      </div>
-      <!-- metamask placeholder -->
-      <div style="
-        border:1px solid rgba(255,255,255,0.04);
-        padding:20px 24px;
-        display:flex;align-items:center;gap:16px;
-        opacity:0.4;
-      ">
         <span style="font-size:32px;">🦊</span>
         <div style="text-align:left;">
           <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">MetaMask</div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">Apex / Avalanche beta</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">Avalanche C-Chain / EVM wallet</div>
         </div>
-        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">SOON</div>
+        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-green);letter-spacing:2px;">RECOMMENDED</div>
+      </div>
+      <div style="
+        border:1px solid rgba(255,255,255,0.08);
+        padding:20px 24px;
+        display:flex;align-items:center;gap:16px;
+        background:rgba(255,255,255,0.01);
+      ">
+        <span style="font-size:32px;">🔗</span>
+        <div style="text-align:left;">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Any EVM Wallet</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);">Core, Rabby, Brave, or other injected wallets</div>
+        </div>
+        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;">SUPPORTED</div>
+      </div>
+      <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:var(--text-muted);text-align:left;">
+        Portfolio scan uses your connected Avalanche wallet.<br>
+        Registry burn from <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> is currently executed by the RugBuster backend wallet.
       </div>
     </div>
   </div>
@@ -1520,6 +1523,7 @@
   const SOL_PRICE = 145; // approx USD per SOL for demo
   let walletConnected = false;
   let walletAddress = null;
+  let connectedProvider = null;
   let selectedCurrency = 'SOL';
   let currentPlan = null;
   let currentPrice = 0;
@@ -1535,33 +1539,57 @@
     document.getElementById('walletModal').style.display = 'none';
   }
 
-  async function connectPhantom() {
+  async function connectMetaMask() {
     const btn = document.getElementById('walletBtn');
     const btnText = document.getElementById('walletBtnText');
 
-    // Check if Phantom is installed
-    if (!window.solana || !window.solana.isPhantom) {
+    if (!window.ethereum) {
       document.getElementById('walletModalBody').innerHTML = `
         <div style="text-align:center;padding:24px 0;">
-          <div style="font-size:48px;margin-bottom:16px;">👻</div>
-          <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-bottom:12px;">Phantom Not Found</div>
+          <div style="font-size:48px;margin-bottom:16px;">🦊</div>
+          <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-bottom:12px;">MetaMask Not Found</div>
           <div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:24px;line-height:2;">
-            Install Phantom wallet to continue.<br>It's free and takes 2 minutes.
+            Install MetaMask or another EVM wallet to continue.<br>This Apex flow uses Avalanche C-Chain wallets.
           </div>
-          <a href="https://phantom.app" target="_blank" class="btn-primary" style="font-size:11px;padding:13px 32px;text-decoration:none;display:inline-block;">
-            Install Phantom →
+          <a href="https://metamask.io/download/" target="_blank" class="btn-primary" style="font-size:11px;padding:13px 32px;text-decoration:none;display:inline-block;">
+            Install MetaMask →
           </a>
         </div>`;
       return;
     }
 
     try {
-      const resp = await window.solana.connect();
-      walletAddress = resp.publicKey.toString();
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      if (chainId !== '0xa86a') {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xa86a' }]
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0xa86a',
+                chainName: 'Avalanche C-Chain',
+                nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+                rpcUrls: ['https://api.avax.network/ext/bc/C/rpc'],
+                blockExplorerUrls: ['https://snowtrace.io']
+              }]
+            });
+          } else {
+            throw switchError;
+          }
+        }
+      }
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      walletAddress = accounts[0];
       walletConnected = true;
+      connectedProvider = 'evm';
       closeWalletModal();
 
-      // Update nav button
       const short = walletAddress.slice(0,4) + '...' + walletAddress.slice(-4);
       btnText.textContent = short;
       btn.style.background = 'rgba(0,255,136,0.1)';
@@ -1572,21 +1600,21 @@
       // Auto-fill scanner input if empty
       const scanInput = document.getElementById('scanInput');
       if (scanInput && !scanInput.value) {
-        scanInput.placeholder = `Wallet connected: ${short} — paste token address to scan`;
+        scanInput.placeholder = `Avalanche wallet connected: ${short} — paste token address to scan`;
       }
 
     } catch(err) {
-      console.log('Wallet connect cancelled');
+      console.log('Wallet connect cancelled or failed', err);
     }
   }
 
   function disconnectWallet() {
-    if (window.solana) window.solana.disconnect();
     walletConnected = false;
     walletAddress = null;
+    connectedProvider = null;
     const btn = document.getElementById('walletBtn');
     const btnText = document.getElementById('walletBtnText');
-    btnText.textContent = 'Connect Wallet';
+    btnText.textContent = 'Connect Avalanche Wallet';
     btn.style.background = 'transparent';
     btn.style.boxShadow = 'none';
     btn.onclick = connectWallet;
