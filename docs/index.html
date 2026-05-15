@@ -1552,6 +1552,85 @@
   let lastScannedAddress = null;
   let lastScanData = null;
   let apexPortfolioAddress = null;
+  let walletListenersInstalled = false;
+
+  function updateWalletButtonState() {
+    const btn = document.getElementById('walletBtn');
+    const btnText = document.getElementById('walletBtnText');
+    const scanInput = document.getElementById('scanInput');
+
+    if (!btn || !btnText) return;
+
+    if (walletConnected && walletAddress) {
+      const short = walletAddress.slice(0,4) + '...' + walletAddress.slice(-4);
+      btnText.textContent = short;
+      btn.style.background = 'rgba(0,255,136,0.1)';
+      btn.style.borderColor = 'var(--neon-green)';
+      btn.style.boxShadow = '0 0 20px rgba(0,255,136,0.2)';
+      btn.onclick = disconnectWallet;
+
+      if (scanInput && !scanInput.value) {
+        scanInput.placeholder = `Avalanche wallet connected: ${short} — paste token address to scan`;
+      }
+    } else {
+      btnText.textContent = 'Connect Avalanche Wallet';
+      btn.style.background = 'transparent';
+      btn.style.boxShadow = 'none';
+      btn.style.borderColor = 'rgba(0,255,255,0.3)';
+      btn.onclick = connectWallet;
+
+      if (scanInput && !scanInput.value) {
+        scanInput.placeholder = 'Paste token address (Apex / Avalanche)...';
+      }
+    }
+  }
+
+  async function syncConnectedWallet(options = {}) {
+    const { silent = false } = options;
+    if (!window.ethereum) return;
+
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts && accounts.length > 0) {
+        walletAddress = accounts[0];
+        walletConnected = true;
+        connectedProvider = 'evm';
+      } else {
+        walletConnected = false;
+        walletAddress = null;
+        connectedProvider = null;
+      }
+      updateWalletButtonState();
+    } catch (err) {
+      if (!silent) console.log('Wallet sync failed', err);
+    }
+  }
+
+  function installWalletListeners() {
+    if (!window.ethereum || walletListenersInstalled) return;
+    walletListenersInstalled = true;
+
+    window.ethereum.on('accountsChanged', accounts => {
+      if (accounts && accounts.length > 0) {
+        walletAddress = accounts[0];
+        walletConnected = true;
+        connectedProvider = 'evm';
+        apexPortfolioAddress = walletAddress;
+        updateWalletButtonState();
+        renderPortfolioHeader();
+        termLine(`<span class="t-out">// Active wallet switched to ${shortAddress(walletAddress)}</span>`);
+        termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      } else {
+        disconnectWallet();
+        renderPortfolioHeader();
+      }
+    });
+
+    window.ethereum.on('chainChanged', async () => {
+      await syncConnectedWallet({ silent: true });
+      renderPortfolioHeader();
+    });
+  }
 
   function connectWallet() {
     document.getElementById('walletModal').style.display = 'flex';
@@ -1589,9 +1668,6 @@
   }
 
   async function connectMetaMask() {
-    const btn = document.getElementById('walletBtn');
-    const btnText = document.getElementById('walletBtnText');
-
     if (!window.ethereum) {
       document.getElementById('walletModalBody').innerHTML = `
         <div style="text-align:center;padding:24px 0;">
@@ -1608,6 +1684,7 @@
     }
 
     try {
+      installWalletListeners();
       await ensureAvalancheChain();
 
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -1615,19 +1692,9 @@
       walletConnected = true;
       connectedProvider = 'evm';
       closeWalletModal();
-
-      const short = walletAddress.slice(0,4) + '...' + walletAddress.slice(-4);
-      btnText.textContent = short;
-      btn.style.background = 'rgba(0,255,136,0.1)';
-      btn.style.borderColor = 'var(--neon-green)';
-      btn.style.boxShadow = '0 0 20px rgba(0,255,136,0.2)';
-      btn.onclick = disconnectWallet;
-
-      // Auto-fill scanner input if empty
-      const scanInput = document.getElementById('scanInput');
-      if (scanInput && !scanInput.value) {
-        scanInput.placeholder = `Avalanche wallet connected: ${short} — paste token address to scan`;
-      }
+      apexPortfolioAddress = walletAddress;
+      updateWalletButtonState();
+      renderPortfolioHeader();
 
     } catch(err) {
       console.log('Wallet connect cancelled or failed', err);
@@ -1638,12 +1705,8 @@
     walletConnected = false;
     walletAddress = null;
     connectedProvider = null;
-    const btn = document.getElementById('walletBtn');
-    const btnText = document.getElementById('walletBtnText');
-    btnText.textContent = 'Connect Avalanche Wallet';
-    btn.style.background = 'transparent';
-    btn.style.boxShadow = 'none';
-    btn.onclick = connectWallet;
+    apexPortfolioAddress = null;
+    updateWalletButtonState();
   }
 
   function openPayment(plan, price, e) {
@@ -2707,6 +2770,12 @@
 
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
   }
+
+  window.addEventListener('load', async () => {
+    installWalletListeners();
+    await syncConnectedWallet({ silent: true });
+    renderPortfolioHeader();
+  });
 </script>
 
 </body>
