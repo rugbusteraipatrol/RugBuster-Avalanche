@@ -1,0 +1,16 @@
+{
+  "name": "rugbuster-avalanche",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:scanner:fuji": "hardhat run scripts/deploy_scanner_fuji.js --network fuji",
+    "abi:scanner": "hardhat run scripts/generate_scanner_abi.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.19"
+  }
+}
