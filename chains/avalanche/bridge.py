@@ -65,7 +65,8 @@ def _send_update_score(
             "chainId": web3.eth.chain_id,
         }
     )
-    tx["gas"] = web3.eth.estimate_gas(tx)
+    estimated_gas = int(web3.eth.estimate_gas(tx))
+    tx["gas"] = max(int(estimated_gas * 1.5), estimated_gas + 25_000)
     tx = apply_fee_strategy(web3, tx)
 
     signed = account.sign_transaction(tx)
