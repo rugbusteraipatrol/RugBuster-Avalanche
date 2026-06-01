@@ -114,6 +114,47 @@ Initial supported factory targets:
 
 The adapter is intentionally configurable through `.env`, so additional Avalanche DEX factories can be added without changing core logic.
 
+## 24/7 AVAX Collector Worker
+
+`chains/avalanche/avax_collector_v6.py` is the long-running Avalanche worker for
+Retro9000/Culture Catalyst activity. It polls Avalanche C-Chain RPC every 60
+seconds, queues new contract deployments, scans one queued token every random
+15-90 minutes, and publishes six module payloads as separate zero-value EVM
+transactions with JSON in `tx.data`:
+
+- `funding_origin`
+- `holder_concentration`
+- `backdoor_check`
+- `liquidity_status`
+- `rug_velocity`
+- `final_verdict`
+
+Do not paste private keys into chat. Set secrets in Railway variables or local
+`.env`:
+
+```txt
+AVAX_LOG_PRIVATE_KEY=account_2_private_key
+AVAX_RPC=https://api.avax.network/ext/bc/C/rpc
+ONCHAIN_LOG_ENABLED=true
+ONCHAIN_LOG_TO_ADDRESS=
+
+AVAX_TELEGRAM_BOT_TOKEN=telegram_bot_token
+AVAX_TELEGRAM_CHAT_ID=@RugBusterAvax
+
+MAX_TOKENS_PER_DAY=20
+MAX_EUR_TOTAL=20
+MAX_AVAX_TOTAL=2
+RUN_UNTIL_DATE=2026-06-17
+AVAX_EUR_PRICE_FALLBACK=30
+MIN_SCAN_DELAY_MINUTES=15
+MAX_SCAN_DELAY_MINUTES=90
+```
+
+If `ONCHAIN_LOG_TO_ADDRESS` is empty, the worker sends each data transaction to
+the signer wallet itself. State is stored in `avax_collector_state.json`; token
+count resets daily, while total AVAX/EUR spend is tracked until
+`RUN_UNTIL_DATE`. Transaction hashes are appended to `avax_scan_log.md`.
+
 ## Local Scan API
 
 To power the website and local demos with a real RugBuster backend, start the local API:

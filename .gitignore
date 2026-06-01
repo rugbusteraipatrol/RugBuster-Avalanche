@@ -7,6 +7,8 @@
 data/*.csv
 data/*.jsonl
 !data/.gitkeep
+avax_collector_state.json
+avax_scan_log.md
 
 # Python
 __pycache__/
