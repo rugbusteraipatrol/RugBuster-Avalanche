@@ -931,8 +931,8 @@
       </div>
       <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:var(--text-muted);text-align:left;">
         Portfolio scan uses your connected Avalanche wallet.<br>
-        Connected reviewer wallets can publish directly from their own AVAX balance.<br>
-        If no reviewer wallet is connected, <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> falls back to the RugBuster backend wallet.
+        <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> requires an authorized reviewer wallet.<br>
+        Each module write is confirmed in your wallet and burns AVAX from that wallet.
       </div>
     </div>
   </div>
@@ -2330,6 +2330,107 @@
     };
   }
 
+  function liquidityModuleScore(liquidityUsd) {
+    if (liquidityUsd === null || liquidityUsd === undefined || Number.isNaN(Number(liquidityUsd))) return 35;
+    const value = Number(liquidityUsd);
+    if (value < 5000) return 20;
+    if (value < 25000) return 45;
+    if (value < 100000) return 65;
+    if (value < 500000) return 80;
+    return 95;
+  }
+
+  function marketActivityModuleScore(report) {
+    const buys = report.buys24h;
+    const sells = report.sells24h;
+    const volume = report.volume24h;
+    if (buys === null && sells === null && volume === null) return 40;
+    const txCount = Number(buys || 0) + Number(sells || 0);
+    if (txCount === 0 && !volume) return 25;
+    if (txCount < 10) return 45;
+    if (txCount < 50) return 65;
+    return 80;
+  }
+
+  function flattenReasons(reasonGroups) {
+    if (!reasonGroups) return [];
+    return [
+      ...(reasonGroups.high || []),
+      ...(reasonGroups.medium || []),
+      ...(reasonGroups.neutral || [])
+    ].slice(0, 6);
+  }
+
+  function buildWalletReportModules(address, report) {
+    const base = {
+      token: address,
+      tokenName: report.tokenName,
+      ts: Math.floor(Date.now() / 1000),
+      source: report.source,
+      network: 'Avalanche C-Chain Mainnet'
+    };
+    return [
+      {
+        module: 'token_metadata',
+        score: report.tokenName && !/^Unknown/i.test(report.tokenName) ? 100 : 40,
+        payload: { ...base, image: report.tokenImage, dexId: report.dexId }
+      },
+      {
+        module: 'liquidity',
+        score: liquidityModuleScore(report.liquidityUsd),
+        payload: {
+          ...base,
+          liquidityUsd: report.liquidityUsd,
+          hasLiquidityEvidence: report.hasLiquidityEvidence,
+          pairAddress: report.pairAddress,
+          pairUrl: report.pairUrl,
+          dexId: report.dexId
+        }
+      },
+      {
+        module: 'market_activity',
+        score: marketActivityModuleScore(report),
+        payload: {
+          ...base,
+          volume24h: report.volume24h,
+          buys24h: report.buys24h,
+          sells24h: report.sells24h,
+          priceChange24h: report.priceChange24h
+        }
+      },
+      {
+        module: 'rug_risk',
+        score: Number(report.rugScore || 0),
+        payload: {
+          ...base,
+          status: report.rugStatus,
+          reasons: flattenReasons(report.rugReasons)
+        }
+      },
+      {
+        module: 'speculation_risk',
+        score: Number(report.speculationScore || 0),
+        payload: {
+          ...base,
+          status: report.speculationStatus,
+          reasons: flattenReasons(report.speculationReasons),
+          fdv: report.fdv
+        }
+      },
+      {
+        module: 'final_verdict',
+        score: Number(report.rugScore || 0),
+        payload: {
+          ...base,
+          rugScore: report.rugScore,
+          rugStatus: report.rugStatus,
+          speculationScore: report.speculationScore,
+          speculationStatus: report.speculationStatus
+        }
+      }
+    ];
+  }
+
   async function fetchApexScanFromApi(address) {
     const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
       method: 'POST',
@@ -2352,19 +2453,6 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         throw new Error(data.error || `HTTP ${res.status} — Telegram alert failed`);
-      }
-      return data;
-    }
-
-    async function postRegistryPublish(address) {
-      const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, publish_modules: true, use_cached: true })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || `HTTP ${res.status} — Registry publish failed`);
       }
       return data;
     }
@@ -2721,24 +2809,51 @@
 
     setPublishButtonState(false, 'PUBLISHING...');
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">publish ${shortAddress(lastScannedAddress)} --registry</span>`);
-    await termLineDelay(`<span class="t-out">Preparing backend module registry writes...</span>`, 220);
+    await termLineDelay(`<span class="t-out">Preparing wallet-confirmed module registry writes...</span>`, 220);
 
     try {
-      const response = await postRegistryPublish(lastScannedAddress);
-      if (!response.module_published || !response.module_published.count) {
-        throw new Error('Registry API did not confirm module publication');
+      if (!walletConnected || connectedProvider !== 'evm' || !window.ethereum) {
+        throw new Error('Connect an Avalanche wallet before publishing');
       }
-      await termLineDelay(`<span class="t-success">✓ Module registry publish confirmed via backend signer.</span>`, 220);
-      await termLineDelay(`<span class="t-out">// Module TXs: ${response.module_published.count}</span>`, 120);
-      await termLineDelay(`<span class="t-out">// Total gas used: ${response.module_published.total_gas_used}</span>`, 120);
-      for (const item of response.module_published.transactions || []) {
-        await termLineDelay(`<span class="t-out">// ${item.module}: ${item.tx_hash}</span>`, 90);
+
+      const { signer, contract } = await getRegistryContractWithSigner();
+      const signerAddress = await signer.getAddress();
+      const isReviewer = await isAuthorizedReviewerAddress(signerAddress);
+
+      if (!isReviewer) {
+        throw new Error('Connected wallet is not an authorized reviewer yet. Owner must approve it first.');
       }
+
+      const modules = buildWalletReportModules(lastScannedAddress, lastScanData);
+      let totalGas = 0n;
+      await termLineDelay(`<span class="t-out">// Signing with ${shortAddress(signerAddress)}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Wallet will ask for ${modules.length} module confirmations.</span>`, 120);
+
+      for (const item of modules) {
+        const metadataHash = await sha256Bytes32({
+          module: item.module,
+          payload: item.payload
+        });
+        await termLineDelay(`<span class="t-out">// Confirm ${item.module} in wallet...</span>`, 90);
+        const tx = await contract.updateScore(
+          lastScannedAddress,
+          Math.max(0, Math.min(100, Number(item.score || 0))),
+          metadataHash
+        );
+        await termLineDelay(`<span class="t-out">// ${item.module} sent: ${tx.hash}</span>`, 90);
+        const receipt = await tx.wait();
+        totalGas += BigInt(receipt.gasUsed.toString());
+        await termLineDelay(`<span class="t-success">✓ ${item.module} confirmed · gas ${receipt.gasUsed.toString()}</span>`, 120);
+      }
+
+      await termLineDelay(`<span class="t-success">✓ Wallet-confirmed module publish complete.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Module TXs: ${modules.length}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Total gas used: ${totalGas.toString()}</span>`, 120);
       setPublishButtonState(true, 'PUBLISHED');
       setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
     } catch (err) {
       await termLineDelay(`<span class="t-danger">✗ REGISTRY PUBLISH FAILED: ${err.message}</span>`, 220);
-      await termLineDelay(`<span class="t-out">// Check Railway PRIVATE_KEY, REGISTRY_ADDRESS, PUBLISH_MODULES_TO_REGISTRY, and backend AVAX gas balance.</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Connect Avalanche C-Chain, authorize this reviewer wallet, and keep enough AVAX for gas.</span>`, 120);
       setPublishButtonState(true, 'PUBLISH REPORT');
     }
 
