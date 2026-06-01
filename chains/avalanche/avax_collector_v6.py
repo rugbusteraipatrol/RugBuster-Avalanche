@@ -49,12 +49,16 @@ def load_env(path: Path = Path(".env")) -> None:
 
 load_env()
 
+
+def clean_env_value(name: str, default: str = "") -> str:
+    return os.getenv(name, default).strip().strip('"').strip("'")
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-SNOWTRACE_API_KEY = os.getenv("SNOWTRACE_API_KEY", "rs_c563928dc3b9c46d70d8698c")
-SNOWTRACE_API     = os.getenv("SNOWTRACE_API", "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api")
-AVAX_RPC          = os.getenv("AVAX_RPC", "https://api.avax.network/ext/bc/C/rpc")
+SNOWTRACE_API_KEY = clean_env_value("SNOWTRACE_API_KEY", "rs_c563928dc3b9c46d70d8698c")
+SNOWTRACE_API     = clean_env_value("SNOWTRACE_API", "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api")
+AVAX_RPC          = clean_env_value("AVAX_RPC", "https://api.avax.network/ext/bc/C/rpc")
 
 OUTPUT_FILE       = "syndicate_train_avax_v6.jsonl"
 DATABASE_URL      = os.getenv("DATABASE_URL")
@@ -70,13 +74,13 @@ MAX_AVAX_TOTAL = float(os.getenv("MAX_AVAX_TOTAL", "2"))
 MAX_EUR_TOTAL = float(os.getenv("MAX_EUR_TOTAL", "20"))
 RUN_UNTIL_DATE = os.getenv("RUN_UNTIL_DATE", "2026-06-17")
 AVAX_EUR_PRICE_FALLBACK = float(os.getenv("AVAX_EUR_PRICE_FALLBACK", "30"))
-AVAX_SCAN_LOG = Path(os.getenv("AVAX_SCAN_LOG", "avax_scan_log.md"))
-AVAX_STATE_FILE = Path(os.getenv("AVAX_STATE_FILE", "avax_collector_state.json"))
-AVAX_TELEGRAM_CHAT_ID = os.getenv("AVAX_TELEGRAM_CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID") or "@RugBusterAvax"
-TELEGRAM_BOT_TOKEN = os.getenv("AVAX_TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN", "")
+AVAX_SCAN_LOG = Path(clean_env_value("AVAX_SCAN_LOG", "avax_scan_log.md"))
+AVAX_STATE_FILE = Path(clean_env_value("AVAX_STATE_FILE", "avax_collector_state.json"))
+AVAX_TELEGRAM_CHAT_ID = clean_env_value("AVAX_TELEGRAM_CHAT_ID") or clean_env_value("TELEGRAM_CHAT_ID") or "@RugBusterAvax"
+TELEGRAM_BOT_TOKEN = clean_env_value("AVAX_TELEGRAM_BOT_TOKEN") or clean_env_value("TELEGRAM_BOT_TOKEN")
 ONCHAIN_LOG_ENABLED = os.getenv("ONCHAIN_LOG_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
-ONCHAIN_LOG_TO_ADDRESS = os.getenv("ONCHAIN_LOG_TO_ADDRESS", "").strip()
-ACTIVITY_LOGGER_ADDRESS = os.getenv("ACTIVITY_LOGGER_ADDRESS", "").strip()
+ONCHAIN_LOG_TO_ADDRESS = clean_env_value("ONCHAIN_LOG_TO_ADDRESS")
+ACTIVITY_LOGGER_ADDRESS = clean_env_value("ACTIVITY_LOGGER_ADDRESS")
 
 ACTIVITY_LOGGER_ABI = [
     {
@@ -1297,10 +1301,25 @@ def onchain_logging_ready() -> bool:
     if Web3 is None:
         log.error("web3 nije instaliran. Dodaj `web3` iz requirements.txt i pokreni pip install -r requirements.txt.")
         return False
-    if not (os.getenv("AVAX_LOG_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")):
+    if not (clean_env_value("AVAX_LOG_PRIVATE_KEY") or clean_env_value("PRIVATE_KEY")):
         log.error("Nema AVAX_LOG_PRIVATE_KEY/PRIVATE_KEY u .env; on-chain upis preskočen.")
         return False
     return True
+
+
+def require_private_key() -> str:
+    private_key = clean_env_value("AVAX_LOG_PRIVATE_KEY") or clean_env_value("PRIVATE_KEY")
+    candidate = private_key[2:] if private_key.startswith("0x") else private_key
+    if len(candidate) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in candidate):
+        raise RuntimeError("AVAX_LOG_PRIVATE_KEY nije validan hex private key: koristi 64 hex karaktera, bez navodnika/razmaka")
+    return private_key
+
+
+def checksum_env_address(value: str, name: str) -> str:
+    cleaned = value.strip().strip('"').strip("'")
+    if not Web3.is_address(cleaned):
+        raise RuntimeError(f"{name} nije validna EVM adresa: {cleaned}")
+    return Web3.to_checksum_address(cleaned)
 
 
 def build_activity_logger_tx(web3, logger_contract, account_address: str, payload: dict, nonce: int) -> dict:
@@ -1342,17 +1361,17 @@ def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[d
     if not web3.is_connected():
         raise RuntimeError("Ne mogu da se povežem na AVAX RPC za on-chain logging")
 
-    private_key = os.getenv("AVAX_LOG_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
+    private_key = require_private_key()
     account = web3.eth.account.from_key(private_key)
     logger_contract = None
     if ACTIVITY_LOGGER_ADDRESS:
         logger_contract = web3.eth.contract(
-            address=Web3.to_checksum_address(ACTIVITY_LOGGER_ADDRESS),
+            address=checksum_env_address(ACTIVITY_LOGGER_ADDRESS, "ACTIVITY_LOGGER_ADDRESS"),
             abi=ACTIVITY_LOGGER_ABI,
         )
-        target = Web3.to_checksum_address(ACTIVITY_LOGGER_ADDRESS)
+        target = checksum_env_address(ACTIVITY_LOGGER_ADDRESS, "ACTIVITY_LOGGER_ADDRESS")
     else:
-        target = Web3.to_checksum_address(ONCHAIN_LOG_TO_ADDRESS or account.address)
+        target = checksum_env_address(ONCHAIN_LOG_TO_ADDRESS or account.address, "ONCHAIN_LOG_TO_ADDRESS")
         log.warning("ACTIVITY_LOGGER_ADDRESS nije postavljen; koristim raw tx.data fallback na %s", target)
     next_nonce = web3.eth.get_transaction_count(account.address, "pending")
     avax_eur_price = fetch_avax_eur_price()
