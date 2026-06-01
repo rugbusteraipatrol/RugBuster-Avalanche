@@ -5,6 +5,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "deploy:scanner:fuji": "hardhat run scripts/deploy_scanner_fuji.js --network fuji",
+    "deploy:activity:mainnet": "hardhat run scripts/deploy_activity_logger.js --network mainnet",
     "abi:scanner": "hardhat run scripts/generate_scanner_abi.js"
   },
   "devDependencies": {

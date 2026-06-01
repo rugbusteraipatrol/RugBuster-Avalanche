@@ -18,6 +18,7 @@ import random
 import time
 import statistics
 import hashlib
+from eth_utils import keccak
 from pathlib import Path
 from collections import defaultdict, Counter
 from datetime import datetime, timezone
@@ -75,6 +76,23 @@ AVAX_TELEGRAM_CHAT_ID = os.getenv("AVAX_TELEGRAM_CHAT_ID") or os.getenv("TELEGRA
 TELEGRAM_BOT_TOKEN = os.getenv("AVAX_TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN", "")
 ONCHAIN_LOG_ENABLED = os.getenv("ONCHAIN_LOG_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 ONCHAIN_LOG_TO_ADDRESS = os.getenv("ONCHAIN_LOG_TO_ADDRESS", "").strip()
+ACTIVITY_LOGGER_ADDRESS = os.getenv("ACTIVITY_LOGGER_ADDRESS", "").strip()
+
+ACTIVITY_LOGGER_ABI = [
+    {
+        "inputs": [
+            {"internalType": "address", "name": "token", "type": "address"},
+            {"internalType": "string", "name": "module", "type": "string"},
+            {"internalType": "string", "name": "verdict", "type": "string"},
+            {"internalType": "uint8", "name": "score", "type": "uint8"},
+            {"internalType": "bytes32", "name": "payloadHash", "type": "bytes32"},
+        ],
+        "name": "logModule",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    }
+]
 
 # Throttle: SnowTrace free tier ~5 req/s
 _last_api_call = [0.0]
@@ -1269,6 +1287,10 @@ def raw_transaction(signed_tx) -> bytes:
     return getattr(signed_tx, "raw_transaction", None) or getattr(signed_tx, "rawTransaction")
 
 
+def payload_hash(payload: dict) -> bytes:
+    return keccak(text=stable_payload_json(payload))
+
+
 def onchain_logging_ready() -> bool:
     if not ONCHAIN_LOG_ENABLED:
         return False
@@ -1281,6 +1303,37 @@ def onchain_logging_ready() -> bool:
     return True
 
 
+def build_activity_logger_tx(web3, logger_contract, account_address: str, payload: dict, nonce: int) -> dict:
+    token = Web3.to_checksum_address(payload["token"])
+    score = max(0, min(100, int(payload.get("score") or 0)))
+    return logger_contract.functions.logModule(
+        token,
+        str(payload.get("module") or "unknown"),
+        str(payload.get("verdict") or "UNKNOWN"),
+        score,
+        payload_hash(payload),
+    ).build_transaction(
+        {
+            "from": account_address,
+            "nonce": nonce,
+            "chainId": web3.eth.chain_id,
+        }
+    )
+
+
+def build_raw_data_tx(web3, account_address: str, target: str, payload: dict, nonce: int) -> dict:
+    encoded = stable_payload_json(payload).encode("utf-8")
+    return {
+        "from": account_address,
+        "to": target,
+        "value": 0,
+        "data": "0x" + encoded.hex(),
+        "nonce": nonce,
+        "chainId": web3.eth.chain_id,
+        "type": 2,
+    }
+
+
 def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[dict]:
     if not onchain_logging_ready():
         return []
@@ -1291,23 +1344,26 @@ def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[d
 
     private_key = os.getenv("AVAX_LOG_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
     account = web3.eth.account.from_key(private_key)
-    target = Web3.to_checksum_address(ONCHAIN_LOG_TO_ADDRESS or account.address)
+    logger_contract = None
+    if ACTIVITY_LOGGER_ADDRESS:
+        logger_contract = web3.eth.contract(
+            address=Web3.to_checksum_address(ACTIVITY_LOGGER_ADDRESS),
+            abi=ACTIVITY_LOGGER_ABI,
+        )
+        target = Web3.to_checksum_address(ACTIVITY_LOGGER_ADDRESS)
+    else:
+        target = Web3.to_checksum_address(ONCHAIN_LOG_TO_ADDRESS or account.address)
+        log.warning("ACTIVITY_LOGGER_ADDRESS nije postavljen; koristim raw tx.data fallback na %s", target)
     next_nonce = web3.eth.get_transaction_count(account.address, "pending")
     avax_eur_price = fetch_avax_eur_price()
     total_budget_wei = avax_to_wei(MAX_AVAX_TOTAL)
     sent: list[dict] = []
 
     for payload in payloads:
-        encoded = stable_payload_json(payload).encode("utf-8")
-        tx = {
-            "from": account.address,
-            "to": target,
-            "value": 0,
-            "data": "0x" + encoded.hex(),
-            "nonce": next_nonce,
-            "chainId": web3.eth.chain_id,
-            "type": 2,
-        }
+        if logger_contract is not None:
+            tx = build_activity_logger_tx(web3, logger_contract, account.address, payload, next_nonce)
+        else:
+            tx = build_raw_data_tx(web3, account.address, target, payload, next_nonce)
         estimated_gas = int(web3.eth.estimate_gas(tx))
         tx["gas"] = max(int(estimated_gas * 1.25), estimated_gas + 10_000)
         tx = apply_eip1559_fee_strategy(web3, tx)
@@ -1347,6 +1403,7 @@ def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[d
             "gas_used": int(receipt.gasUsed),
             "avax_spent": actual_avax,
             "eur_spent": actual_eur,
+            "to": target,
         }
         sent.append(item)
         log.info("  [ONCHAIN] %s -> %s gas=%s", payload["module"], item["tx_hash"], item["gas_used"])

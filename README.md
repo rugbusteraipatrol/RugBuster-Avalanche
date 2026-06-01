@@ -133,9 +133,10 @@ Do not paste private keys into chat. Set secrets in Railway variables or local
 `.env`:
 
 ```txt
-AVAX_LOG_PRIVATE_KEY=account_2_private_key
+AVAX_LOG_PRIVATE_KEY=verified_wallet_private_key
 AVAX_RPC=https://api.avax.network/ext/bc/C/rpc
 ONCHAIN_LOG_ENABLED=true
+ACTIVITY_LOGGER_ADDRESS=deployed_activity_logger_contract
 ONCHAIN_LOG_TO_ADDRESS=
 
 AVAX_TELEGRAM_BOT_TOKEN=telegram_bot_token
@@ -150,10 +151,20 @@ MIN_SCAN_DELAY_MINUTES=15
 MAX_SCAN_DELAY_MINUTES=90
 ```
 
-If `ONCHAIN_LOG_TO_ADDRESS` is empty, the worker sends each data transaction to
-the signer wallet itself. State is stored in `avax_collector_state.json`; token
-count resets daily, while total AVAX/EUR spend is tracked until
-`RUN_UNTIL_DATE`. Transaction hashes are appended to `avax_scan_log.md`.
+Deploy the activity logger with the verified wallet:
+
+```bash
+npm run deploy:activity:mainnet
+```
+
+Then set the printed `ACTIVITY_LOGGER_ADDRESS` in Railway. With
+`ACTIVITY_LOGGER_ADDRESS` set, each module is a valid contract call from the
+verified wallet to the RugBuster activity contract. If it is not set, the worker
+falls back to raw `tx.data` writes, which is less useful for project attribution.
+
+State is stored in `avax_collector_state.json`; token count resets daily, while
+total AVAX/EUR spend is tracked until `RUN_UNTIL_DATE`. Transaction hashes are
+appended to `avax_scan_log.md`.
 
 ## Local Scan API
 

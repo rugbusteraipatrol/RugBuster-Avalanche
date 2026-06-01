@@ -14,6 +14,11 @@ module.exports = {
     },
   },
   networks: {
+    mainnet: {
+      url: process.env.AVALANCHE_RPC_URL || "https://api.avax.network/ext/bc/C/rpc",
+      chainId: 43114,
+      accounts: privateKey ? [privateKey] : [],
+    },
     fuji: {
       url: process.env.FUJI_RPC_URL || "https://api.avax-test.network/ext/bc/C/rpc",
       chainId: 43113,
