@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "chains" / "avalanche"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from bridge import publish_score, send_telegram_alert  # noqa: E402
+from bridge import publish_score, publish_score_modules, send_telegram_alert  # noqa: E402
 from risk_engine import score_token  # noqa: E402
 from network_config import NETWORKS, load_env, resolve_network, resolve_rpc  # noqa: E402
 
@@ -132,8 +132,9 @@ def api_scan():
 
     payload = request.get_json(silent=True) or {}
     address = str(payload.get("address") or "").strip()
-    publish = bool(payload.get("publish"))
-    notify = bool(payload.get("notify"))
+    publish = bool(payload.get("publish")) or env_enabled("PUBLISH_TO_REGISTRY")
+    publish_modules = bool(payload.get("publish_modules")) or env_enabled("PUBLISH_MODULES_TO_REGISTRY")
+    notify = bool(payload.get("notify")) or env_enabled("TELEGRAM_ALERTS")
     use_cached = bool(payload.get("use_cached"))
 
     if not Web3.is_address(address):
@@ -154,10 +155,17 @@ def api_scan():
         except Exception as exc:
             return jsonify({"ok": False, "error": f"Registry publish failed: {exc}", "report": report}), 400
 
+    module_publish_result = None
+    if publish_modules:
+        try:
+            module_publish_result = publish_report_modules(report)
+        except Exception as exc:
+            return jsonify({"ok": False, "error": f"Module registry publish failed: {exc}", "report": report}), 400
+
     telegram_result = None
     if notify:
         try:
-            telegram_result = notify_report(report, publish_result)
+            telegram_result = notify_report(report, publish_result, module_publish_result)
         except Exception as exc:
             return jsonify({"ok": False, "error": f"Telegram alert failed: {exc}", "report": report}), 400
 
@@ -166,6 +174,7 @@ def api_scan():
             "ok": True,
             "report": report,
             "published": publish_result,
+            "module_published": module_publish_result,
             "telegram": telegram_result,
         }
     )
@@ -215,6 +224,10 @@ def get_optional_env(*names: str) -> str | None:
         if value:
             return value
     return None
+
+
+def env_enabled(name: str) -> bool:
+    return (os.getenv(name) or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def call_optional(contract, fn_name: str) -> Any | None:
@@ -581,7 +594,136 @@ def publish_report(report: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def notify_report(report: dict[str, Any], publish_result: dict[str, Any] | None) -> dict[str, Any]:
+def build_report_modules(report: dict[str, Any]) -> list[dict[str, Any]]:
+    token = report["address"]
+    timestamp = int(time.time())
+    base = {
+        "token": token,
+        "symbol": report.get("symbol"),
+        "ts": timestamp,
+        "source": report.get("source"),
+        "network": report.get("network"),
+    }
+    modules = [
+        {
+            "module": "token_metadata",
+            "score": 100 if report.get("token_name") not in (None, "Unknown") else 40,
+            "payload": {
+                **base,
+                "name": report.get("token_name"),
+                "decimals_known": report.get("symbol") not in (None, "Unknown"),
+            },
+        },
+        {
+            "module": "liquidity",
+            "score": liquidity_module_score(report.get("liquidity_usd")),
+            "payload": {
+                **base,
+                "liquidity_usd": report.get("liquidity_usd"),
+                "has_liquidity_evidence": report.get("has_liquidity_evidence"),
+                "pair_address": report.get("pair_address"),
+                "dex_id": report.get("dex_id"),
+            },
+        },
+        {
+            "module": "market_activity",
+            "score": market_activity_module_score(report),
+            "payload": {
+                **base,
+                "volume24h": report.get("volume24h"),
+                "buys24h": report.get("buys24h"),
+                "sells24h": report.get("sells24h"),
+                "price_change24h": report.get("price_change24h"),
+            },
+        },
+        {
+            "module": "rug_risk",
+            "score": int(report.get("rug_score") or 0),
+            "payload": {
+                **base,
+                "status": report.get("rug_status"),
+                "reasons": list(report.get("rug_reasons") or [])[:6],
+            },
+        },
+        {
+            "module": "speculation_risk",
+            "score": int(report.get("speculation_score") or 0),
+            "payload": {
+                **base,
+                "status": report.get("speculation_status"),
+                "reasons": list(report.get("speculation_reasons") or [])[:6],
+                "fdv": report.get("fdv"),
+            },
+        },
+        {
+            "module": "final_verdict",
+            "score": int(report.get("rug_score") or 0),
+            "payload": {
+                **base,
+                "rug_score": report.get("rug_score"),
+                "rug_status": report.get("rug_status"),
+                "speculation_score": report.get("speculation_score"),
+                "speculation_status": report.get("speculation_status"),
+                "verdict": verdict_text(report),
+            },
+        },
+    ]
+    return modules
+
+
+def liquidity_module_score(liquidity_usd: float | None) -> int:
+    if liquidity_usd is None:
+        return 35
+    if liquidity_usd < 5_000:
+        return 20
+    if liquidity_usd < 25_000:
+        return 45
+    if liquidity_usd < 100_000:
+        return 65
+    if liquidity_usd < 500_000:
+        return 80
+    return 95
+
+
+def market_activity_module_score(report: dict[str, Any]) -> int:
+    buys = report.get("buys24h")
+    sells = report.get("sells24h")
+    volume = report.get("volume24h")
+    if buys is None and sells is None and volume is None:
+        return 40
+    tx_count = int(buys or 0) + int(sells or 0)
+    if tx_count == 0 and not volume:
+        return 25
+    if tx_count < 10:
+        return 45
+    if tx_count < 50:
+        return 65
+    return 80
+
+
+def publish_report_modules(report: dict[str, Any]) -> dict[str, Any]:
+    web3 = get_web3()
+    private_key = require_env("PRIVATE_KEY")
+    registry_address = require_env("REGISTRY_ADDRESS")
+    module_receipts = publish_score_modules(
+        web3=web3,
+        private_key=private_key,
+        registry_address=registry_address,
+        token=report["address"],
+        modules=build_report_modules(report),
+    )
+    return {
+        "count": len(module_receipts),
+        "transactions": module_receipts,
+        "total_gas_used": sum(int(receipt.get("gas_used") or 0) for receipt in module_receipts),
+    }
+
+
+def notify_report(
+    report: dict[str, Any],
+    publish_result: dict[str, Any] | None,
+    module_publish_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     bot_token = require_env("TELEGRAM_BOT_TOKEN")
     chat_id = require_env("TELEGRAM_CHAT_ID")
     lines = [
@@ -594,6 +736,8 @@ def notify_report(report: dict[str, Any], publish_result: dict[str, Any] | None)
     ]
     if publish_result:
         lines.append(f"⛓️ <b>Registry TX:</b> <code>{publish_result['tx_hash']}</code>")
+    if module_publish_result:
+        lines.append(f"⛓️ <b>Module TXs:</b> <code>{module_publish_result['count']}</code>")
     if report.get("pair_url"):
         lines.append(f"🔗 <a href=\"{report['pair_url']}\">Pair URL</a>")
 

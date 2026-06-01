@@ -133,6 +133,7 @@ Example request:
 {
   "address": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
   "publish": false,
+  "publish_modules": false,
   "notify": false
 }
 ```
@@ -143,7 +144,32 @@ The API:
 - reads live market structure from DexScreener
 - scores the token through `risk_engine.py`
 - can optionally publish the result to `RugBusterRegistry`
+- can optionally publish each scan module as its own on-chain registry event
 - can optionally send a Telegram alert
+
+For deeper on-chain proof-of-work per real scan, set `publish_modules` to `true`.
+The API will send one Avalanche C-Chain transaction for each module:
+
+```json
+{
+  "address": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+  "publish_modules": true,
+  "notify": true
+}
+```
+
+Current module writes:
+
+- `token_metadata`
+- `liquidity`
+- `market_activity`
+- `rug_risk`
+- `speculation_risk`
+- `final_verdict`
+
+Each transaction emits a `ScoreUpdated` registry event with a module-specific
+metadata hash. This keeps the activity tied to real scanner output while making
+the Avalanche activity visible on-chain.
 
 If the website is open locally, its Apex scanner will try this API first at `http://127.0.0.1:8787`, then fall back to direct DexScreener reads if the API is not running.
 
@@ -175,10 +201,15 @@ AVALANCHE_RPC_URL=https://api.avax.network/ext/bc/C/rpc
 REGISTRY_ADDRESS=0x5F30276B3A5079E088Ec3072884286de5a868355
 PRIVATE_KEY=your_registry_reviewer_key
 PUBLISH_TO_REGISTRY=false
+PUBLISH_MODULES_TO_REGISTRY=false
 TELEGRAM_ALERTS=false
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 ```
+
+Set `PUBLISH_MODULES_TO_REGISTRY=true` when the backend should automatically
+publish module-level on-chain writes for every real API scan, including scans
+started from a Telegram bot or external worker.
 
 5. After deploy, test:
 

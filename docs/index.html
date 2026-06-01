@@ -2360,7 +2360,7 @@
       const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, publish: true, use_cached: true })
+        body: JSON.stringify({ address, publish_modules: true, use_cached: true })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
@@ -2721,50 +2721,24 @@
 
     setPublishButtonState(false, 'PUBLISHING...');
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">publish ${shortAddress(lastScannedAddress)} --registry</span>`);
-    await termLineDelay(`<span class="t-out">Preparing mainnet registry write...</span>`, 220);
+    await termLineDelay(`<span class="t-out">Preparing backend module registry writes...</span>`, 220);
 
     try {
-      if (walletConnected && connectedProvider === 'evm' && window.ethereum) {
-        const { signer, contract } = await getRegistryContractWithSigner();
-        const signerAddress = await signer.getAddress();
-        const isReviewer = await isAuthorizedReviewerAddress(signerAddress);
-
-        if (!isReviewer) {
-          throw new Error('Connected wallet is not an authorized reviewer yet. Owner must approve it before direct publish.');
-        }
-
-        if (lastScanData.rugScore === null || lastScanData.rugScore === undefined) {
-          throw new Error('Cannot publish without a Rug Score');
-        }
-
-        const metadataHash = await sha256Bytes32({ report: lastScanData });
-        await termLineDelay(`<span class="t-out">// Signing with connected wallet ${shortAddress(signerAddress)}</span>`, 120);
-        const tx = await contract.updateScore(
-          lastScannedAddress,
-          Number(lastScanData.rugScore),
-          metadataHash
-        );
-        const receipt = await tx.wait();
-        await termLineDelay(`<span class="t-success">✓ Registry publish confirmed from connected wallet.</span>`, 220);
-        await termLineDelay(`<span class="t-out">// TX: ${tx.hash}</span>`, 120);
-        await termLineDelay(`<span class="t-out">// Gas used: ${receipt.gasUsed.toString()}</span>`, 120);
-        setPublishButtonState(true, 'PUBLISHED');
-        setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
-      } else {
-        const response = await postRegistryPublish(lastScannedAddress);
-        if (!response.published || !response.published.tx_hash) {
-          throw new Error('Registry API did not confirm on-chain publication');
-        }
-        await termLineDelay(`<span class="t-success">✓ Registry publish confirmed via backend signer.</span>`, 220);
-        await termLineDelay(`<span class="t-out">// TX: ${response.published.tx_hash}</span>`, 120);
-        await termLineDelay(`<span class="t-out">// Gas used: ${response.published.gas_used}</span>`, 120);
-        await termLineDelay(`<span class="t-out">// Connect an authorized Avalanche reviewer wallet to burn gas from your own account.</span>`, 120);
-        setPublishButtonState(true, 'PUBLISHED');
-        setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
+      const response = await postRegistryPublish(lastScannedAddress);
+      if (!response.module_published || !response.module_published.count) {
+        throw new Error('Registry API did not confirm module publication');
       }
+      await termLineDelay(`<span class="t-success">✓ Module registry publish confirmed via backend signer.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Module TXs: ${response.module_published.count}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Total gas used: ${response.module_published.total_gas_used}</span>`, 120);
+      for (const item of response.module_published.transactions || []) {
+        await termLineDelay(`<span class="t-out">// ${item.module}: ${item.tx_hash}</span>`, 90);
+      }
+      setPublishButtonState(true, 'PUBLISHED');
+      setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
     } catch (err) {
       await termLineDelay(`<span class="t-danger">✗ REGISTRY PUBLISH FAILED: ${err.message}</span>`, 220);
-      await termLineDelay(`<span class="t-out">// Check reviewer authorization, REGISTRY_ADDRESS, and Avalanche gas balance.</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Check Railway PRIVATE_KEY, REGISTRY_ADDRESS, PUBLISH_MODULES_TO_REGISTRY, and backend AVAX gas balance.</span>`, 120);
       setPublishButtonState(true, 'PUBLISH REPORT');
     }
 

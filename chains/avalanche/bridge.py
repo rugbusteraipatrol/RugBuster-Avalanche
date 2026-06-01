@@ -44,20 +44,16 @@ def metadata_hash(payload: dict) -> bytes:
     return hashlib.sha256(encoded).digest()
 
 
-def publish_score(
+def _send_update_score(
     *,
     web3: Web3,
-    private_key: str,
-    registry_address: str,
+    account: Any,
+    registry: Any,
     token: str,
     score: int,
     payload: dict,
+    nonce: int | None = None,
 ) -> dict[str, Any]:
-    account = web3.eth.account.from_key(private_key)
-    registry = web3.eth.contract(
-        address=Web3.to_checksum_address(registry_address),
-        abi=MINIMAL_REGISTRY_ABI,
-    )
     tx = registry.functions.updateScore(
         Web3.to_checksum_address(token),
         int(score),
@@ -65,7 +61,7 @@ def publish_score(
     ).build_transaction(
         {
             "from": account.address,
-            "nonce": web3.eth.get_transaction_count(account.address),
+            "nonce": web3.eth.get_transaction_count(account.address) if nonce is None else nonce,
             "chainId": web3.eth.chain_id,
         }
     )
@@ -84,6 +80,70 @@ def publish_score(
         "effective_gas_price": int(getattr(receipt, "effectiveGasPrice", 0) or 0),
         "publisher": account.address,
     }
+
+
+def publish_score(
+    *,
+    web3: Web3,
+    private_key: str,
+    registry_address: str,
+    token: str,
+    score: int,
+    payload: dict,
+) -> dict[str, Any]:
+    account = web3.eth.account.from_key(private_key)
+    registry = web3.eth.contract(
+        address=Web3.to_checksum_address(registry_address),
+        abi=MINIMAL_REGISTRY_ABI,
+    )
+    return _send_update_score(
+        web3=web3,
+        account=account,
+        registry=registry,
+        token=token,
+        score=score,
+        payload=payload,
+    )
+
+
+def publish_score_modules(
+    *,
+    web3: Web3,
+    private_key: str,
+    registry_address: str,
+    token: str,
+    modules: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    account = web3.eth.account.from_key(private_key)
+    registry = web3.eth.contract(
+        address=Web3.to_checksum_address(registry_address),
+        abi=MINIMAL_REGISTRY_ABI,
+    )
+    next_nonce = web3.eth.get_transaction_count(account.address)
+    receipts: list[dict[str, Any]] = []
+
+    for module in modules:
+        module_name = str(module.get("module") or "unknown")
+        module_score = int(module.get("score") or 0)
+        module_payload = dict(module.get("payload") or {})
+        module_payload.setdefault("module", module_name)
+        module_payload.setdefault("token", Web3.to_checksum_address(token))
+
+        receipt = _send_update_score(
+            web3=web3,
+            account=account,
+            registry=registry,
+            token=token,
+            score=module_score,
+            payload=module_payload,
+            nonce=next_nonce,
+        )
+        receipt["module"] = module_name
+        receipt["score"] = module_score
+        receipts.append(receipt)
+        next_nonce += 1
+
+    return receipts
 
 
 def send_telegram_alert(
