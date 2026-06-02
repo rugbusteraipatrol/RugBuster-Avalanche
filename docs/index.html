@@ -1642,19 +1642,21 @@
 
   async function ensureAvalancheChain() {
     if (!window.ethereum) throw new Error('No EVM wallet detected');
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-    if (chainId === '0xa86a') return;
+    const avalancheChainId = '0xa86a';
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    let chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (chainId === avalancheChainId) return;
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0xa86a' }]
+        params: [{ chainId: avalancheChainId }]
       });
     } catch (switchError) {
       if (switchError.code === 4902) {
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [{
-            chainId: '0xa86a',
+            chainId: avalancheChainId,
             chainName: 'Avalanche C-Chain',
             nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
             rpcUrls: ['https://api.avax.network/ext/bc/C/rpc'],
@@ -1665,6 +1667,13 @@
         throw switchError;
       }
     }
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      if (chainId === avalancheChainId) return;
+      await sleep(250);
+    }
+    throw new Error('Wallet did not switch to Avalanche C-Chain');
   }
 
   async function connectMetaMask() {
@@ -1892,7 +1901,12 @@
       throw new Error('MetaMask or another EVM wallet is required');
     }
     await ensureAvalancheChain();
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
     const provider = new window.ethers.BrowserProvider(window.ethereum);
+    const network = await provider.getNetwork();
+    if (network.chainId !== 43114n) {
+      throw new Error('Wallet provider is not on Avalanche C-Chain yet');
+    }
     const signer = await provider.getSigner();
     const contract = new window.ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, signer);
     return { provider, signer, contract };
@@ -2074,15 +2088,7 @@
     }
 
     try {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xa86a' }]
-        });
-      } catch (switchErr) {
-        console.warn('Could not switch to Avalanche automatically:', switchErr);
-      }
-
+      await ensureAvalancheChain();
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (!accounts || !accounts.length) {
         throw new Error('Wallet connection returned no accounts');
