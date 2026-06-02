@@ -1388,13 +1388,28 @@ def checksum_env_address(value: str, name: str) -> str:
 def build_activity_logger_tx(web3, logger_contract, account_address: str, payload: dict, nonce: int) -> dict:
     token = Web3.to_checksum_address(payload["token"])
     score = max(0, min(100, int(payload.get("score") or 0)))
-    return logger_contract.functions.logModuleWithEvidence(
+    fn_name = "logModuleWithEvidence" if payload.get("_with_evidence", True) else "logModule"
+    if fn_name == "logModuleWithEvidence":
+        return logger_contract.functions.logModuleWithEvidence(
+            token,
+            str(payload.get("module") or "unknown"),
+            str(payload.get("verdict") or "UNKNOWN"),
+            score,
+            payload_hash(payload),
+            evidence_bytes(payload),
+        ).build_transaction(
+            {
+                "from": account_address,
+                "nonce": nonce,
+                "chainId": web3.eth.chain_id,
+            }
+        )
+    return logger_contract.functions.logModule(
         token,
         str(payload.get("module") or "unknown"),
         str(payload.get("verdict") or "UNKNOWN"),
         score,
         payload_hash(payload),
-        evidence_bytes(payload),
     ).build_transaction(
         {
             "from": account_address,
@@ -1459,10 +1474,26 @@ def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[d
 
     for payload in payloads:
         if logger_contract is not None:
-            tx = build_activity_logger_tx(web3, logger_contract, account.address, payload, next_nonce)
+            try:
+                tx = build_activity_logger_tx(web3, logger_contract, account.address, payload, next_nonce)
+            except Exception as exc:
+                fallback_payload = dict(payload)
+                fallback_payload["_with_evidence"] = False
+                log.warning("  [ONCHAIN] evidence call nije dostupan (%s); koristim logModule fallback.", exc)
+                tx = build_activity_logger_tx(web3, logger_contract, account.address, fallback_payload, next_nonce)
         else:
             tx = build_raw_data_tx(web3, account.address, target, payload, next_nonce)
-        estimated_gas = int(web3.eth.estimate_gas(tx))
+        try:
+            estimated_gas = int(web3.eth.estimate_gas(tx))
+        except Exception as exc:
+            if logger_contract is not None and payload.get("_with_evidence", True):
+                fallback_payload = dict(payload)
+                fallback_payload["_with_evidence"] = False
+                log.warning("  [ONCHAIN] estimate za evidence call pukao (%s); koristim logModule fallback.", exc)
+                tx = build_activity_logger_tx(web3, logger_contract, account.address, fallback_payload, next_nonce)
+                estimated_gas = int(web3.eth.estimate_gas(tx))
+            else:
+                raise
         tx["gas"] = max(int(estimated_gas * 1.25), estimated_gas + 10_000)
         tx = apply_eip1559_fee_strategy(web3, tx)
         tx = apply_target_scan_fee(web3, tx, len(payloads))
@@ -1760,7 +1791,11 @@ def poll_loop(output_path: Path) -> None:
 
                     record = process_token_avax(token_data, output_path)
                     if record:
-                        txs = publish_module_payloads_onchain(module_payloads(record), state)
+                        txs = []
+                        try:
+                            txs = publish_module_payloads_onchain(module_payloads(record), state)
+                        except Exception as exc:
+                            log.error("  [ONCHAIN] Module writes failed, saljem Telegram bez tx hash-eva: %s", exc)
                         append_markdown_scan_log(record, txs)
                         send_telegram_alert_avax(record, txs)
                         state = load_daily_state()
