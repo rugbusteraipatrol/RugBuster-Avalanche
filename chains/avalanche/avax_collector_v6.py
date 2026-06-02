@@ -84,6 +84,24 @@ TELEGRAM_BOT_TOKEN = clean_env_value("AVAX_TELEGRAM_BOT_TOKEN") or clean_env_val
 ONCHAIN_LOG_ENABLED = os.getenv("ONCHAIN_LOG_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 ONCHAIN_LOG_TO_ADDRESS = clean_env_value("ONCHAIN_LOG_TO_ADDRESS")
 ACTIVITY_LOGGER_ADDRESS = clean_env_value("ACTIVITY_LOGGER_ADDRESS")
+V1_PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
+LB_PAIR_CREATED_TOPIC = "0x" + keccak(text="LBPairCreated(address,address,uint256,address,uint256)").hex()
+DEFAULT_V1_DEX_FACTORIES = [
+    "0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10",  # Trader Joe V1
+    "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",  # Pangolin
+]
+DEFAULT_LB_DEX_FACTORIES = [
+    "0xb43120c4745967fa9b93E79C149E66B0f2D6Fe0c",  # LFJ V2.2
+    "0x8e42f2F4101563bF679975178e880FD87d3eFd4e",  # LFJ V2.1
+    "0x6E77932A92582f504FF6c4BdbCef7Da6c198aEEf",  # LFJ V2.0
+]
+BASE_TOKEN_ADDRESSES = {
+    "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",  # WAVAX
+    "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664",  # USDC.e
+    "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",  # USDC
+    "0xc7198437980c041c805a1edcba50c1ce5db95118",  # USDT.e
+    "0xd586e7f844cea2f87f50152665bcbc2c279d8d70",  # DAI.e
+}
 
 ACTIVITY_LOGGER_ABI = [
     {
@@ -1694,6 +1712,112 @@ def process_token_avax(token_data: dict, output_path: Path) -> dict | None:
 # Block scanner (isti kao stara verzija)
 # ---------------------------------------------------------------------------
 
+def configured_dex_factories() -> list[str]:
+    raw = clean_env_value("DEX_FACTORIES_JSON")
+    if raw:
+        try:
+            values = json.loads(raw)
+            if isinstance(values, list):
+                return [str(value) for value in values if Web3 is None or Web3.is_address(str(value))]
+        except json.JSONDecodeError:
+            log.warning("DEX_FACTORIES_JSON nije validan JSON; koristim default factory adrese.")
+    return DEFAULT_V1_DEX_FACTORIES
+
+
+def configured_lb_factories() -> list[str]:
+    raw = clean_env_value("LB_DEX_FACTORIES_JSON")
+    if raw:
+        try:
+            values = json.loads(raw)
+            if isinstance(values, list):
+                return [str(value) for value in values if Web3 is None or Web3.is_address(str(value))]
+        except json.JSONDecodeError:
+            log.warning("LB_DEX_FACTORIES_JSON nije validan JSON; koristim default LFJ LB factory adrese.")
+    return DEFAULT_LB_DEX_FACTORIES
+
+
+def topic_to_address(topic: str) -> str:
+    topic = str(topic or "")
+    if topic.startswith("0x") and len(topic) >= 42:
+        return "0x" + topic[-40:].lower()
+    return ""
+
+
+def choose_pair_token(token0: str, token1: str) -> str:
+    token0 = token0.lower()
+    token1 = token1.lower()
+    if token0 in BASE_TOKEN_ADDRESSES and token1 not in BASE_TOKEN_ADDRESSES:
+        return token1
+    if token1 in BASE_TOKEN_ADDRESSES and token0 not in BASE_TOKEN_ADDRESSES:
+        return token0
+    return token0
+
+
+def fetch_pair_created_logs(from_block: int, to_block: int, factories: list[str], topic: str) -> list[dict]:
+    if not factories:
+        return []
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_getLogs",
+        "params": [{
+            "fromBlock": hex(from_block),
+            "toBlock": hex(to_block),
+            "address": factories,
+            "topics": [topic],
+        }],
+    }
+    resp = requests.post(AVAX_RPC, json=payload, timeout=RPC_TIMEOUT)
+    logs = resp.json().get("result", [])
+    if not isinstance(logs, list):
+        log.warning("DEX pair scan nije vratio listu: %s", logs)
+        return []
+    return logs
+
+
+def get_new_dex_pair_tokens(from_block: int, to_block: int) -> list[dict]:
+    tokens = {}
+    try:
+        pair_logs = []
+        pair_logs.extend(fetch_pair_created_logs(from_block, to_block, configured_dex_factories(), V1_PAIR_CREATED_TOPIC))
+        pair_logs.extend(fetch_pair_created_logs(from_block, to_block, configured_lb_factories(), LB_PAIR_CREATED_TOPIC))
+        for item in pair_logs:
+            topics = item.get("topics", [])
+            if len(topics) < 3:
+                continue
+            token0 = topic_to_address(topics[1])
+            token1 = topic_to_address(topics[2])
+            token_addr = choose_pair_token(token0, token1)
+            if not token_addr or token_addr in tokens:
+                continue
+            pair_addr = ""
+            data = str(item.get("data") or "")
+            if data.startswith("0x") and len(data) >= 66:
+                pair_addr = "0x" + data[26:66].lower()
+            block_num = int(str(item.get("blockNumber", "0x0")), 16)
+            token_info = get_erc20_metadata_rpc(token_addr) or {}
+            tokens[token_addr] = {
+                "address": token_addr,
+                "name": token_info.get("name", "Unknown"),
+                "symbol": token_info.get("symbol", ""),
+                "deployer": str(item.get("address", "")).lower(),
+                "block": block_num,
+                "timestamp": int(time.time()),
+                "pair": pair_addr,
+                "source": "dex_pair",
+            }
+            log.info(
+                "  Novi DEX pair token: %s (%s) | token=%s pair=%s",
+                tokens[token_addr]["name"],
+                tokens[token_addr]["symbol"],
+                token_addr[:12],
+                pair_addr[:12] if pair_addr else "unknown",
+            )
+    except Exception as e:
+        log.warning("DEX pair scan greška: %s", e)
+    return list(tokens.values())
+
+
 def get_new_token_deployments(from_block: int, to_block: int = 0) -> list:
     contracts = {}
     try:
@@ -1813,8 +1937,15 @@ def poll_loop(output_path: Path) -> None:
                 time.sleep(POLL_INTERVAL)
                 continue
 
+            dex_tokens = get_new_dex_pair_tokens(current_block, new_block)
+            log.info("Nađeno %d novih DEX pair tokena u blokovima %d-%d",
+                     len(dex_tokens), current_block, new_block)
+            for token_data in dex_tokens:
+                if token_data.get("address", "").lower() not in seen_contracts:
+                    pending_tokens.append(token_data)
+
             deployments = get_new_token_deployments(current_block, new_block)
-            log.info("Nađeno %d novih contract deploy-eva u blokovima %d-%d",
+            log.info("Nađeno %d novih fallback contract deploy-eva u blokovima %d-%d",
                      len(deployments), current_block, new_block)
             for token_data in deployments:
                 if token_data.get("address", "").lower() not in seen_contracts:
