@@ -120,6 +120,12 @@ ERC20_META_ABI = [
     {"constant": True, "inputs": [], "name": "decimals", "outputs": [{"name": "", "type": "uint8"}], "type": "function"},
     {"constant": True, "inputs": [], "name": "totalSupply", "outputs": [{"name": "", "type": "uint256"}], "type": "function"},
 ]
+ERC20_BYTES32_META_ABI = [
+    {"constant": True, "inputs": [], "name": "name", "outputs": [{"name": "", "type": "bytes32"}], "type": "function"},
+    {"constant": True, "inputs": [], "name": "symbol", "outputs": [{"name": "", "type": "bytes32"}], "type": "function"},
+    {"constant": True, "inputs": [], "name": "decimals", "outputs": [{"name": "", "type": "uint8"}], "type": "function"},
+    {"constant": True, "inputs": [], "name": "totalSupply", "outputs": [{"name": "", "type": "uint256"}], "type": "function"},
+]
 
 # Throttle: SnowTrace free tier ~5 req/s
 _last_api_call = [0.0]
@@ -706,36 +712,54 @@ def get_token_info_avax(contract_address: str) -> dict:
     return {"name": "Unknown", "symbol": "", "total_supply": 0, "decimals": 18, "holders_count": 0}
 
 
+def decode_token_text(value) -> str:
+    if isinstance(value, bytes):
+        return value.rstrip(b"\x00").decode("utf-8", errors="ignore").strip()
+    return str(value or "").strip()
+
+
+def read_erc20_metadata_with_abi(web3, contract_address: str, abi: list[dict]) -> dict | None:
+    token = web3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=abi)
+    name = decode_token_text(token.functions.name().call())
+    symbol = decode_token_text(token.functions.symbol().call())
+    decimals = token.functions.decimals().call()
+    total_supply = token.functions.totalSupply().call()
+    if not name and not symbol:
+        return None
+    if not name:
+        name = symbol
+    if not symbol:
+        symbol = name[:12]
+    return {
+        "name": name,
+        "symbol": symbol,
+        "total_supply": total_supply,
+        "decimals": int(decimals),
+        "holders_count": 0,
+        "is_erc20": True,
+    }
+
+
 def get_erc20_metadata_rpc(contract_address: str) -> dict | None:
     if Web3 is None:
         return None
-    try:
-        web3 = Web3(Web3.HTTPProvider(AVAX_RPC, request_kwargs={"timeout": RPC_TIMEOUT}))
-        if not web3.is_connected() or not Web3.is_address(contract_address):
-            return None
-        token = web3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=ERC20_META_ABI)
-        name = token.functions.name().call()
-        symbol = token.functions.symbol().call()
-        decimals = token.functions.decimals().call()
-        total_supply = token.functions.totalSupply().call()
-        if not name or not symbol:
-            return None
-        return {
-            "name": str(name or "Unknown"),
-            "symbol": str(symbol or ""),
-            "total_supply": total_supply,
-            "decimals": int(decimals),
-            "holders_count": 0,
-            "is_erc20": True,
-        }
-    except Exception:
+    web3 = Web3(Web3.HTTPProvider(AVAX_RPC, request_kwargs={"timeout": RPC_TIMEOUT}))
+    if not web3.is_connected() or not Web3.is_address(contract_address):
         return None
+    for abi in (ERC20_META_ABI, ERC20_BYTES32_META_ABI):
+        try:
+            metadata = read_erc20_metadata_with_abi(web3, contract_address, abi)
+            if metadata:
+                return metadata
+        except Exception:
+            continue
+    return None
 
 
 def has_usable_token_metadata(token_info: dict) -> bool:
     name = str(token_info.get("name") or "").strip()
     symbol = str(token_info.get("symbol") or "").strip()
-    return bool(name and symbol and name.lower() != "unknown")
+    return bool((name and name.lower() != "unknown") or symbol)
 
 # ---------------------------------------------------------------------------
 # CIA Analitika — iste funkcije iz stare verzije
