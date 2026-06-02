@@ -84,6 +84,8 @@ TELEGRAM_BOT_TOKEN = clean_env_value("AVAX_TELEGRAM_BOT_TOKEN") or clean_env_val
 ONCHAIN_LOG_ENABLED = os.getenv("ONCHAIN_LOG_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 ONCHAIN_LOG_TO_ADDRESS = clean_env_value("ONCHAIN_LOG_TO_ADDRESS")
 ACTIVITY_LOGGER_ADDRESS = clean_env_value("ACTIVITY_LOGGER_ADDRESS")
+REGISTRY_ADDRESS = clean_env_value("REGISTRY_ADDRESS", "0x5F30276B3A5079E088Ec3072884286de5a868355")
+BOT_PUBLISH_TO_REGISTRY = os.getenv("BOT_PUBLISH_TO_REGISTRY", "true").strip().lower() in {"1", "true", "yes", "on"}
 GECKOTERMINAL_ENABLED = os.getenv("GECKOTERMINAL_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 GECKOTERMINAL_NEW_POOLS_URL = clean_env_value(
     "GECKOTERMINAL_NEW_POOLS_URL",
@@ -132,6 +134,19 @@ ACTIVITY_LOGGER_ABI = [
             {"internalType": "bytes", "name": "evidence", "type": "bytes"},
         ],
         "name": "logModuleWithEvidence",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    }
+]
+REGISTRY_ABI = [
+    {
+        "inputs": [
+            {"internalType": "address", "name": "token", "type": "address"},
+            {"internalType": "uint8", "name": "score", "type": "uint8"},
+            {"internalType": "bytes32", "name": "metadataHash", "type": "bytes32"},
+        ],
+        "name": "updateScore",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function",
@@ -1404,6 +1419,10 @@ def payload_hash(payload: dict) -> bytes:
     return keccak(text=stable_payload_json(payload))
 
 
+def registry_metadata_hash(payload: dict) -> bytes:
+    return hashlib.sha256(stable_payload_json(payload).encode("utf-8")).digest()
+
+
 def evidence_bytes(payload: dict) -> bytes:
     encoded = stable_payload_json(payload).encode("utf-8")
     if len(encoded) >= EVIDENCE_BYTES_TARGET:
@@ -1476,6 +1495,30 @@ def build_activity_logger_tx(web3, logger_contract, account_address: str, payloa
     )
 
 
+def build_registry_update_score_tx(web3, registry_contract, account_address: str, payload: dict, nonce: int) -> dict:
+    token = Web3.to_checksum_address(payload["token"])
+    score = max(0, min(100, int(payload.get("score") or 0)))
+    registry_payload = {
+        "module": str(payload.get("module") or "unknown"),
+        "token": token,
+        "verdict": str(payload.get("verdict") or "UNKNOWN"),
+        "score": score,
+        "ts": int(payload.get("ts") or time.time()),
+        "evidence": payload.get("evidence", {}),
+    }
+    return registry_contract.functions.updateScore(
+        token,
+        score,
+        registry_metadata_hash(registry_payload),
+    ).build_transaction(
+        {
+            "from": account_address,
+            "nonce": nonce,
+            "chainId": web3.eth.chain_id,
+        }
+    )
+
+
 def build_raw_data_tx(web3, account_address: str, target: str, payload: dict, nonce: int) -> dict:
     encoded = stable_payload_json(payload).encode("utf-8")
     return {
@@ -1514,14 +1557,24 @@ def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[d
 
     private_key = require_private_key()
     account = web3.eth.account.from_key(private_key)
+    registry_contract = None
+    if BOT_PUBLISH_TO_REGISTRY and REGISTRY_ADDRESS:
+        registry_contract = web3.eth.contract(
+            address=checksum_env_address(REGISTRY_ADDRESS, "REGISTRY_ADDRESS"),
+            abi=REGISTRY_ABI,
+        )
+        target = checksum_env_address(REGISTRY_ADDRESS, "REGISTRY_ADDRESS")
+        log.info("  [ONCHAIN] Registry mode: %s", target)
+    else:
+        target = ""
     logger_contract = None
-    if ACTIVITY_LOGGER_ADDRESS:
+    if registry_contract is None and ACTIVITY_LOGGER_ADDRESS:
         logger_contract = web3.eth.contract(
             address=checksum_env_address(ACTIVITY_LOGGER_ADDRESS, "ACTIVITY_LOGGER_ADDRESS"),
             abi=ACTIVITY_LOGGER_ABI,
         )
         target = checksum_env_address(ACTIVITY_LOGGER_ADDRESS, "ACTIVITY_LOGGER_ADDRESS")
-    else:
+    elif registry_contract is None:
         target = checksum_env_address(ONCHAIN_LOG_TO_ADDRESS or account.address, "ONCHAIN_LOG_TO_ADDRESS")
         log.warning("ACTIVITY_LOGGER_ADDRESS nije postavljen; koristim raw tx.data fallback na %s", target)
     next_nonce = web3.eth.get_transaction_count(account.address, "pending")
@@ -1530,7 +1583,9 @@ def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[d
     sent: list[dict] = []
 
     for payload in payloads:
-        if logger_contract is not None:
+        if registry_contract is not None:
+            tx = build_registry_update_score_tx(web3, registry_contract, account.address, payload, next_nonce)
+        elif logger_contract is not None:
             try:
                 tx = build_activity_logger_tx(web3, logger_contract, account.address, payload, next_nonce)
             except Exception as exc:
