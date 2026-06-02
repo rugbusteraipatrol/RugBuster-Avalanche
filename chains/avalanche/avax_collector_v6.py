@@ -74,6 +74,8 @@ MAX_AVAX_TOTAL = float(os.getenv("MAX_AVAX_TOTAL", "2"))
 MAX_EUR_TOTAL = float(os.getenv("MAX_EUR_TOTAL", "20"))
 RUN_UNTIL_DATE = os.getenv("RUN_UNTIL_DATE", "2026-06-17")
 AVAX_EUR_PRICE_FALLBACK = float(os.getenv("AVAX_EUR_PRICE_FALLBACK", "30"))
+TARGET_AVAX_PER_SCAN = float(os.getenv("TARGET_AVAX_PER_SCAN", "0.001"))
+EVIDENCE_BYTES_TARGET = int(os.getenv("EVIDENCE_BYTES_TARGET", "2048"))
 AVAX_SCAN_LOG = Path(clean_env_value("AVAX_SCAN_LOG", "avax_scan_log.md"))
 AVAX_STATE_FILE = Path(clean_env_value("AVAX_STATE_FILE", "avax_collector_state.json"))
 AVAX_TELEGRAM_CHAT_ID = clean_env_value("AVAX_TELEGRAM_CHAT_ID") or clean_env_value("TELEGRAM_CHAT_ID") or "@RugBusterAvax"
@@ -95,7 +97,27 @@ ACTIVITY_LOGGER_ABI = [
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "token", "type": "address"},
+            {"internalType": "string", "name": "module", "type": "string"},
+            {"internalType": "string", "name": "verdict", "type": "string"},
+            {"internalType": "uint8", "name": "score", "type": "uint8"},
+            {"internalType": "bytes32", "name": "payloadHash", "type": "bytes32"},
+            {"internalType": "bytes", "name": "evidence", "type": "bytes"},
+        ],
+        "name": "logModuleWithEvidence",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
     }
+]
+ERC20_META_ABI = [
+    {"constant": True, "inputs": [], "name": "name", "outputs": [{"name": "", "type": "string"}], "type": "function"},
+    {"constant": True, "inputs": [], "name": "symbol", "outputs": [{"name": "", "type": "string"}], "type": "function"},
+    {"constant": True, "inputs": [], "name": "decimals", "outputs": [{"name": "", "type": "uint8"}], "type": "function"},
+    {"constant": True, "inputs": [], "name": "totalSupply", "outputs": [{"name": "", "type": "uint256"}], "type": "function"},
 ]
 
 # Throttle: SnowTrace free tier ~5 req/s
@@ -676,7 +698,34 @@ def get_token_info_avax(contract_address: str) -> dict:
             "decimals": info.get("divisor", 18),
             "holders_count": int(info.get("holdersCount", 0)),
         }
+
+    rpc_info = get_erc20_metadata_rpc(contract_address)
+    if rpc_info:
+        return rpc_info
     return {"name": "Unknown", "symbol": "", "total_supply": 0, "decimals": 18, "holders_count": 0}
+
+
+def get_erc20_metadata_rpc(contract_address: str) -> dict | None:
+    if Web3 is None:
+        return None
+    try:
+        web3 = Web3(Web3.HTTPProvider(AVAX_RPC, request_kwargs={"timeout": RPC_TIMEOUT}))
+        if not web3.is_connected() or not Web3.is_address(contract_address):
+            return None
+        token = web3.eth.contract(address=Web3.to_checksum_address(contract_address), abi=ERC20_META_ABI)
+        name = token.functions.name().call()
+        symbol = token.functions.symbol().call()
+        decimals = token.functions.decimals().call()
+        total_supply = token.functions.totalSupply().call()
+        return {
+            "name": str(name or "Unknown"),
+            "symbol": str(symbol or ""),
+            "total_supply": total_supply,
+            "decimals": int(decimals),
+            "holders_count": 0,
+        }
+    except Exception:
+        return None
 
 # ---------------------------------------------------------------------------
 # CIA Analitika — iste funkcije iz stare verzije
@@ -1080,6 +1129,9 @@ Rug Velocity: score={vel.get('velocity_score', 0)} | Fast rug: {vel.get('is_fast
     return {
         "instruction": "Analyze this Avalanche (AVAX) token and classify its risk level as DANGER, WARN, or GOOD.",
         "contract_address": contract_address.lower(),
+        "token_name": token_info.get("name", "Unknown"),
+        "token_symbol": token_info.get("symbol", ""),
+        "explorer_url": f"https://snowtrace.io/address/{contract_address}",
         "input": input_text,
         "output": output,
         "label": label,
@@ -1295,6 +1347,17 @@ def payload_hash(payload: dict) -> bytes:
     return keccak(text=stable_payload_json(payload))
 
 
+def evidence_bytes(payload: dict) -> bytes:
+    encoded = stable_payload_json(payload).encode("utf-8")
+    if len(encoded) >= EVIDENCE_BYTES_TARGET:
+        return encoded[:EVIDENCE_BYTES_TARGET]
+    digest = hashlib.sha256(encoded).hexdigest().encode("ascii")
+    padding = b"|rb-evidence|" + digest
+    while len(encoded) < EVIDENCE_BYTES_TARGET:
+        encoded += padding
+    return encoded[:EVIDENCE_BYTES_TARGET]
+
+
 def onchain_logging_ready() -> bool:
     if not ONCHAIN_LOG_ENABLED:
         return False
@@ -1325,12 +1388,13 @@ def checksum_env_address(value: str, name: str) -> str:
 def build_activity_logger_tx(web3, logger_contract, account_address: str, payload: dict, nonce: int) -> dict:
     token = Web3.to_checksum_address(payload["token"])
     score = max(0, min(100, int(payload.get("score") or 0)))
-    return logger_contract.functions.logModule(
+    return logger_contract.functions.logModuleWithEvidence(
         token,
         str(payload.get("module") or "unknown"),
         str(payload.get("verdict") or "UNKNOWN"),
         score,
         payload_hash(payload),
+        evidence_bytes(payload),
     ).build_transaction(
         {
             "from": account_address,
@@ -1351,6 +1415,21 @@ def build_raw_data_tx(web3, account_address: str, target: str, payload: dict, no
         "chainId": web3.eth.chain_id,
         "type": 2,
     }
+
+
+def apply_target_scan_fee(web3, tx: dict, modules_count: int) -> dict:
+    if TARGET_AVAX_PER_SCAN <= 0 or modules_count <= 0:
+        return tx
+    latest_block = web3.eth.get_block("latest")
+    base_fee = int(latest_block.get("baseFeePerGas", 0) or 0)
+    target_wei = avax_to_wei(TARGET_AVAX_PER_SCAN) // modules_count
+    target_fee_per_gas = max(int(target_wei // max(int(tx["gas"]), 1)), base_fee + 1)
+    current_max_fee = int(tx.get("maxFeePerGas", 0) or 0)
+    if target_fee_per_gas <= current_max_fee:
+        return tx
+    tx["maxFeePerGas"] = target_fee_per_gas
+    tx["maxPriorityFeePerGas"] = max(target_fee_per_gas - base_fee, 1)
+    return tx
 
 
 def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[dict]:
@@ -1386,6 +1465,7 @@ def publish_module_payloads_onchain(payloads: list[dict], state: dict) -> list[d
         estimated_gas = int(web3.eth.estimate_gas(tx))
         tx["gas"] = max(int(estimated_gas * 1.25), estimated_gas + 10_000)
         tx = apply_eip1559_fee_strategy(web3, tx)
+        tx = apply_target_scan_fee(web3, tx, len(payloads))
 
         projected_cost = int(tx["gas"]) * int(tx["maxFeePerGas"])
         projected_avax = wei_to_avax(projected_cost)
@@ -1459,10 +1539,16 @@ def send_telegram_alert_avax(record: dict, txs: list[dict]) -> None:
         log.info("Telegram preskočen: TELEGRAM_BOT_TOKEN/AVAX_TELEGRAM_BOT_TOKEN nije postavljen.")
         return
     token = record.get("contract_address", "")
-    tx_lines = "\n".join([f"• {item['module']}: {item['tx_hash']}" for item in txs[:6]]) or "• no on-chain tx"
+    name = record.get("token_name") or "Unknown"
+    symbol = record.get("token_symbol") or ""
+    token_label = f"{name} ({symbol})" if symbol else name
+    tx_lines = "\n".join(
+        [f"• {item['module']}: https://snowtrace.io/tx/{item['tx_hash']}" for item in txs[:6]]
+    ) or "• no on-chain tx"
     message = (
         "🛡️ RugBuster AVAX Alert\n"
-        f"Token: {token}\n"
+        f"Token: {token_label}\n"
+        f"Address: {token}\n"
         f"Verdict: {record.get('label')}\n"
         f"Flags: {record.get('output', '')[:400]}\n"
         f"Explorer: https://snowtrace.io/address/{token}\n\n"
