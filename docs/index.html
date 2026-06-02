@@ -1902,7 +1902,7 @@
     }
     await ensureAvalancheChain();
     await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const provider = new window.ethers.BrowserProvider(window.ethereum);
+    const provider = new window.ethers.BrowserProvider(window.ethereum, 'any');
     const network = await provider.getNetwork();
     if (network.chainId !== 43114n) {
       throw new Error('Wallet provider is not on Avalanche C-Chain yet');
