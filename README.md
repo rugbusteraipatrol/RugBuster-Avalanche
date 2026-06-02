@@ -138,6 +138,7 @@ AVAX_RPC=https://api.avax.network/ext/bc/C/rpc
 ONCHAIN_LOG_ENABLED=true
 ACTIVITY_LOGGER_ADDRESS=deployed_activity_logger_contract
 ONCHAIN_LOG_TO_ADDRESS=
+REQUIRE_ERC20_METADATA=true
 
 AVAX_TELEGRAM_BOT_TOKEN=telegram_bot_token
 AVAX_TELEGRAM_CHAT_ID=@RugBusterAvax

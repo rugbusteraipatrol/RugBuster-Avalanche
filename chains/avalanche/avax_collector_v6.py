@@ -76,6 +76,7 @@ RUN_UNTIL_DATE = os.getenv("RUN_UNTIL_DATE", "2026-06-17")
 AVAX_EUR_PRICE_FALLBACK = float(os.getenv("AVAX_EUR_PRICE_FALLBACK", "30"))
 TARGET_AVAX_PER_SCAN = float(os.getenv("TARGET_AVAX_PER_SCAN", "0.001"))
 EVIDENCE_BYTES_TARGET = int(os.getenv("EVIDENCE_BYTES_TARGET", "2048"))
+REQUIRE_ERC20_METADATA = os.getenv("REQUIRE_ERC20_METADATA", "true").strip().lower() in {"1", "true", "yes", "on"}
 AVAX_SCAN_LOG = Path(clean_env_value("AVAX_SCAN_LOG", "avax_scan_log.md"))
 AVAX_STATE_FILE = Path(clean_env_value("AVAX_STATE_FILE", "avax_collector_state.json"))
 AVAX_TELEGRAM_CHAT_ID = clean_env_value("AVAX_TELEGRAM_CHAT_ID") or clean_env_value("TELEGRAM_CHAT_ID") or "@RugBusterAvax"
@@ -717,15 +718,24 @@ def get_erc20_metadata_rpc(contract_address: str) -> dict | None:
         symbol = token.functions.symbol().call()
         decimals = token.functions.decimals().call()
         total_supply = token.functions.totalSupply().call()
+        if not name or not symbol:
+            return None
         return {
             "name": str(name or "Unknown"),
             "symbol": str(symbol or ""),
             "total_supply": total_supply,
             "decimals": int(decimals),
             "holders_count": 0,
+            "is_erc20": True,
         }
     except Exception:
         return None
+
+
+def has_usable_token_metadata(token_info: dict) -> bool:
+    name = str(token_info.get("name") or "").strip()
+    symbol = str(token_info.get("symbol") or "").strip()
+    return bool(name and symbol and name.lower() != "unknown")
 
 # ---------------------------------------------------------------------------
 # CIA Analitika — iste funkcije iz stare verzije
@@ -1566,6 +1576,9 @@ def append_markdown_scan_log(record: dict, txs: list[dict]) -> None:
 
 
 def send_telegram_alert_avax(record: dict, txs: list[dict]) -> None:
+    if not txs:
+        log.warning("  [TELEGRAM] Preskočen alert: nema potvrđenih on-chain module tx hash-eva.")
+        return
     if not TELEGRAM_BOT_TOKEN:
         log.info("Telegram preskočen: TELEGRAM_BOT_TOKEN/AVAX_TELEGRAM_BOT_TOKEN nije postavljen.")
         return
@@ -1575,7 +1588,7 @@ def send_telegram_alert_avax(record: dict, txs: list[dict]) -> None:
     token_label = f"{name} ({symbol})" if symbol else name
     tx_lines = "\n".join(
         [f"• {item['module']}: https://snowtrace.io/tx/{item['tx_hash']}" for item in txs[:6]]
-    ) or "• no on-chain tx"
+    )
     message = (
         "🛡️ RugBuster AVAX Alert\n"
         f"Token: {token_label}\n"
@@ -1619,6 +1632,9 @@ def process_token_avax(token_data: dict, output_path: Path) -> dict | None:
     if token_info.get("name") == "Unknown" and name != "Unknown":
         token_info["name"] = name
         token_info["symbol"] = symbol
+    if REQUIRE_ERC20_METADATA and not has_usable_token_metadata(token_info):
+        log.info("  Preskačem contract bez ERC20 name/symbol metadata: %s", contract)
+        return None
 
     deployer_balance = get_avax_balance(deployer) if deployer else 0.0
     log.info("  Deployer balance: %.4f AVAX", deployer_balance)
@@ -1774,7 +1790,7 @@ def poll_loop(output_path: Path) -> None:
                 continue
 
             deployments = get_new_token_deployments(current_block, new_block)
-            log.info("Nađeno %d novih tokena u blokovima %d-%d",
+            log.info("Nađeno %d novih contract deploy-eva u blokovima %d-%d",
                      len(deployments), current_block, new_block)
             for token_data in deployments:
                 if token_data.get("address", "").lower() not in seen_contracts:
@@ -1790,12 +1806,16 @@ def poll_loop(output_path: Path) -> None:
                         continue
 
                     record = process_token_avax(token_data, output_path)
+                    if not record:
+                        next_scan_at = time.time()
+                        log.info("Preskočen contract bez validnog token metadata. Queue=%d.", len(pending_tokens))
+                        continue
                     if record:
                         txs = []
                         try:
                             txs = publish_module_payloads_onchain(module_payloads(record), state)
                         except Exception as exc:
-                            log.error("  [ONCHAIN] Module writes failed, saljem Telegram bez tx hash-eva: %s", exc)
+                            log.error("  [ONCHAIN] Module writes failed, alert neće biti poslat bez tx hash-eva: %s", exc)
                         append_markdown_scan_log(record, txs)
                         send_telegram_alert_avax(record, txs)
                         state = load_daily_state()
