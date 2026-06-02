@@ -1833,8 +1833,7 @@ def poll_loop(output_path: Path) -> None:
                     if not record:
                         next_scan_at = time.time()
                         log.info("Preskočen contract bez validnog token metadata. Queue=%d.", len(pending_tokens))
-                        continue
-                    if record:
+                    else:
                         txs = []
                         try:
                             txs = publish_module_payloads_onchain(module_payloads(record), state)
@@ -1846,19 +1845,19 @@ def poll_loop(output_path: Path) -> None:
                         state["tokens"] = int(state.get("tokens", 0)) + 1
                         save_daily_state(state)
 
-                    delay_minutes = random.randint(MIN_SCAN_DELAY_MINUTES, MAX_SCAN_DELAY_MINUTES)
-                    next_scan_at = time.time() + delay_minutes * 60
-                    log.info(
-                        "Sledeći scan za %d min. Queue=%d, daily=%s/%s tokens, total %.6f/%.6f AVAX, %.2f/%.2f EUR.",
-                        delay_minutes,
-                        len(pending_tokens),
-                        state.get("tokens", 0),
-                        MAX_TOKENS_PER_DAY,
-                        wei_to_avax(int(state.get("avax_spent_wei", 0))),
-                        MAX_AVAX_TOTAL,
-                        float(state.get("eur_spent", 0.0)),
-                        MAX_EUR_TOTAL,
-                    )
+                        delay_minutes = random.randint(MIN_SCAN_DELAY_MINUTES, MAX_SCAN_DELAY_MINUTES)
+                        next_scan_at = time.time() + delay_minutes * 60
+                        log.info(
+                            "Sledeći scan za %d min. Queue=%d, daily=%s/%s tokens, total %.6f/%.6f AVAX, %.2f/%.2f EUR.",
+                            delay_minutes,
+                            len(pending_tokens),
+                            state.get("tokens", 0),
+                            MAX_TOKENS_PER_DAY,
+                            wei_to_avax(int(state.get("avax_spent_wei", 0))),
+                            MAX_AVAX_TOTAL,
+                            float(state.get("eur_spent", 0.0)),
+                            MAX_EUR_TOTAL,
+                        )
                 except Exception as e:
                     log.error("Greška pri procesiranju: %s", e)
             elif pending_tokens:
