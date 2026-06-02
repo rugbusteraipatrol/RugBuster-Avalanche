@@ -1972,7 +1972,15 @@ def poll_loop(output_path: Path) -> None:
 
     log.info("Start blok: %d", current_block)
     pending_tokens: list[dict] = []
+    queued_contracts: set[str] = set()
     next_scan_at = 0.0
+
+    def enqueue_token(token_data: dict) -> None:
+        address = token_data.get("address", "").lower()
+        if not address or address in seen_contracts or address in queued_contracts:
+            return
+        pending_tokens.append(token_data)
+        queued_contracts.add(address)
 
     while True:
         try:
@@ -2007,30 +2015,29 @@ def poll_loop(output_path: Path) -> None:
             gecko_tokens = get_geckoterminal_new_pool_tokens()
             log.info("Nađeno %d GeckoTerminal AVAX new-pool tokena", len(gecko_tokens))
             for token_data in gecko_tokens:
-                if token_data.get("address", "").lower() not in seen_contracts:
-                    pending_tokens.append(token_data)
+                enqueue_token(token_data)
 
             dex_tokens = get_new_dex_pair_tokens(current_block, new_block)
             log.info("Nađeno %d novih DEX pair tokena u blokovima %d-%d",
                      len(dex_tokens), current_block, new_block)
             for token_data in dex_tokens:
-                if token_data.get("address", "").lower() not in seen_contracts:
-                    pending_tokens.append(token_data)
+                enqueue_token(token_data)
 
             deployments = get_new_token_deployments(current_block, new_block)
             log.info("Nađeno %d novih fallback contract deploy-eva u blokovima %d-%d",
                      len(deployments), current_block, new_block)
             for token_data in deployments:
-                if token_data.get("address", "").lower() not in seen_contracts:
-                    pending_tokens.append(token_data)
+                enqueue_token(token_data)
 
             now = time.time()
             if pending_tokens and now >= next_scan_at:
                 token_data = pending_tokens.pop(0)
+                queued_contracts.discard(token_data.get("address", "").lower())
                 try:
                     state = load_daily_state()
                     if not daily_limits_open(state):
                         pending_tokens.insert(0, token_data)
+                        queued_contracts.add(token_data.get("address", "").lower())
                         continue
 
                     record = process_token_avax(token_data, output_path)
