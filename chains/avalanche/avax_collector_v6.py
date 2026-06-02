@@ -84,6 +84,11 @@ TELEGRAM_BOT_TOKEN = clean_env_value("AVAX_TELEGRAM_BOT_TOKEN") or clean_env_val
 ONCHAIN_LOG_ENABLED = os.getenv("ONCHAIN_LOG_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 ONCHAIN_LOG_TO_ADDRESS = clean_env_value("ONCHAIN_LOG_TO_ADDRESS")
 ACTIVITY_LOGGER_ADDRESS = clean_env_value("ACTIVITY_LOGGER_ADDRESS")
+GECKOTERMINAL_ENABLED = os.getenv("GECKOTERMINAL_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+GECKOTERMINAL_NEW_POOLS_URL = clean_env_value(
+    "GECKOTERMINAL_NEW_POOLS_URL",
+    "https://api.geckoterminal.com/api/v2/networks/avax/new_pools?include=base_token,quote_token",
+)
 V1_PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
 LB_PAIR_CREATED_TOPIC = "0x" + keccak(text="LBPairCreated(address,address,uint256,address,uint256)").hex()
 DEFAULT_V1_DEX_FACTORIES = [
@@ -1753,6 +1758,68 @@ def choose_pair_token(token0: str, token1: str) -> str:
     return token0
 
 
+def token_id_to_address(token_id: str) -> str:
+    token_id = str(token_id or "")
+    if "_" in token_id:
+        token_id = token_id.split("_", 1)[1]
+    token_id = token_id.lower()
+    if token_id.startswith("0x") and len(token_id) == 42:
+        return token_id
+    return ""
+
+
+def get_geckoterminal_new_pool_tokens() -> list[dict]:
+    if not GECKOTERMINAL_ENABLED:
+        return []
+    tokens = {}
+    try:
+        resp = requests.get(GECKOTERMINAL_NEW_POOLS_URL, timeout=API_TIMEOUT)
+        data = resp.json()
+        pools = data.get("data", [])
+        included = {
+            item.get("id"): item
+            for item in data.get("included", [])
+            if isinstance(item, dict) and item.get("type") == "token"
+        }
+        if not isinstance(pools, list):
+            log.warning("GeckoTerminal new_pools nije vratio listu: %s", pools)
+            return []
+
+        for pool in pools:
+            relationships = pool.get("relationships", {})
+            base_id = relationships.get("base_token", {}).get("data", {}).get("id", "")
+            quote_id = relationships.get("quote_token", {}).get("data", {}).get("id", "")
+            base_addr = token_id_to_address(base_id)
+            quote_addr = token_id_to_address(quote_id)
+            token_addr = choose_pair_token(base_addr, quote_addr)
+            if not token_addr or token_addr in BASE_TOKEN_ADDRESSES or token_addr in tokens:
+                continue
+
+            token_item = included.get(f"avax_{token_addr}") or included.get(base_id) or included.get(quote_id) or {}
+            attrs = token_item.get("attributes", {})
+            pool_attrs = pool.get("attributes", {})
+            tokens[token_addr] = {
+                "address": token_addr,
+                "name": attrs.get("name") or pool_attrs.get("name", "Unknown").split("/", 1)[0].strip(),
+                "symbol": attrs.get("symbol", ""),
+                "deployer": "",
+                "block": 0,
+                "timestamp": int(time.time()),
+                "pair": pool_attrs.get("address", ""),
+                "source": "geckoterminal_new_pools",
+            }
+            log.info(
+                "  GeckoTerminal pool token: %s (%s) | token=%s pair=%s",
+                tokens[token_addr]["name"],
+                tokens[token_addr]["symbol"],
+                token_addr[:12],
+                str(tokens[token_addr]["pair"])[:12],
+            )
+    except Exception as e:
+        log.warning("GeckoTerminal new_pools greška: %s", e)
+    return list(tokens.values())
+
+
 def fetch_pair_created_logs(from_block: int, to_block: int, factories: list[str], topic: str) -> list[dict]:
     if not factories:
         return []
@@ -1936,6 +2003,12 @@ def poll_loop(output_path: Path) -> None:
                 log.info("Nema novih blokova. Čekam %ds...", POLL_INTERVAL)
                 time.sleep(POLL_INTERVAL)
                 continue
+
+            gecko_tokens = get_geckoterminal_new_pool_tokens()
+            log.info("Nađeno %d GeckoTerminal AVAX new-pool tokena", len(gecko_tokens))
+            for token_data in gecko_tokens:
+                if token_data.get("address", "").lower() not in seen_contracts:
+                    pending_tokens.append(token_data)
 
             dex_tokens = get_new_dex_pair_tokens(current_block, new_block)
             log.info("Nađeno %d novih DEX pair tokena u blokovima %d-%d",
