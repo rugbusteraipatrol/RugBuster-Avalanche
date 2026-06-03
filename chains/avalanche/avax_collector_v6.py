@@ -67,8 +67,8 @@ POLL_INTERVAL     = 60
 RPC_TIMEOUT       = 15
 API_TIMEOUT       = 20
 RATE_LIMIT_DELAY  = 1.0
-MIN_SCAN_DELAY_MINUTES = int(os.getenv("MIN_SCAN_DELAY_MINUTES", "5"))
-MAX_SCAN_DELAY_MINUTES = int(os.getenv("MAX_SCAN_DELAY_MINUTES", "5"))
+MIN_SCAN_DELAY_MINUTES = int(os.getenv("MIN_SCAN_DELAY_MINUTES", "2"))
+MAX_SCAN_DELAY_MINUTES = int(os.getenv("MAX_SCAN_DELAY_MINUTES", "3"))
 MAX_TOKENS_PER_DAY = int(os.getenv("MAX_TOKENS_PER_DAY", "20"))
 MAX_AVAX_TOTAL = float(os.getenv("MAX_AVAX_TOTAL", "2"))
 MAX_EUR_TOTAL = float(os.getenv("MAX_EUR_TOTAL", "20"))
@@ -91,6 +91,10 @@ GECKOTERMINAL_NEW_POOLS_URL = clean_env_value(
     "GECKOTERMINAL_NEW_POOLS_URL",
     "https://api.geckoterminal.com/api/v2/networks/avax/new_pools?include=base_token,quote_token",
 )
+GECKOTERMINAL_TOP_POOLS_ENABLED = os.getenv("GECKOTERMINAL_TOP_POOLS_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+GECKOTERMINAL_POOL_PAGES = int(os.getenv("GECKOTERMINAL_POOL_PAGES", "3"))
+GECKOTERMINAL_QUEUE_LOW_WATERMARK = int(os.getenv("GECKOTERMINAL_QUEUE_LOW_WATERMARK", "10"))
+GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS = int(os.getenv("GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS", "900"))
 V1_PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
 LB_PAIR_CREATED_TOPIC = "0x" + keccak(text="LBPairCreated(address,address,uint256,address,uint256)").hex()
 DEFAULT_V1_DEX_FACTORIES = [
@@ -1823,55 +1827,86 @@ def token_id_to_address(token_id: str) -> str:
     return ""
 
 
+def parse_geckoterminal_pool_tokens(data: dict, source: str) -> list[dict]:
+    tokens = {}
+    pools = data.get("data", [])
+    included = {
+        item.get("id"): item
+        for item in data.get("included", [])
+        if isinstance(item, dict) and item.get("type") == "token"
+    }
+    if not isinstance(pools, list):
+        log.warning("GeckoTerminal %s nije vratio listu: %s", source, pools)
+        return []
+
+    for pool in pools:
+        relationships = pool.get("relationships", {})
+        base_id = relationships.get("base_token", {}).get("data", {}).get("id", "")
+        quote_id = relationships.get("quote_token", {}).get("data", {}).get("id", "")
+        base_addr = token_id_to_address(base_id)
+        quote_addr = token_id_to_address(quote_id)
+        token_addr = choose_pair_token(base_addr, quote_addr)
+        if not token_addr or token_addr in BASE_TOKEN_ADDRESSES or token_addr in tokens:
+            continue
+
+        token_item = included.get(f"avax_{token_addr}") or included.get(base_id) or included.get(quote_id) or {}
+        attrs = token_item.get("attributes", {})
+        pool_attrs = pool.get("attributes", {})
+        tokens[token_addr] = {
+            "address": token_addr,
+            "name": attrs.get("name") or pool_attrs.get("name", "Unknown").split("/", 1)[0].strip(),
+            "symbol": attrs.get("symbol", ""),
+            "deployer": "",
+            "block": 0,
+            "timestamp": int(time.time()),
+            "pair": pool_attrs.get("address", ""),
+            "source": source,
+        }
+        log.info(
+            "  GeckoTerminal %s token: %s (%s) | token=%s pair=%s",
+            source,
+            tokens[token_addr]["name"],
+            tokens[token_addr]["symbol"],
+            token_addr[:12],
+            str(tokens[token_addr]["pair"])[:12],
+        )
+    return list(tokens.values())
+
+
 def get_geckoterminal_new_pool_tokens() -> list[dict]:
     if not GECKOTERMINAL_ENABLED:
         return []
-    tokens = {}
     try:
         resp = requests.get(GECKOTERMINAL_NEW_POOLS_URL, timeout=API_TIMEOUT)
-        data = resp.json()
-        pools = data.get("data", [])
-        included = {
-            item.get("id"): item
-            for item in data.get("included", [])
-            if isinstance(item, dict) and item.get("type") == "token"
-        }
-        if not isinstance(pools, list):
-            log.warning("GeckoTerminal new_pools nije vratio listu: %s", pools)
+        if resp.status_code == 429:
+            log.warning("GeckoTerminal new_pools rate limit; preskačem ovaj krug.")
             return []
-
-        for pool in pools:
-            relationships = pool.get("relationships", {})
-            base_id = relationships.get("base_token", {}).get("data", {}).get("id", "")
-            quote_id = relationships.get("quote_token", {}).get("data", {}).get("id", "")
-            base_addr = token_id_to_address(base_id)
-            quote_addr = token_id_to_address(quote_id)
-            token_addr = choose_pair_token(base_addr, quote_addr)
-            if not token_addr or token_addr in BASE_TOKEN_ADDRESSES or token_addr in tokens:
-                continue
-
-            token_item = included.get(f"avax_{token_addr}") or included.get(base_id) or included.get(quote_id) or {}
-            attrs = token_item.get("attributes", {})
-            pool_attrs = pool.get("attributes", {})
-            tokens[token_addr] = {
-                "address": token_addr,
-                "name": attrs.get("name") or pool_attrs.get("name", "Unknown").split("/", 1)[0].strip(),
-                "symbol": attrs.get("symbol", ""),
-                "deployer": "",
-                "block": 0,
-                "timestamp": int(time.time()),
-                "pair": pool_attrs.get("address", ""),
-                "source": "geckoterminal_new_pools",
-            }
-            log.info(
-                "  GeckoTerminal pool token: %s (%s) | token=%s pair=%s",
-                tokens[token_addr]["name"],
-                tokens[token_addr]["symbol"],
-                token_addr[:12],
-                str(tokens[token_addr]["pair"])[:12],
-            )
+        resp.raise_for_status()
+        return parse_geckoterminal_pool_tokens(resp.json(), "new_pools")
     except Exception as e:
         log.warning("GeckoTerminal new_pools greška: %s", e)
+    return []
+
+
+def get_geckoterminal_top_pool_tokens() -> list[dict]:
+    if not (GECKOTERMINAL_ENABLED and GECKOTERMINAL_TOP_POOLS_ENABLED):
+        return []
+    tokens: dict[str, dict] = {}
+    page_count = max(1, min(GECKOTERMINAL_POOL_PAGES, 5))
+    for page in range(1, page_count + 1):
+        try:
+            url = f"https://api.geckoterminal.com/api/v2/networks/avax/pools?include=base_token,quote_token&page={page}"
+            resp = requests.get(url, timeout=API_TIMEOUT)
+            if resp.status_code == 429:
+                log.warning("GeckoTerminal pools rate limit na page=%d; stajem sa refill-om.", page)
+                break
+            resp.raise_for_status()
+            for token in parse_geckoterminal_pool_tokens(resp.json(), f"top_pools_p{page}"):
+                tokens.setdefault(token["address"], token)
+            time.sleep(0.8)
+        except Exception as e:
+            log.warning("GeckoTerminal pools page=%d greška: %s", page, e)
+            break
     return list(tokens.values())
 
 
@@ -2028,6 +2063,7 @@ def poll_loop(output_path: Path) -> None:
     log.info("Start blok: %d", current_block)
     pending_tokens: list[dict] = []
     queued_contracts: set[str] = set()
+    last_top_pool_refill_at = 0.0
     next_scan_at = 0.0
 
     def enqueue_token(token_data: dict) -> None:
@@ -2071,6 +2107,16 @@ def poll_loop(output_path: Path) -> None:
             log.info("Nađeno %d GeckoTerminal AVAX new-pool tokena", len(gecko_tokens))
             for token_data in gecko_tokens:
                 enqueue_token(token_data)
+
+            if (
+                len(pending_tokens) < GECKOTERMINAL_QUEUE_LOW_WATERMARK
+                and time.time() - last_top_pool_refill_at >= GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS
+            ):
+                top_pool_tokens = get_geckoterminal_top_pool_tokens()
+                last_top_pool_refill_at = time.time()
+                log.info("Nađeno %d GeckoTerminal AVAX top-pool refill tokena", len(top_pool_tokens))
+                for token_data in top_pool_tokens:
+                    enqueue_token(token_data)
 
             dex_tokens = get_new_dex_pair_tokens(current_block, new_block)
             log.info("Nađeno %d novih DEX pair tokena u blokovima %d-%d",
