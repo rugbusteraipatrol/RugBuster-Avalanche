@@ -2614,8 +2614,22 @@
     return normalizeBuilderScoreReport(data);
   }
 
-  async function fetchBuilderAiVerdict(address) {
-    const res = await fetch(`${RUGBUSTER_BUILDER_API}/score?address=${encodeURIComponent(address)}&explain=1`);
+  async function fetchBuilderAiVerdict(address, report) {
+    const res = await fetch(`${RUGBUSTER_BUILDER_API}/explain`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address,
+        token_name: report.tokenName,
+        label: report.rugStatus,
+        risk_flags: flattenReasons(report.rugReasons),
+        speculation_status: report.speculationStatus,
+        speculation_flags: flattenReasons(report.speculationReasons),
+        liquidity_usd: report.liquidityUsd,
+        fdv: report.fdv,
+        volume24h: report.volume24h
+      })
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data.error || `HTTP ${res.status} — AI verdict unavailable`);
@@ -2919,7 +2933,7 @@
       }
 
       try {
-        const aiVerdict = await fetchBuilderAiVerdict(address);
+        const aiVerdict = await fetchBuilderAiVerdict(address, apexData);
         if (aiVerdict) {
           await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
           await termLineDelay(`<span class="t-out">── DEEPSEEK AI VERDICT ───────────────────</span>`, 180);
