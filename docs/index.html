@@ -2445,6 +2445,52 @@
     };
   }
 
+  function normalizeBuilderScoreReport(score) {
+    const label = String(score.label || 'UNKNOWN').toUpperCase();
+    const rawFlags = Array.isArray(score.risk_flags) ? score.risk_flags : [];
+    const riskFlags = rawFlags.map(flag => {
+      const text = String(flag);
+      return /^[✗⚡·>]/.test(text) ? text : `✗ ${text}`;
+    });
+    const isDanger = label === 'DANGER';
+    const isWarn = label === 'WARN';
+    const isGood = label === 'GOOD';
+    const rugScore = isDanger ? 92 : isWarn ? 62 : isGood ? 18 : null;
+    const rugStatus = isDanger ? 'DANGER' : isWarn ? 'WARN' : isGood ? 'GOOD' : 'UNKNOWN';
+
+    return {
+      tokenName: `${score.token_name || 'Cached Avalanche Token'}${score.token_symbol ? ` (${score.token_symbol})` : ''}`,
+      tokenImage: null,
+      dexId: 'RUGBUSTER CACHE',
+      pairLabel: 'AVALANCHE / CACHED SCORE',
+      liquidityUsd: null,
+      fdv: null,
+      marketCap: null,
+      volume24h: null,
+      priceChange24h: null,
+      buys24h: null,
+      sells24h: null,
+      pairAddress: '',
+      pairUrl: '',
+      rugScore,
+      rugStatus,
+      rugReasons: {
+        high: isDanger ? riskFlags : [],
+        medium: isWarn ? riskFlags : [],
+        neutral: isGood ? ['Cached score has no major risk flags'] : label === 'UNKNOWN' ? [score.message || 'No cached RugBuster scan found for this address'] : []
+      },
+      speculationScore: null,
+      speculationStatus: 'UNKNOWN',
+      speculationReasons: {
+        high: [],
+        medium: ['Market speculation score unavailable from public cache endpoint'],
+        neutral: [`Classifier: ${score.classifier_version || 'weighted_v2'}`]
+      },
+      hasLiquidityEvidence: false,
+      source: `RugBuster Builder API (${score.source || 'cache'})`
+    };
+  }
+
   function liquidityModuleScore(liquidityUsd) {
     if (liquidityUsd === null || liquidityUsd === undefined || Number.isNaN(Number(liquidityUsd))) return 35;
     const value = Number(liquidityUsd);
@@ -2558,6 +2604,15 @@
     }
       return normalizeApexApiReport(data.report);
     }
+
+  async function fetchApexScoreFromBuilderApi(address) {
+    const res = await fetch(`${RUGBUSTER_BUILDER_API}/score?address=${encodeURIComponent(address)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || `HTTP ${res.status} — RugBuster Builder API unavailable`);
+    }
+    return normalizeBuilderScoreReport(data);
+  }
 
   async function postTelegramAlert(address) {
       const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
@@ -2733,8 +2788,13 @@
     try {
       return await fetchApexScanFromApi(address);
     } catch (apiErr) {
-      console.warn('RugBuster API unavailable, falling back to DexScreener:', apiErr);
-      return await fetchApexScanFromDex(address);
+      console.warn('RugBuster scan API unavailable, trying Builder API cache:', apiErr);
+      try {
+        return await fetchApexScoreFromBuilderApi(address);
+      } catch (scoreErr) {
+        console.warn('RugBuster Builder API unavailable, falling back to DexScreener:', scoreErr);
+        return await fetchApexScanFromDex(address);
+      }
     }
   }
 
