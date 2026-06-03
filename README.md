@@ -328,6 +328,15 @@ returns a compact risk label without exposing the private dataset. `/scan` is
 protected because it can trigger deeper scoring work and should not be abused
 by bots. See `docs/AVALANCHE_API.md` for integration examples.
 
+## Retro9000 Updates And L1 Roadmap
+
+- `docs/RETRO9000_UPDATE_2026-06-03.md`
+- `docs/L1_SECURITY_ROADMAP.md`
+
+These documents summarize the current builder tooling progress and the phased
+path from scanner, registry, evidence corpus, and API toward RugBuster Sentinel
+and an eventual Avalanche L1 security layer.
+
 ## Temporary AI Bridge
 
 The first version uses deterministic risk rules in `risk_engine.py` so demos can run end-to-end immediately.

@@ -1405,6 +1405,28 @@
       </div>
     </div>
 
+    <div style="margin-top:18px;border:1px solid rgba(0,245,255,0.12);background:rgba(0,245,255,0.03);padding:18px 20px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;margin-bottom:12px;">// live cache score demo</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <input id="apiScoreInput" value="0x2ce7788de3a177f8be43df6376a8513ef9182032" placeholder="0x token address" style="
+          flex:1;
+          min-width:260px;
+          background:rgba(5,8,17,0.8);
+          border:1px solid rgba(0,245,255,0.22);
+          color:var(--text-primary);
+          padding:13px 14px;
+          font-family:'Share Tech Mono',monospace;
+          font-size:12px;
+          letter-spacing:1px;
+          outline:none;
+        ">
+        <button onclick="fetchBuilderScore()" class="btn-primary" style="font-size:11px;padding:13px 24px;clip-path:none;">Check API Score</button>
+      </div>
+      <div id="apiScoreResult" style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
+        Ready. Example token is cached so reviewers can verify the public endpoint immediately.
+      </div>
+    </div>
+
     <div style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
       The API exposes compact Avalanche risk intelligence from the private collector corpus without publishing raw evidence.
       Current classifier: <span style="color:var(--neon-cyan);">weighted_v2</span>.
@@ -1415,6 +1437,8 @@
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;">
       <a href="https://rugbuster-api-production.up.railway.app" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">Open API</a>
       <a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/AVALANCHE_API.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">API Docs</a>
+      <a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/L1_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">L1 Roadmap</a>
+      <a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/RETRO9000_UPDATE_2026-06-03.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">Retro9000 Update</a>
     </div>
   </div>
 </div>
@@ -1551,11 +1575,11 @@
 
 <!-- CTA -->
 <div class="cta-section z1">
-  <h2 class="cta-title">STOP GETTING<br><span>RUGGED.</span></h2>
-  <p class="cta-sub">Join 14,000+ traders who activated their shield today.</p>
+  <h2 class="cta-title">BUILD ON<br><span>AVALANCHE INTEL.</span></h2>
+  <p class="cta-sub">Use RugBuster Apex for token risk lookups, reviewer attestations, and Sentinel-ready monitoring.</p>
   <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
-    <a href="#pricing" class="btn-primary">Activate RugBuster</a>
-    <a href="#" class="btn-secondary">View Live Demo</a>
+    <a href="#api" class="btn-primary">Test Builder API</a>
+    <a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/L1_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary">View L1 Roadmap</a>
   </div>
 </div>
 
@@ -1565,8 +1589,8 @@
   <ul class="footer-links">
     <li><a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/AVALANCHE_API.md" target="_blank" rel="noopener">Docs</a></li>
     <li><a href="#api">API</a></li>
-    <li><a href="#">Telegram</a></li>
-    <li><a href="#">Privacy</a></li>
+    <li><a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/RETRO9000_UPDATE_2026-06-03.md" target="_blank" rel="noopener">Retro9000</a></li>
+    <li><a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/L1_SECURITY_ROADMAP.md" target="_blank" rel="noopener">Roadmap</a></li>
   </ul>
 </footer>
 
@@ -1865,6 +1889,7 @@
   const RUGCHECK_API = 'https://api.rugcheck.xyz/v1';
   const DEXSCREENER_API = 'https://api.dexscreener.com/latest/dex/tokens';
   const RUGBUSTER_API = (window.RUGBUSTER_API || 'https://web-production-376bf.up.railway.app').replace(/\/$/, '');
+  const RUGBUSTER_BUILDER_API = (window.RUGBUSTER_BUILDER_API || 'https://rugbuster-api-production.up.railway.app').replace(/\/$/, '');
 
   // Glitch effect on stat numbers
   document.querySelectorAll('.stat-number').forEach(el => {
@@ -1887,6 +1912,13 @@
     if (e.key === 'Enter') runScan();
   });
 
+  const apiScoreInput = document.getElementById('apiScoreInput');
+  if (apiScoreInput) {
+    apiScoreInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchBuilderScore();
+    });
+  }
+
   function loadExample(type) {
     const examples = {
       apex: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'
@@ -1908,6 +1940,43 @@
 
   function isApexAddress(address) {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  async function fetchBuilderScore() {
+    const input = document.getElementById('apiScoreInput');
+    const result = document.getElementById('apiScoreResult');
+    if (!input || !result) return;
+
+    const address = input.value.trim();
+    if (!isApexAddress(address)) {
+      result.innerHTML = `<span style="color:#ffcc00;">WARN</span> // Enter a valid Avalanche 0x token address.`;
+      return;
+    }
+
+    result.innerHTML = `<span style="color:var(--neon-cyan);">QUERYING</span> // ${RUGBUSTER_BUILDER_API}/score`;
+
+    try {
+      const res = await fetch(`${RUGBUSTER_BUILDER_API}/score?address=${encodeURIComponent(address)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+
+      const label = String(data.label || 'UNKNOWN').toUpperCase();
+      const labelColor = label === 'DANGER' ? '#ff3d3d' : label === 'WARN' ? '#ffcc00' : label === 'GOOD' ? 'var(--neon-green)' : 'var(--text-muted)';
+      const token = [data.token_name, data.token_symbol ? `(${data.token_symbol})` : ''].filter(Boolean).join(' ') || shortAddress(address);
+      const flags = Array.isArray(data.risk_flags) && data.risk_flags.length
+        ? data.risk_flags.map(flag => `<div>&gt; ${String(flag)}</div>`).join('')
+        : '<div>&gt; No risk flags returned for this cached score.</div>';
+
+      result.innerHTML = `
+        <div><span style="color:${labelColor};">${label}</span> // ${token}</div>
+        <div>source=${data.source || 'unknown'} classifier=${data.classifier_version || data.classifier || 'unknown'} chain=${data.chain || 'AVAX'}</div>
+        ${flags}
+      `;
+    } catch (err) {
+      result.innerHTML = `<span style="color:#ff3d3d;">ERROR</span> // ${err.message || 'Builder API unavailable'}`;
+    }
   }
 
   function shortAddress(address) {
