@@ -18,6 +18,25 @@ RugBuster Avalanche is designed for the Retro9000 and Culture Catalyst context:
 - Publish safety scores on-chain through a gas-efficient registry contract.
 - Emit real-time events for monitoring and integrations.
 
+## Retro9000 Infrastructure Tooling Update - 2026-06-03
+
+RugBuster Apex now includes a live Avalanche builder API layer in addition to
+the on-chain registry and website scanner.
+
+- Live builder API: `https://rugbuster-api-production.up.railway.app`
+- Public health endpoint: `GET /health`
+- Public cache score endpoint: `GET /score?address=0x...`
+- Protected deep scan endpoint: `GET /scan?address=0x...` with `X-API-Key`
+- Current Avalanche classifier: `weighted_v2`
+- Private AVAX collector evidence is stored in Postgres and is not exposed as
+  a raw dataset.
+- Verified mainnet registry:
+  `0x5F30276B3A5079E088Ec3072884286de5a868355`
+
+This turns RugBuster Apex from a single scanner UI into infrastructure that
+wallets, launchpads, DEX interfaces, dashboards, and future Avalanche L1
+security tooling can query without copying the private evidence corpus.
+
 ## Product Model
 
 On Solana, RugBuster acts like an emergency alert system for retail traders.
@@ -284,6 +303,31 @@ POST /api/scan
 
 When the public Railway URL is live, point the website scanner to that URL instead of `127.0.0.1`.
 
+## Builder API
+
+The builder API is a separate protected service intended for integrations and
+Retro9000 L1 tooling evidence:
+
+```txt
+https://rugbuster-api-production.up.railway.app
+```
+
+Public endpoints:
+
+- `GET /`
+- `GET /health`
+- `GET /score?address=0x...`
+
+Protected endpoint:
+
+- `GET /scan?address=0x...`
+- Header: `X-API-Key: <partner_or_internal_key>`
+
+`/score` is cache-first: it reads already collected Avalanche evidence and
+returns a compact risk label without exposing the private dataset. `/scan` is
+protected because it can trigger deeper scoring work and should not be abused
+by bots. See `docs/AVALANCHE_API.md` for integration examples.
+
 ## Temporary AI Bridge
 
 The first version uses deterministic risk rules in `risk_engine.py` so demos can run end-to-end immediately.
@@ -298,7 +342,8 @@ Later phases replace or augment this with a fine-tuned RugBusterAI model trained
 - [x] Temporary risk rules engine
 - [x] Fuji deployment script
 - [x] Batch publisher simulation
-- [ ] Avalanche-specific dataset collection
+- [x] Avalanche-specific dataset collection
+- [x] Public cache score API for Avalanche builder tooling
 - [ ] Evaluation harness for AI scoring
 - [ ] Wallet and dashboard API integrations
 
