@@ -69,7 +69,7 @@ API_TIMEOUT       = 20
 RATE_LIMIT_DELAY  = 1.0
 MIN_SCAN_DELAY_MINUTES = int(os.getenv("MIN_SCAN_DELAY_MINUTES", "2"))
 MAX_SCAN_DELAY_MINUTES = int(os.getenv("MAX_SCAN_DELAY_MINUTES", "3"))
-MAX_TOKENS_PER_DAY = int(os.getenv("MAX_TOKENS_PER_DAY", "20"))
+MAX_TOKENS_PER_DAY = int(os.getenv("MAX_TOKENS_PER_DAY", "120"))
 MAX_AVAX_TOTAL = float(os.getenv("MAX_AVAX_TOTAL", "2"))
 MAX_EUR_TOTAL = float(os.getenv("MAX_EUR_TOTAL", "20"))
 RUN_UNTIL_DATE = os.getenv("RUN_UNTIL_DATE", "2026-06-17")
@@ -95,6 +95,7 @@ GECKOTERMINAL_TOP_POOLS_ENABLED = os.getenv("GECKOTERMINAL_TOP_POOLS_ENABLED", "
 GECKOTERMINAL_POOL_PAGES = int(os.getenv("GECKOTERMINAL_POOL_PAGES", "3"))
 GECKOTERMINAL_QUEUE_LOW_WATERMARK = int(os.getenv("GECKOTERMINAL_QUEUE_LOW_WATERMARK", "10"))
 GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS = int(os.getenv("GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS", "900"))
+RESCAN_COOLDOWN_SECONDS = int(os.getenv("RESCAN_COOLDOWN_SECONDS", "2700"))
 V1_PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
 LB_PAIR_CREATED_TOPIC = "0x" + keccak(text="LBPairCreated(address,address,uint256,address,uint256)").hex()
 DEFAULT_V1_DEX_FACTORIES = [
@@ -261,7 +262,7 @@ def save_to_postgres(record: dict) -> None:
 # Creator History Tracker
 # ---------------------------------------------------------------------------
 creator_history = defaultdict(lambda: {"total": 0, "danger": 0, "warn": 0, "good": 0})
-seen_contracts = set()
+seen_contracts: dict[str, float] = {}
 
 def update_creator_history(creator: str, label: str):
     if not creator:
@@ -1722,9 +1723,12 @@ def send_telegram_alert_avax(record: dict, txs: list[dict]) -> None:
 
 def process_token_avax(token_data: dict, output_path: Path) -> dict | None:
     contract = token_data.get("address", "").lower()
-    if not contract or contract in seen_contracts:
+    if not contract:
         return None
-    seen_contracts.add(contract)
+    last_scan_at = float(seen_contracts.get(contract, 0.0))
+    if last_scan_at and time.time() - last_scan_at < RESCAN_COOLDOWN_SECONDS:
+        return None
+    seen_contracts[contract] = time.time()
 
     deployer = token_data.get("deployer", "")
     deploy_timestamp = token_data.get("timestamp", int(time.time()))
@@ -2068,7 +2072,9 @@ def poll_loop(output_path: Path) -> None:
 
     def enqueue_token(token_data: dict) -> None:
         address = token_data.get("address", "").lower()
-        if not address or address in seen_contracts or address in queued_contracts:
+        last_scan_at = float(seen_contracts.get(address, 0.0)) if address else 0.0
+        recently_scanned = last_scan_at and time.time() - last_scan_at < RESCAN_COOLDOWN_SECONDS
+        if not address or recently_scanned or address in queued_contracts:
             return
         pending_tokens.append(token_data)
         queued_contracts.add(address)
