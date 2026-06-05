@@ -2031,7 +2031,7 @@
 
   async function loadRecentScans() {
     try {
-      const res = await fetch(`${RUGBUSTER_API}/api/recent-scans?limit=10`);
+      const res = await fetch(`${RUGBUSTER_API}/api/recent-scans?limit=10&t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
       renderRecentScans(data.items || []);
@@ -3134,12 +3134,20 @@
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
   }
 
-  window.addEventListener('load', async () => {
-    installWalletListeners();
-    await syncConnectedWallet({ silent: true });
-    renderPortfolioHeader();
+  function startRecentScanFeed() {
     loadRecentScans();
     setInterval(loadRecentScans, 60000);
+  }
+
+  window.addEventListener('DOMContentLoaded', startRecentScanFeed);
+
+  window.addEventListener('load', async () => {
+    installWalletListeners();
+    try {
+      await syncConnectedWallet({ silent: true });
+    } finally {
+      renderPortfolioHeader();
+    }
   });
 </script>
 
