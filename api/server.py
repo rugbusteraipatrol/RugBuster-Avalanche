@@ -12,6 +12,11 @@ import requests
 from flask import Flask, jsonify, request
 from web3 import Web3
 
+try:
+    import psycopg2
+except ImportError:  # pragma: no cover - optional when DATABASE_URL is absent
+    psycopg2 = None
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "chains" / "avalanche"))
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -87,6 +92,10 @@ app = Flask(__name__)
 SCAN_CACHE_TTL_SECONDS = 180
 SCAN_CACHE: dict[str, dict[str, Any]] = {}
 PORTFOLIO_SCAN_WORKERS = 3
+DATABASE_URL = os.getenv("DATABASE_URL")
+RECENT_SCAN_LIMIT = int(os.getenv("RECENT_SCAN_LIMIT", "10"))
+RECENT_SCAN_INGEST_TOKEN = os.getenv("RECENT_SCAN_INGEST_TOKEN", "").strip()
+RECENT_SCANS: list[dict[str, Any]] = []
 
 
 def cache_key(address: str) -> str:
@@ -114,6 +123,51 @@ def cors(response):
     return response
 
 
+def compact_recent_flag(record: dict[str, Any]) -> str:
+    output = str(record.get("output") or "").strip()
+    if not output:
+        return "analysis complete"
+    if "Flags:" in output:
+        output = output.split("Flags:", 1)[1].strip()
+    if "CIA/V6 flags:" in output:
+        output = output.split("CIA/V6 flags:", 1)[1].strip()
+    output = output.replace("No major red flags.", "clean").replace("Low risk AVAX token.", "low risk")
+    output = " ".join(output.split())
+    return output[:96]
+
+
+def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
+    if isinstance(record, str):
+        try:
+            record = json.loads(record)
+        except json.JSONDecodeError:
+            record = {}
+    return {
+        "token_name": record.get("token_name") or "Unknown",
+        "token_symbol": record.get("token_symbol") or "",
+        "address": record.get("contract_address") or "",
+        "verdict": record.get("label") or "UNKNOWN",
+        "flag": compact_recent_flag(record),
+        "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at or ""),
+        "explorer_url": record.get("explorer_url") or f"https://snowtrace.io/address/{record.get('contract_address', '')}",
+    }
+
+
+def merge_recent_scans(*groups: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for group in groups:
+        for item in group:
+            address = str(item.get("address") or "").lower()
+            key = f"{address}:{item.get('created_at', '')}"
+            if not address or key in seen:
+                continue
+            seen.add(key)
+            merged.append(item)
+    merged.sort(key=lambda item: item.get("created_at", ""), reverse=True)
+    return merged[:limit]
+
+
 @app.after_request
 def add_cors_headers(response):
     return cors(response)
@@ -123,6 +177,46 @@ def add_cors_headers(response):
 def health():
     network = resolve_network()
     return jsonify({"ok": True, "network": network, "label": NETWORKS[network]["label"]})
+
+
+@app.route("/api/recent-scans", methods=["GET", "POST", "OPTIONS"])
+def api_recent_scans():
+    if request.method == "OPTIONS":
+        return jsonify({"ok": True})
+
+    limit = max(1, min(int(request.args.get("limit", RECENT_SCAN_LIMIT)), 25))
+    if request.method == "POST":
+        if RECENT_SCAN_INGEST_TOKEN:
+            token = request.headers.get("X-RugBuster-Feed-Token", "")
+            if token != RECENT_SCAN_INGEST_TOKEN:
+                return jsonify({"ok": False, "error": "Unauthorized"}), 401
+        payload = request.get_json(silent=True) or {}
+        record = payload.get("record") if isinstance(payload.get("record"), dict) else payload
+        item = recent_scan_item(record, payload.get("created_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+        RECENT_SCANS.insert(0, item)
+        del RECENT_SCANS[100:]
+        return jsonify({"ok": True, "item": item})
+
+    db_items: list[dict[str, Any]] = []
+    if not DATABASE_URL or psycopg2 is None:
+        return jsonify({"ok": True, "items": merge_recent_scans(RECENT_SCANS, limit=limit)})
+
+    try:
+        with psycopg2.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT full_record, created_at
+                    FROM avax_scans
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                db_items = [recent_scan_item(record, created_at) for record, created_at in cur.fetchall()]
+        return jsonify({"ok": True, "items": merge_recent_scans(RECENT_SCANS, db_items, limit=limit)})
+    except Exception as exc:
+        return jsonify({"ok": True, "warning": str(exc), "items": merge_recent_scans(RECENT_SCANS, limit=limit)})
 
 
 @app.route("/api/scan", methods=["POST", "OPTIONS"])

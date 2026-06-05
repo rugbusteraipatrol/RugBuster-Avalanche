@@ -1313,37 +1313,16 @@
   <div class="monitor-panel z1">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
-        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// monitored sources</div>
-        <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Monitored DEX Factories</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-pink);letter-spacing:3px;">// live scan feed</div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;color:var(--text-primary);margin-top:6px;">Recent AVAX Scans</div>
       </div>
-      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-green);letter-spacing:2px;">CONFIGURED FOR EVENT MONITORING</div>
+      <div id="recentScanState" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neon-green);letter-spacing:2px;">SYNCING FEED</div>
     </div>
 
-    <div class="monitor-grid">
-      <div class="monitor-card">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-          <div>
-            <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Trader Joe Factory</div>
-            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xFf06D441D352F33041926D451a5118742880017D</div>
-          </div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
-        </div>
+    <div id="recentScanList" style="display:grid;grid-template-columns:1fr;gap:8px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.8;border:1px solid rgba(0,245,255,0.08);background:rgba(0,245,255,0.03);padding:14px 16px;">
+        Awaiting recent AVAX scanner output.
       </div>
-
-      <div class="monitor-card">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-          <div>
-            <div style="font-family:'Orbitron',monospace;font-size:13px;color:var(--text-primary);">Pangolin Factory</div>
-            <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;word-break:break-all;">0xefa94DE7a4659D7836704329a8ca30E89e599d14</div>
-          </div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--neon-cyan);letter-spacing:2px;">FUJI</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="margin-top:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.9;">
-      Adapter logic listens for <span style="color:var(--neon-cyan);">PairCreated</span> events from these factory contracts.
-      When a new pair appears, RugBuster captures the token address, runs live risk analysis, and prepares the result for on-chain certification.
     </div>
   </div>
 
@@ -1976,6 +1955,92 @@
       `;
     } catch (err) {
       result.innerHTML = `<span style="color:#ff3d3d;">ERROR</span> // ${err.message || 'Builder API unavailable'}`;
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+  }
+
+  function recentVerdictColor(verdict) {
+    const label = String(verdict || '').toUpperCase();
+    if (label === 'DANGER') return '#ff3d3d';
+    if (label === 'WARN') return '#ff7a00';
+    if (label === 'GOOD') return 'var(--neon-green)';
+    return 'var(--text-muted)';
+  }
+
+  function formatRecentTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--:--';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderRecentScans(items) {
+    const list = document.getElementById('recentScanList');
+    const state = document.getElementById('recentScanState');
+    if (!list || !state) return;
+
+    if (!Array.isArray(items) || !items.length) {
+      state.textContent = 'AWAITING DATA';
+      state.style.color = 'var(--text-muted)';
+      list.innerHTML = `
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.8;border:1px solid rgba(0,245,255,0.08);background:rgba(0,245,255,0.03);padding:14px 16px;">
+          Awaiting recent AVAX scanner output.
+        </div>`;
+      return;
+    }
+
+    state.textContent = `${items.length} LATEST`;
+    state.style.color = 'var(--neon-green)';
+    list.innerHTML = items.slice(0, 10).map(item => {
+      const verdict = String(item.verdict || 'UNKNOWN').toUpperCase();
+      const symbol = item.token_symbol || item.token_name || shortAddress(item.address || '');
+      const name = item.token_name && item.token_symbol ? item.token_name : '';
+      const flag = item.flag || 'analysis complete';
+      const href = item.explorer_url || `https://snowtrace.io/address/${item.address}`;
+      return `
+        <a href="${escapeHtml(href)}" target="_blank" rel="noopener" style="
+          display:grid;
+          grid-template-columns:52px minmax(82px,0.8fr) 64px minmax(0,1.8fr);
+          gap:10px;
+          align-items:center;
+          min-height:38px;
+          padding:9px 12px;
+          border:1px solid rgba(0,245,255,0.10);
+          background:rgba(0,245,255,0.025);
+          text-decoration:none;
+          overflow:hidden;
+        ">
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);white-space:nowrap;">${formatRecentTime(item.created_at)}</span>
+          <span style="min-width:0;">
+            <span style="display:block;font-family:'Orbitron',monospace;font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(symbol)}</span>
+            <span style="display:block;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name || shortAddress(item.address || ''))}</span>
+          </span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:${recentVerdictColor(verdict)};letter-spacing:1px;white-space:nowrap;">${escapeHtml(verdict)}</span>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(flag)}</span>
+        </a>`;
+    }).join('');
+  }
+
+  async function loadRecentScans() {
+    try {
+      const res = await fetch(`${RUGBUSTER_API}/api/recent-scans?limit=10`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      renderRecentScans(data.items || []);
+    } catch (err) {
+      const state = document.getElementById('recentScanState');
+      if (state) {
+        state.textContent = 'FEED OFFLINE';
+        state.style.color = '#ff7a00';
+      }
     }
   }
 
@@ -3073,6 +3138,8 @@
     installWalletListeners();
     await syncConnectedWallet({ silent: true });
     renderPortfolioHeader();
+    loadRecentScans();
+    setInterval(loadRecentScans, 60000);
   });
 </script>
 

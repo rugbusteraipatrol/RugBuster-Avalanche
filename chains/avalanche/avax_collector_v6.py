@@ -81,6 +81,8 @@ AVAX_SCAN_LOG = Path(clean_env_value("AVAX_SCAN_LOG", "avax_scan_log.md"))
 AVAX_STATE_FILE = Path(clean_env_value("AVAX_STATE_FILE", "avax_collector_state.json"))
 AVAX_TELEGRAM_CHAT_ID = clean_env_value("AVAX_TELEGRAM_CHAT_ID") or clean_env_value("TELEGRAM_CHAT_ID") or "@RugBusterAvax"
 TELEGRAM_BOT_TOKEN = clean_env_value("AVAX_TELEGRAM_BOT_TOKEN") or clean_env_value("TELEGRAM_BOT_TOKEN")
+RECENT_SCAN_FEED_URL = clean_env_value("RECENT_SCAN_FEED_URL", "https://web-production-376bf.up.railway.app/api/recent-scans")
+RECENT_SCAN_INGEST_TOKEN = clean_env_value("RECENT_SCAN_INGEST_TOKEN")
 ONCHAIN_LOG_ENABLED = os.getenv("ONCHAIN_LOG_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 ONCHAIN_LOG_TO_ADDRESS = clean_env_value("ONCHAIN_LOG_TO_ADDRESS")
 ACTIVITY_LOGGER_ADDRESS = clean_env_value("ACTIVITY_LOGGER_ADDRESS")
@@ -240,7 +242,11 @@ def save_to_postgres(record: dict) -> None:
                     f"""
                     INSERT INTO {DB_TABLE} (contract_address, chain, label, full_record)
                     VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (contract_address) DO NOTHING
+                    ON CONFLICT (contract_address) DO UPDATE SET
+                        chain = EXCLUDED.chain,
+                        label = EXCLUDED.label,
+                        full_record = EXCLUDED.full_record,
+                        created_at = NOW()
                     """,
                     (
                         contract_address,
@@ -249,10 +255,7 @@ def save_to_postgres(record: dict) -> None:
                         Json(record),
                     ),
                 )
-                if cur.rowcount:
-                    log.info("  -> PostgreSQL upis [%s]: %s", DB_TABLE, contract_address)
-                else:
-                    log.info("  -> PostgreSQL duplikat preskočen [%s]: %s", DB_TABLE, contract_address)
+                log.info("  -> PostgreSQL upsert [%s]: %s", DB_TABLE, contract_address)
     except Exception as e:
         log.error("PostgreSQL upis greška: %s", e)
     finally:
@@ -1255,8 +1258,30 @@ def append_to_dataset(record: dict, output_path: Path) -> None:
         log.info("  -> Snimljeno [%s][AVAX-V6] Rug rate: %s%%  Ukupno: %d",
                  record["label"], record.get("creator_rug_rate", "N/A"), count_lines(output_path))
         save_to_postgres(record)
+        publish_recent_scan_feed(record)
     except OSError as e:
         log.error("Nije moguće zapisati: %s", e)
+
+
+def publish_recent_scan_feed(record: dict) -> None:
+    if not RECENT_SCAN_FEED_URL:
+        return
+    headers = {"Content-Type": "application/json"}
+    if RECENT_SCAN_INGEST_TOKEN:
+        headers["X-RugBuster-Feed-Token"] = RECENT_SCAN_INGEST_TOKEN
+    try:
+        response = requests.post(
+            RECENT_SCAN_FEED_URL,
+            json={"record": record},
+            headers=headers,
+            timeout=10,
+        )
+        if response.ok:
+            log.info("  -> Recent scan feed updated.")
+        else:
+            log.warning("Recent scan feed nije prihvatio zapis: HTTP %s", response.status_code)
+    except Exception as e:
+        log.warning("Recent scan feed greška: %s", e)
 
 
 # ---------------------------------------------------------------------------
