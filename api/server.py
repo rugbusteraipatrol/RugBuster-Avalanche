@@ -96,6 +96,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 RECENT_SCAN_LIMIT = int(os.getenv("RECENT_SCAN_LIMIT", "10"))
 RECENT_SCAN_INGEST_TOKEN = os.getenv("RECENT_SCAN_INGEST_TOKEN", "").strip()
 RECENT_SCANS: list[dict[str, Any]] = []
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip()
+DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions").strip()
+DEEPSEEK_TIMEOUT_SECONDS = int(os.getenv("DEEPSEEK_TIMEOUT_SECONDS", "20"))
 
 
 def cache_key(address: str) -> str:
@@ -240,6 +244,13 @@ def api_scan():
             report = scan_token(address)
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
+        if not report.get("ai_verdict"):
+            try:
+                report["ai_verdict"] = fetch_deepseek_verdict(report)
+                report["ai_model"] = DEEPSEEK_MODEL if report.get("ai_verdict") else None
+            except Exception as exc:
+                report["ai_verdict"] = None
+                report["ai_error"] = str(exc)
         put_cached_report(address, report)
 
     publish_result = None
@@ -318,6 +329,70 @@ def get_optional_env(*names: str) -> str | None:
         if value:
             return value
     return None
+
+
+def deepseek_enabled() -> bool:
+    return bool(DEEPSEEK_API_KEY)
+
+
+def build_ai_scan_context(report: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "token": report.get("address"),
+        "name": report.get("token_name"),
+        "symbol": report.get("symbol"),
+        "rug_score": report.get("rug_score"),
+        "rug_status": report.get("rug_status"),
+        "rug_reasons": report.get("rug_reasons", [])[:5],
+        "speculation_score": report.get("speculation_score"),
+        "speculation_status": report.get("speculation_status"),
+        "speculation_reasons": report.get("speculation_reasons", [])[:5],
+        "liquidity_usd": report.get("liquidity_usd"),
+        "fdv": report.get("fdv"),
+        "volume24h": report.get("volume24h"),
+        "price_change24h": report.get("price_change24h"),
+        "buys24h": report.get("buys24h"),
+        "sells24h": report.get("sells24h"),
+        "dex_id": report.get("dex_id"),
+        "source": report.get("source"),
+    }
+
+
+def fetch_deepseek_verdict(report: dict[str, Any]) -> str | None:
+    if not deepseek_enabled():
+        return None
+    context = build_ai_scan_context(report)
+    prompt = (
+        "Analyze this Avalanche token security scan. "
+        "Return one concise RugBuster verdict in max 28 words. "
+        "Mention the main risk driver if any. Do not give financial advice.\n\n"
+        f"{json.dumps(context, ensure_ascii=False, sort_keys=True)}"
+    )
+    response = requests.post(
+        DEEPSEEK_API_URL,
+        headers={
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": DEEPSEEK_MODEL,
+            "messages": [
+                {"role": "system", "content": "You are RugBuster's concise Avalanche token risk analyst."},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.2,
+            "max_tokens": 90,
+        },
+        timeout=DEEPSEEK_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    data = response.json()
+    verdict = (
+        data.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content", "")
+        .strip()
+    )
+    return " ".join(verdict.split())[:240] if verdict else None
 
 
 def env_enabled(name: str) -> bool:

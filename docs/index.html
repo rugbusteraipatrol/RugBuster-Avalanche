@@ -2506,7 +2506,8 @@
       speculationStatus: report.speculation_status || 'UNKNOWN',
       speculationReasons,
       hasLiquidityEvidence: Boolean(report.has_liquidity_evidence),
-      source: sourceMap[report.source] || `RugBuster API (${report.source || 'live market + on-chain'})`
+      source: sourceMap[report.source] || `RugBuster API (${report.source || 'live market + on-chain'})`,
+      aiVerdict: report.ai_verdict || ''
     };
   }
 
@@ -2998,10 +2999,10 @@
       }
 
       try {
-        const aiVerdict = await fetchBuilderAiVerdict(address, apexData);
+        const aiVerdict = apexData.aiVerdict || await fetchBuilderAiVerdict(address, apexData);
         if (aiVerdict) {
           await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
-          await termLineDelay(`<span class="t-out">── SYNDICATE AI VERDICT ──────────────────</span>`, 180);
+          await termLineDelay(`<span class="t-out">── DEEPSEEK AI VERDICT ───────────────────</span>`, 180);
           await termLineDelay(`<span class="t-cyan">  ${aiVerdict}</span>`, 180);
         }
       } catch (aiErr) {
