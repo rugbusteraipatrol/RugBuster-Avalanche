@@ -450,6 +450,230 @@
     background: rgba(0,245,255,0.03);
   }
 
+  .cia-flow-panel {
+    max-width: 1280px;
+    margin: 28px auto 0;
+    border: 1px solid rgba(0,245,255,0.16);
+    background:
+      linear-gradient(90deg, rgba(0,245,255,0.035) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(0,245,255,0.028) 1px, transparent 1px),
+      rgba(7,12,24,0.9);
+    background-size: 44px 44px;
+    padding: 22px;
+    box-shadow: inset 0 0 34px rgba(0,245,255,0.035);
+    overflow: hidden;
+  }
+
+  .cia-flow-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .cia-flow-kicker {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--neon-pink);
+    letter-spacing: 3px;
+  }
+
+  .cia-flow-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    color: var(--text-primary);
+    margin-top: 6px;
+  }
+
+  .cia-flow-state {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-align: right;
+  }
+
+  .cia-flow-state.scanning { color: var(--neon-pink); }
+  .cia-flow-state.complete { color: var(--neon-green); }
+  .cia-flow-state.warn { color: var(--neon-orange); }
+  .cia-flow-state.danger { color: #ff3d3d; }
+
+  .cia-flow-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(300px, 1.35fr) minmax(90px, 0.25fr) minmax(190px, 0.75fr);
+    gap: 18px;
+    align-items: center;
+  }
+
+  .cia-node {
+    border: 1px solid rgba(0,245,255,0.18);
+    background: rgba(0,245,255,0.04);
+    padding: 16px;
+    min-height: 92px;
+    position: relative;
+    box-shadow: inset 0 0 24px rgba(0,245,255,0.025);
+  }
+
+  .cia-node-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .cia-node-main {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cia-node-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-top: 8px;
+    word-break: break-all;
+  }
+
+  .cia-module-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    position: relative;
+  }
+
+  .cia-module-node {
+    border: 1px solid rgba(0,245,255,0.12);
+    background: rgba(0,245,255,0.03);
+    min-height: 78px;
+    padding: 12px 12px 10px;
+    position: relative;
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+  }
+
+  .cia-module-node::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    transform: translateY(-50%);
+    background: rgba(0,245,255,0.25);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0,245,255,0.2);
+  }
+
+  .cia-module-node.active {
+    border-color: rgba(255,0,200,0.72);
+    background: rgba(255,0,200,0.055);
+    box-shadow: 0 0 22px rgba(255,0,200,0.14);
+  }
+
+  .cia-module-node.active::before {
+    background: var(--neon-pink);
+    box-shadow: 0 0 18px rgba(255,0,200,0.85);
+    animation: pulse-glow 0.9s ease-in-out infinite;
+  }
+
+  .cia-module-node.complete {
+    border-color: rgba(0,255,136,0.52);
+    background: rgba(0,255,136,0.045);
+    box-shadow: 0 0 20px rgba(0,255,136,0.08);
+  }
+
+  .cia-module-node.complete::before {
+    background: var(--neon-green);
+    box-shadow: 0 0 16px rgba(0,255,136,0.8);
+  }
+
+  .cia-module-node.warn {
+    border-color: rgba(255,107,0,0.62);
+    background: rgba(255,107,0,0.045);
+  }
+
+  .cia-module-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cia-module-detail {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    min-height: 28px;
+  }
+
+  .cia-link-stage {
+    position: relative;
+    height: 100%;
+    min-height: 252px;
+    overflow: hidden;
+  }
+
+  .cia-link {
+    position: absolute;
+    height: 1px;
+    left: 0;
+    right: 0;
+    top: 50%;
+    background: linear-gradient(90deg, rgba(0,245,255,0.05), rgba(255,0,200,0.55), rgba(0,255,136,0.18));
+  }
+
+  .cia-link::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 18px rgba(0,245,255,0.9);
+    animation: ciaTrace 2.3s linear infinite;
+  }
+
+  .cia-link:nth-child(1) { top: 18%; transform: rotate(7deg); }
+  .cia-link:nth-child(2) { top: 34%; transform: rotate(2deg); }
+  .cia-link:nth-child(3) { top: 50%; transform: rotate(-1deg); }
+  .cia-link:nth-child(4) { top: 66%; transform: rotate(-4deg); }
+  .cia-link:nth-child(5) { top: 82%; transform: rotate(-8deg); }
+
+  .cia-final-node.complete {
+    border-color: rgba(0,255,136,0.62);
+    box-shadow: 0 0 28px rgba(0,255,136,0.14), inset 0 0 30px rgba(0,255,136,0.035);
+  }
+
+  .cia-final-node.warn {
+    border-color: rgba(255,107,0,0.7);
+    box-shadow: 0 0 28px rgba(255,107,0,0.12), inset 0 0 30px rgba(255,107,0,0.035);
+  }
+
+  .cia-final-node.danger {
+    border-color: rgba(255,61,61,0.8);
+    box-shadow: 0 0 34px rgba(255,61,61,0.18), inset 0 0 30px rgba(255,61,61,0.04);
+  }
+
+  @keyframes ciaTrace {
+    from { transform: translateX(0); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    to { transform: translateX(96px); opacity: 0; }
+  }
+
   .portfolio-panel {
     max-width: 1280px;
     margin: 28px auto 0;
@@ -832,6 +1056,12 @@
     .pricing-grid { grid-template-columns: 1fr; }
     .how-grid { grid-template-columns: 1fr 1fr; }
     .terminal-wrap { grid-template-columns: 1fr; gap: 40px; }
+    .cia-flow-head { align-items: flex-start; flex-direction: column; }
+    .cia-flow-state { text-align: left; }
+    .cia-flow-grid { grid-template-columns: 1fr; }
+    .cia-module-stack { grid-template-columns: 1fr; }
+    .cia-link-stage { min-height: 34px; }
+    .cia-link { display: none; }
     .monitor-grid { grid-template-columns: 1fr; }
     .portfolio-row { grid-template-columns: 1fr; }
     .stats-bar { grid-template-columns: repeat(2, 1fr); }
@@ -839,6 +1069,13 @@
     .terminal-section { padding: 60px 24px; }
     footer { flex-direction: column; gap: 20px; text-align: center; }
     .how-grid::before { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cia-link::after,
+    .cia-module-node.active::before {
+      animation: none;
+    }
   }
 </style>
 </head>
@@ -1310,6 +1547,69 @@
     </div>
   </div>
 
+  <div class="cia-flow-panel z1" id="ciaFlowPanel">
+    <div class="cia-flow-head">
+      <div>
+        <div class="cia-flow-kicker">// cia module trace</div>
+        <div class="cia-flow-title">Syndicate CIA Scan Path</div>
+      </div>
+      <div class="cia-flow-state" id="ciaFlowState">IDLE</div>
+    </div>
+
+    <div class="cia-flow-grid">
+      <div class="cia-node">
+        <div class="cia-node-label">Target Token</div>
+        <div class="cia-node-main" id="ciaTargetName">Awaiting target</div>
+        <div class="cia-node-sub" id="ciaTargetAddress">Paste an Avalanche address and start scan.</div>
+      </div>
+
+      <div class="cia-module-stack" id="ciaModuleStack">
+        <div class="cia-module-node" data-cia-module="funding_origin">
+          <div class="cia-module-name">Funding Origin</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="deploy_latency">
+          <div class="cia-module-name">Deploy Latency</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="tx_entropy">
+          <div class="cia-module-name">TX Entropy</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="wash_pattern">
+          <div class="cia-module-name">Wash Pattern</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="holder_cluster">
+          <div class="cia-module-name">Holder Cluster</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="market_depth">
+          <div class="cia-module-name">Market Depth</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+        <div class="cia-module-node" data-cia-module="syndicate_ai">
+          <div class="cia-module-name">Syndicate AI</div>
+          <div class="cia-module-detail">waiting</div>
+        </div>
+      </div>
+
+      <div class="cia-link-stage" aria-hidden="true">
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+        <div class="cia-link"></div>
+      </div>
+
+      <div class="cia-node cia-final-node" id="ciaFinalNode">
+        <div class="cia-node-label">Final Scan</div>
+        <div class="cia-node-main" id="ciaFinalVerdict">Not analyzed</div>
+        <div class="cia-node-sub" id="ciaFinalScore">Rug and speculation scores will appear here.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="monitor-panel z1">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
@@ -1418,6 +1718,70 @@
       <a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/AVALANCHE_API.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">API Docs</a>
       <a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/L1_SECURITY_ROADMAP.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">L1 Roadmap</a>
       <a href="https://github.com/rugbusteraipatrol/RugBuster-Avalanche/blob/main/docs/RETRO9000_UPDATE_2026-06-03.md" target="_blank" rel="noopener" class="btn-secondary" style="font-size:11px;padding:12px 24px;">Retro9000 Update</a>
+    </div>
+  </div>
+</div>
+
+<!-- FINAL SCAN MODAL -->
+<div id="finalScanModal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(5,8,17,0.88);
+  z-index:998;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+">
+  <div style="
+    border:1px solid rgba(0,245,255,0.44);
+    background:linear-gradient(180deg, rgba(10,15,30,0.98), rgba(5,8,17,0.98));
+    padding:28px;
+    max-width:640px;
+    width:100%;
+    box-shadow:0 0 70px rgba(0,245,255,0.18), inset 0 0 30px rgba(0,245,255,0.04);
+    position:relative;
+  ">
+    <button onclick="closeFinalScanModal()" aria-label="Close final scan" style="
+      position:absolute;
+      top:14px;
+      right:14px;
+      width:34px;
+      height:34px;
+      border:1px solid rgba(0,245,255,0.26);
+      background:transparent;
+      color:var(--neon-cyan);
+      cursor:crosshair;
+      font-family:'Orbitron',monospace;
+      font-size:18px;
+    ">×</button>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--neon-pink);margin-bottom:12px;">FINAL SCAN COMPLETE</div>
+    <div id="finalScanTitle" style="font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:8px;line-height:1.35;"></div>
+    <div id="finalScanAddress" style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text-muted);word-break:break-all;margin-bottom:20px;"></div>
+    <div id="finalScanGrid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;"></div>
+    <div id="finalScanAi" style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--neon-cyan);line-height:1.7;border:1px solid rgba(0,245,255,0.12);background:rgba(0,245,255,0.035);padding:14px 16px;margin-bottom:20px;"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+      <button onclick="closeFinalScanModal()" class="btn-secondary" style="font-size:11px;padding:12px 22px;">CLOSE</button>
+      <button onclick="closeFinalScanModal(); sendTelegramAlert();" id="finalScanAlertBtn" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:11px;
+        letter-spacing:2px;
+        padding:12px 20px;
+        background:transparent;
+        border:1px solid rgba(0,255,136,0.36);
+        color:var(--neon-green);
+        cursor:crosshair;
+      ">SEND ALERT</button>
+      <button onclick="closeFinalScanModal(); publishCurrentReport();" id="finalScanPublishBtn" style="
+        font-family:'Share Tech Mono',monospace;
+        font-size:11px;
+        letter-spacing:2px;
+        padding:12px 20px;
+        background:transparent;
+        border:1px solid rgba(255,0,200,0.36);
+        color:var(--neon-pink);
+        cursor:crosshair;
+      ">PUBLISH REPORT</button>
     </div>
   </div>
 </div>
@@ -1863,6 +2227,12 @@
   });
   document.getElementById('paymentModal').addEventListener('click', e => {
     if (e.target === document.getElementById('paymentModal')) closePaymentModal();
+  });
+  document.getElementById('finalScanModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('finalScanModal')) closeFinalScanModal();
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeFinalScanModal();
   });
 
   const RUGCHECK_API = 'https://api.rugcheck.xyz/v1';
@@ -2888,6 +3258,124 @@
     }
   }
 
+  const CIA_MODULE_SEQUENCE = [
+    'funding_origin',
+    'deploy_latency',
+    'tx_entropy',
+    'wash_pattern',
+    'holder_cluster',
+    'market_depth',
+    'syndicate_ai'
+  ];
+
+  function ciaModuleEl(module) {
+    return document.querySelector(`[data-cia-module="${module}"]`);
+  }
+
+  function setCiaStatus(text, state = '') {
+    const el = document.getElementById('ciaFlowState');
+    if (!el) return;
+    el.textContent = text;
+    el.className = `cia-flow-state ${state}`.trim();
+  }
+
+  function resetCiaFlow() {
+    setCiaStatus('IDLE');
+    document.getElementById('ciaTargetName').textContent = 'Awaiting target';
+    document.getElementById('ciaTargetAddress').textContent = 'Paste an Avalanche address and start scan.';
+    document.getElementById('ciaFinalVerdict').textContent = 'Not analyzed';
+    document.getElementById('ciaFinalScore').textContent = 'Rug and speculation scores will appear here.';
+    const finalNode = document.getElementById('ciaFinalNode');
+    finalNode.className = 'cia-node cia-final-node';
+
+    CIA_MODULE_SEQUENCE.forEach(module => {
+      const el = ciaModuleEl(module);
+      if (!el) return;
+      el.classList.remove('active', 'complete', 'warn', 'danger');
+      const detail = el.querySelector('.cia-module-detail');
+      if (detail) detail.textContent = 'waiting';
+    });
+  }
+
+  function setCiaTarget(address, report = null) {
+    document.getElementById('ciaTargetName').textContent = report?.tokenName || 'Scanning target';
+    document.getElementById('ciaTargetAddress').textContent = address || 'Unknown target';
+  }
+
+  function setCiaModuleState(module, state, detailText) {
+    const el = ciaModuleEl(module);
+    if (!el) return;
+    el.classList.remove('active', 'complete', 'warn', 'danger');
+    if (state) el.classList.add(state);
+    const detail = el.querySelector('.cia-module-detail');
+    if (detail) detail.textContent = detailText || state || 'waiting';
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function runCiaFlowStage(module, detailText, finalState = 'complete', delay = 180) {
+    setCiaModuleState(module, 'active', detailText);
+    await sleep(delay);
+    setCiaModuleState(module, finalState, detailText);
+  }
+
+  function finalScanLevel(report) {
+    if (!report) return 'complete';
+    if (report.rugStatus === 'HIGH' || report.speculationStatus === 'HIGH') return 'danger';
+    if (report.rugStatus === 'ELEVATED' || report.speculationStatus === 'ELEVATED') return 'warn';
+    return 'complete';
+  }
+
+  function finalScanVerdict(report) {
+    if (report.rugStatus === 'HIGH') return 'HIGH RUG RISK';
+    if (report.speculationStatus === 'HIGH') return 'HIGH SPECULATION';
+    if (report.speculationStatus === 'ELEVATED') return 'LOW RUG RISK / SHALLOW MARKET';
+    if (report.rugStatus === 'UNKNOWN' || report.speculationStatus === 'UNKNOWN') return 'INCOMPLETE EVIDENCE';
+    return 'LOW RISK';
+  }
+
+  function finalizeCiaFlow(report) {
+    const level = finalScanLevel(report);
+    const finalNode = document.getElementById('ciaFinalNode');
+    finalNode.className = `cia-node cia-final-node ${level}`;
+    document.getElementById('ciaFinalVerdict').textContent = finalScanVerdict(report);
+    document.getElementById('ciaFinalScore').textContent = `Rug ${report.rugScore ?? 'UNKNOWN'} · Spec ${report.speculationScore ?? 'UNKNOWN'} · ${report.dexId || 'DEX unknown'}`;
+    setCiaStatus(level === 'danger' ? 'DANGER' : level === 'warn' ? 'REVIEW' : 'COMPLETE', level);
+  }
+
+  function renderFinalScanMetric(label, value, color) {
+    return `
+      <div style="border:1px solid rgba(0,245,255,0.14);background:rgba(0,245,255,0.035);padding:14px 16px;min-height:78px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;margin-bottom:8px;">${escapeHtml(label)}</div>
+        <div style="font-family:'Orbitron',monospace;font-size:18px;color:${color};line-height:1.35;">${escapeHtml(value)}</div>
+      </div>
+    `;
+  }
+
+  function showFinalScanModal(report, address) {
+    const modal = document.getElementById('finalScanModal');
+    if (!modal || !report) return;
+    const level = finalScanLevel(report);
+    const accent = level === 'danger' ? '#ff3d3d' : level === 'warn' ? 'var(--neon-orange)' : 'var(--neon-green)';
+    document.getElementById('finalScanTitle').innerHTML = `${escapeHtml(report.tokenName || shortAddress(address))} <span style="color:${accent};">/ ${escapeHtml(finalScanVerdict(report))}</span>`;
+    document.getElementById('finalScanAddress').textContent = address;
+    document.getElementById('finalScanGrid').innerHTML = [
+      renderFinalScanMetric('RUG RISK', `${report.rugScore ?? 'UNKNOWN'} · ${report.rugStatus || 'UNKNOWN'}`, accent),
+      renderFinalScanMetric('SPECULATION', `${report.speculationScore ?? 'UNKNOWN'} · ${report.speculationStatus || 'UNKNOWN'}`, report.speculationStatus === 'LOW' ? 'var(--neon-green)' : 'var(--neon-orange)'),
+      renderFinalScanMetric('LIQUIDITY', formatUsd(report.liquidityUsd), 'var(--neon-cyan)'),
+      renderFinalScanMetric('24H VOLUME', formatUsd(report.volume24h), 'var(--neon-pink)')
+    ].join('');
+    document.getElementById('finalScanAi').textContent = report.aiVerdict || 'Syndicate AI verdict unavailable; deterministic score remains active.';
+    modal.style.display = 'flex';
+  }
+
+  function closeFinalScanModal() {
+    const modal = document.getElementById('finalScanModal');
+    if (modal) modal.style.display = 'none';
+  }
+
   async function runScan() {
     const address = document.getElementById('scanInput').value.trim();
     if (!address) {
@@ -2897,6 +3385,7 @@
     }
 
     clearTerminal();
+    resetCiaFlow();
     document.getElementById('scoreBoard').style.display = 'none';
     document.getElementById('tokenImageWrap').style.display = 'none';
     setAlertButtonState(false, 'SEND ALERT');
@@ -2911,10 +3400,13 @@
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-danger">Unsupported address format</span>`);
       termLine(`<span class="t-out">// Use an Apex / Avalanche 0x token address.</span>`);
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      setCiaStatus('UNSUPPORTED', 'danger');
       return;
     }
 
     const chain = 'APEX/AVALANCHE';
+    setCiaTarget(address);
+    setCiaStatus('SCANNING', 'scanning');
 
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">scan ${short} --chain ${chain} --deep --ai</span>`);
     await termLineDelay(`<span class="t-out">Initializing threat engine...</span>`, 300);
@@ -2928,8 +3420,17 @@
       await termLineDelay(`<span class="t-danger">✗ SCAN FAILED: ${err.message}</span>`, 400);
       await termLineDelay(`<span class="t-out">// Ensure this is an Avalanche token address with live liquidity.</span>`, 200);
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
+      setCiaStatus('SCAN FAILED', 'danger');
       return;
     }
+
+      setCiaTarget(address, apexData);
+      await runCiaFlowStage('funding_origin', apexData.source || 'RugBuster live source');
+      await runCiaFlowStage('deploy_latency', apexData.dexId || 'Avalanche token route');
+      await runCiaFlowStage('tx_entropy', apexData.buys24h === null || apexData.sells24h === null ? '24h flow unknown' : `${apexData.buys24h} buys / ${apexData.sells24h} sells`);
+      await runCiaFlowStage('wash_pattern', apexData.speculationStatus === 'LOW' ? 'no hard market anomaly' : `${apexData.speculationStatus} market review`, apexData.speculationStatus === 'LOW' ? 'complete' : 'warn');
+      await runCiaFlowStage('holder_cluster', apexData.rugStatus === 'LOW' ? 'hard facts clean' : `${apexData.rugStatus} on-chain facts`, apexData.rugStatus === 'HIGH' ? 'danger' : apexData.rugStatus === 'LOW' ? 'complete' : 'warn');
+      await runCiaFlowStage('market_depth', `liq ${formatUsd(apexData.liquidityUsd)}`, apexData.speculationStatus === 'HIGH' ? 'danger' : apexData.speculationStatus === 'LOW' ? 'complete' : 'warn');
 
       const rugFlags = [
         ...apexData.rugReasons.high,
@@ -3002,11 +3503,14 @@
       try {
         const aiVerdict = apexData.aiVerdict || await fetchBuilderAiVerdict(address, apexData);
         if (aiVerdict) {
+          apexData.aiVerdict = aiVerdict;
+          setCiaModuleState('syndicate_ai', 'complete', aiVerdict.slice(0, 46));
           await termLineDelay(`<span class="t-out">&nbsp;</span>`, 80);
           await termLineDelay(`<span class="t-out">── SYNDICATE AI VERDICT ──────────────────</span>`, 180);
           await termLineDelay(`<span class="t-cyan">  ${aiVerdict}</span>`, 180);
         }
       } catch (aiErr) {
+        setCiaModuleState('syndicate_ai', 'warn', 'AI unavailable');
         await termLineDelay(`<span class="t-out">// AI verdict unavailable; deterministic score remains active.</span>`, 100);
       }
 
@@ -3024,22 +3528,9 @@
     lastScanData = apexData;
     setAlertButtonState(true, 'SEND ALERT');
     setPublishButtonState(true, 'PUBLISH REPORT');
+    finalizeCiaFlow(apexData);
+    setTimeout(() => showFinalScanModal(apexData, address), 450);
 
-    if (apexData.rugStatus === 'HIGH' || apexData.speculationStatus === 'HIGH') {
-      const dangerList = [...apexData.rugReasons.high, ...apexData.speculationReasons.high].map(flag => `• ${flag.replace(/^[✗⚡·]\s*/, '')}`).join('<br>');
-      setTimeout(() => {
-        showCriticalAlert(
-          apexData.rugStatus === 'HIGH' ? 'HIGH RUG RISK DETECTED' : 'HIGH SPECULATION DETECTED',
-          `Token: <span style="color:#ff3d3d">${apexData.tokenName}</span><br>
-           Address: <span style="color:var(--text-muted)">${short}</span><br>
-           Rug Score: <span style="color:#ff3d3d;font-size:18px">${apexData.rugScore === null ? 'UNKNOWN' : `${apexData.rugScore}%`}</span><br>
-           Speculation Score: <span style="color:#ff3d3d;font-size:18px">${apexData.speculationScore === null ? 'UNKNOWN' : `${apexData.speculationScore}%`}</span><br><br>
-           ${dangerList ? `<span style="color:#ff3d3d">${dangerList}</span><br><br>` : ''}
-           <span style="color:#ff3d3d">⚠ REVIEW THE HARD FACTS AND MARKET EVIDENCE BEFORE TOUCHING THIS TOKEN</span><br>
-           Unknown is allowed. Guessing is not.`
-        );
-      }, 800);
-    }
     return;
   }
 
