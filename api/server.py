@@ -146,14 +146,18 @@ def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
             record = json.loads(record)
         except json.JSONDecodeError:
             record = {}
+    chain = str(record.get("chain") or "AVAX").lower()
+    explorer_base = "https://bscscan.com/address" if chain in {"bnb", "bsc"} else "https://snowtrace.io/address"
+    address = record.get("contract_address") or ""
     return {
         "token_name": record.get("token_name") or "Unknown",
         "token_symbol": record.get("token_symbol") or "",
-        "address": record.get("contract_address") or "",
+        "address": address,
+        "chain": chain,
         "verdict": record.get("label") or "UNKNOWN",
         "flag": compact_recent_flag(record),
         "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at or ""),
-        "explorer_url": record.get("explorer_url") or f"https://snowtrace.io/address/{record.get('contract_address', '')}",
+        "explorer_url": record.get("explorer_url") or f"{explorer_base}/{address}",
     }
 
 
