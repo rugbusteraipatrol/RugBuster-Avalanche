@@ -46,7 +46,7 @@ Avalanche risk labels without getting access to the raw private corpus.
 
 ## Phase 4 - Sentinel Monitoring
 
-Status: planned
+Status: in progress
 
 RugBuster Sentinel will convert the collector and API into proactive monitoring:
 
@@ -56,6 +56,7 @@ RugBuster Sentinel will convert the collector and API into proactive monitoring:
 - Track repeated deployer behavior
 - Keep a public-safe activity feed for ecosystem visibility
 - Preserve private evidence for model training and partner review
+- Provide L1 builder-facing incident context for dashboards and ecosystem tools
 
 Outcome: RugBuster Apex becomes an always-on Avalanche threat-intelligence
 service, not just a manual scanner.
@@ -70,8 +71,8 @@ The L1 path should be attempted only after the tooling proves demand:
 - Builder-facing token risk oracle
 - Registry and API integration for wallets and launchpads
 - Validator or operator dashboard for security events
-- Future ICM/ICTT-aware integrations where useful for Avalanche-native
-  interoperability
+- ICM-aware risk event schemas for cross-L1 security messages
+- ICTT-aware monitoring research for suspicious wrapped asset and bridge flows
 
 Outcome: RugBuster Apex becomes a security layer for Avalanche builders that can
 serve token intelligence, attestations, and monitoring signals across the

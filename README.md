@@ -2,6 +2,13 @@
 
 > AI-powered token security registry and on-chain risk certification layer for Avalanche C-Chain.
 
+Live project links:
+
+- Public scanner UI: `https://rugbusteraipatrol.github.io/RugBuster-Avalanche/`
+- Live builder API: `https://rugbuster-api-production.up.railway.app`
+- Verified registry: `https://snowtrace.io/address/0x5F30276B3A5079E088Ec3072884286de5a868355`
+- L1 infrastructure update: [`docs/L1_INFRASTRUCTURE_UPDATE_2026-06-07.md`](docs/L1_INFRASTRUCTURE_UPDATE_2026-06-07.md)
+
 RugBuster Avalanche extends the RugBusterAI security engine into the Avalanche ecosystem as a public, verifiable risk layer for tokens, launchpads, wallets, DEX interfaces, and Culture Catalyst participants.
 
 The Solana prototype proved the core thesis: real-time token monitoring, external risk signals, structured datasets, and AI-assisted fraud classification can protect users before liquidity disappears. RugBuster Avalanche adapts that experience to an EVM-native flow: scan Avalanche tokens, produce a transparent safety score, and publish security attestations directly on-chain.
@@ -17,6 +24,28 @@ RugBuster Avalanche is designed for the Retro9000 and Culture Catalyst context:
 - Score projects with a temporary rules engine today and a dedicated RugBusterAI model later.
 - Publish safety scores on-chain through a gas-efficient registry contract.
 - Emit real-time events for monitoring and integrations.
+
+For the Avalanche L1s & Infrastructure Tooling round, RugBuster Apex is
+positioned as developer security tooling for Avalanche L1 builders. It is not
+claiming to be a production L1 today; it provides scanner, registry, API,
+alerting, and evidence infrastructure that L1 builders and ecosystem tools can
+integrate.
+
+## Avalanche L1 Builder Use Case
+
+Avalanche L1 teams need security visibility around the contracts and tokens
+launched in their ecosystems. RugBuster Apex gives them:
+
+- a public score endpoint for cache-first token checks
+- a protected deep scan endpoint for trusted integrations
+- deployer, bytecode, holder concentration, liquidity, and rug velocity signals
+- reviewer-published on-chain attestations
+- a registry contract that dashboards and wallets can inspect
+- an evidence corpus that improves the model over time
+
+Planned Avalanche-native work includes ICM-aware risk event schemas and
+ICTT-aware bridge monitoring. Those integrations are tracked as roadmap items,
+not represented as shipped production features.
 
 ## Retro9000 Infrastructure Tooling Update - 2026-06-03
 
@@ -181,7 +210,7 @@ MAX_EUR_TOTAL=20
 MAX_AVAX_TOTAL=2
 TARGET_AVAX_PER_SCAN=0.001
 EVIDENCE_BYTES_TARGET=2048
-RUN_UNTIL_DATE=2026-06-17
+RUN_UNTIL_DATE=2026-07-14
 AVAX_EUR_PRICE_FALLBACK=30
 MIN_SCAN_DELAY_MINUTES=2
 MAX_SCAN_DELAY_MINUTES=3
