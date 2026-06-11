@@ -766,7 +766,7 @@ def scan_token(address: str) -> dict[str, Any]:
     try:
         best_pair = get_market_data(address)
         pair_source = "dexscreener"
-    except RuntimeError:
+    except Exception:
         best_pair = get_pair_from_factories(web3, address, onchain.get("total_supply"))
         if best_pair:
             pair_source = "onchain_pair_lookup"
