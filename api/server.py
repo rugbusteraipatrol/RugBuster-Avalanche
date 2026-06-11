@@ -187,6 +187,103 @@ def health():
     return jsonify({"ok": True, "network": network, "label": NETWORKS[network]["label"]})
 
 
+@app.route("/", methods=["GET"])
+def root():
+    network = resolve_network()
+    return jsonify(
+        {
+            "ok": True,
+            "name": "RugBuster Apex",
+            "version": "rugbuster-avalanche-api-v1",
+            "network": network,
+            "label": NETWORKS[network]["label"],
+            "classifier_version": "weighted_v2",
+            "score_endpoint": "/score?address=0x...",
+            "scan_endpoint": "/api/scan",
+        }
+    )
+
+
+def public_label_from_report(report: dict[str, Any]) -> str:
+    rug_status = str(report.get("rug_status") or "").upper()
+    speculation_status = str(report.get("speculation_status") or "").upper()
+    if rug_status == "HIGH" or speculation_status == "HIGH":
+        return "DANGER"
+    if rug_status in {"ELEVATED", "WARN"} or speculation_status in {"ELEVATED", "WARN"}:
+        return "WARN"
+    if rug_status == "LOW" and speculation_status == "LOW":
+        return "GOOD"
+    return "UNKNOWN"
+
+
+def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any]:
+    address = report.get("address") or report.get("contract_address") or ""
+    risk_flags = list(report.get("rug_reasons") or [])[:4] + list(report.get("speculation_reasons") or [])[:4]
+    return {
+        "ok": True,
+        "address": Web3.to_checksum_address(address) if Web3.is_address(address) else address,
+        "chain": "avalanche",
+        "label": public_label_from_report(report),
+        "rug_score": report.get("rug_score"),
+        "rug_status": report.get("rug_status"),
+        "speculation_score": report.get("speculation_score"),
+        "speculation_status": report.get("speculation_status"),
+        "token_name": report.get("token_name"),
+        "token_symbol": report.get("symbol") or report.get("token_symbol"),
+        "risk_flags": risk_flags[:6],
+        "classifier": "weighted_v2",
+        "source": source,
+    }
+
+
+def lookup_cached_score(address: str) -> dict[str, Any] | None:
+    cached = get_cached_report(address)
+    if cached:
+        return compact_score_response(cached, "memory_cache")
+    if not DATABASE_URL or psycopg2 is None:
+        return None
+    try:
+        with psycopg2.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT full_record
+                    FROM avax_scans
+                    WHERE lower(contract_address) = lower(%s)
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """,
+                    (address,),
+                )
+                row = cur.fetchone()
+        if not row:
+            return None
+        record = row[0]
+        if isinstance(record, str):
+            record = json.loads(record)
+        return compact_score_response(record, "postgres_cache")
+    except Exception:
+        return None
+
+
+@app.route("/score", methods=["GET"])
+def public_score():
+    address = str(request.args.get("address") or "").strip()
+    if not Web3.is_address(address):
+        return jsonify({"ok": False, "error": "Invalid Avalanche token address"}), 400
+
+    score = lookup_cached_score(address)
+    if score:
+        return jsonify(score)
+
+    try:
+        report = scan_token(address)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc), "address": address}), 404
+    put_cached_report(address, report)
+    return jsonify(compact_score_response(report, "live_score"))
+
+
 @app.route("/api/recent-scans", methods=["GET", "POST", "OPTIONS"])
 def api_recent_scans():
     if request.method == "OPTIONS":

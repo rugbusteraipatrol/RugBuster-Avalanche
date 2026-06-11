@@ -3,7 +3,7 @@
 Live API:
 
 ```txt
-https://rugbuster-api-production.up.railway.app
+https://web-production-376bf.up.railway.app
 ```
 
 RugBuster Apex exposes a cache-first Avalanche risk API for wallets,
@@ -14,13 +14,14 @@ access stays protected to control cost and prevent dataset scraping.
 ## Public Endpoints
 
 ```bash
-curl https://rugbuster-api-production.up.railway.app/
-curl https://rugbuster-api-production.up.railway.app/health
-curl "https://rugbuster-api-production.up.railway.app/score?address=0x2ce7788de3a177f8be43df6376a8513ef9182032"
+curl https://web-production-376bf.up.railway.app/
+curl https://web-production-376bf.up.railway.app/health
+curl "https://web-production-376bf.up.railway.app/score?address=0x2ce7788de3a177f8be43df6376a8513ef9182032"
 ```
 
-`GET /score?address=0x...` returns the latest cached score for an Avalanche
-C-Chain token if the collector has evidence for it.
+`GET /score?address=0x...` returns a compact Avalanche C-Chain risk score.
+It uses cache when available and falls back to a live read-only score without
+Telegram alerts or on-chain writes.
 
 Example response shape:
 
@@ -30,7 +31,7 @@ Example response shape:
   "chain": "avalanche",
   "label": "DANGER",
   "classifier": "weighted_v2",
-  "source": "cache"
+  "source": "live_score"
 }
 ```
 
