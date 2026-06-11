@@ -46,6 +46,94 @@ def clamp(score: int) -> int:
     return max(0, min(100, score))
 
 
+def add_reason(reasons: list[str], points: int, reason: str) -> int:
+    if points:
+        reasons.append(reason)
+    return points
+
+
+def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
+    """RugBuster's Avalanche-native RugCheck-style score.
+
+    This combines C-Chain hard evidence when available: deployer behavior,
+    bytecode/backdoor hints, holder concentration, funding, and market depth.
+    It is intentionally deterministic so reviewers can reproduce the verdict.
+    """
+
+    score = 8
+    reasons: list[str] = []
+
+    backdoor_score = int(metadata.get("v6_backdoor_risk_score") or metadata.get("backdoor_risk_score") or 0)
+    top5 = float(metadata.get("v6_top5_concentration_pct") or metadata.get("top5_holder_pct") or 0)
+    concentration = str(metadata.get("v6_concentration_risk") or "").upper()
+    velocity = float(metadata.get("v6_rug_velocity_score") or metadata.get("rug_velocity_score") or 0)
+    creator_rug_rate = float(metadata.get("creator_rug_rate") or 0)
+    holders = int(metadata.get("holders_count") or 0)
+    deployer_balance = float(metadata.get("deployer_balance_avax") or 0)
+    liquidity_usd = metadata.get("liquidity_usd")
+    fdv = metadata.get("fdv")
+
+    if metadata.get("v6_has_backdoor") or backdoor_score >= 40:
+        score += add_reason(reasons, min(35, max(12, backdoor_score // 2)), f"Bytecode backdoor risk score {backdoor_score}/100")
+    if metadata.get("v6_is_proxy"):
+        score += add_reason(reasons, 18, "Upgradeable proxy contract")
+    if metadata.get("v6_has_mint"):
+        score += add_reason(reasons, 18, "Mint function detected in bytecode")
+    if metadata.get("v6_has_blacklist"):
+        score += add_reason(reasons, 12, "Blacklist function detected")
+
+    if concentration == "CRITICAL" or top5 >= 90:
+        score += add_reason(reasons, 30, f"Critical holder concentration top5={top5:.1f}%")
+    elif concentration == "HIGH" or top5 >= 75:
+        score += add_reason(reasons, 22, f"High holder concentration top5={top5:.1f}%")
+    elif concentration == "MEDIUM" or top5 >= 55:
+        score += add_reason(reasons, 10, f"Moderate holder concentration top5={top5:.1f}%")
+
+    if metadata.get("cia_all_fresh_wallets"):
+        score += add_reason(reasons, 12, "Fresh funding chain")
+    if metadata.get("cia_bot_pattern"):
+        score += add_reason(reasons, 10, "Bot-like transaction entropy")
+    if metadata.get("cia_wash_detected"):
+        score += add_reason(reasons, 18, "Wash trading pattern detected")
+    if metadata.get("cia_bot_farm"):
+        score += add_reason(reasons, 15, "Bot farm holder cluster")
+    if metadata.get("v6_is_fast_rug") or velocity >= 0.65:
+        score += add_reason(reasons, 20, f"High rug velocity score {velocity}")
+
+    if creator_rug_rate >= 80:
+        score = max(score, 88)
+        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
+    elif creator_rug_rate >= 40:
+        score = max(score, 72)
+        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
+
+    if holders and holders < 10:
+        score += add_reason(reasons, 8, f"Very few holders ({holders})")
+    if deployer_balance and deployer_balance < 0.1:
+        score += add_reason(reasons, 6, f"Near-zero deployer balance ({deployer_balance:.4f} AVAX)")
+
+    if liquidity_usd is None:
+        reasons.append("Liquidity evidence unavailable")
+    else:
+        liq = float(liquidity_usd)
+        if liq < 5_000:
+            score += add_reason(reasons, 16, f"Very thin live liquidity at ${liq:,.0f}")
+        elif liq < 25_000:
+            score += add_reason(reasons, 9, f"Thin live liquidity at ${liq:,.0f}")
+    if liquidity_usd and fdv:
+        ratio = float(liquidity_usd) / max(float(fdv), 1.0)
+        if ratio < 0.01:
+            score += add_reason(reasons, 18, "Liquidity to FDV ratio under 1%")
+        elif ratio < 0.03:
+            score += add_reason(reasons, 12, "Liquidity to FDV ratio under 3%")
+
+    if not reasons:
+        reasons.append("No hard Avalanche rug signals detected")
+
+    final = clamp(round(score))
+    return ScoreResult(score=final, status=risk_status(final), reasons=reasons[:8])
+
+
 def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
     """Score rug risk from hard on-chain facts only."""
 
@@ -98,7 +186,12 @@ def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
         score += 10 + (4 * min(len(hits), 3))
         reasons.append(f"On-chain naming includes suspicious terms: {', '.join(hits)}")
 
-    return ScoreResult(score=clamp(score), status=risk_status(score), reasons=reasons)
+    native = score_avax_security(metadata)
+    if native.score is not None and native.score > score:
+        score = native.score
+        reasons = native.reasons + reasons[:3]
+
+    return ScoreResult(score=clamp(score), status=risk_status(score), reasons=reasons[:8])
 
 
 def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:

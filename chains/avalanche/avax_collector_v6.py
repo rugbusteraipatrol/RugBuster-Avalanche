@@ -1124,6 +1124,99 @@ def classify_avax_token_v6(token_info: dict, cia_intel: dict, v5: dict, v6: dict
     else:
         return "GOOD", flags
 
+
+def risk_status_from_percent(score: int) -> str:
+    if score >= 75:
+        return "DANGER"
+    if score >= 45:
+        return "WARN"
+    return "GOOD"
+
+
+def calculate_rugbuster_avax_risk(
+    token_info: dict,
+    cia_intel: dict,
+    v5: dict,
+    v6: dict,
+    creator_stats: dict,
+    deployer_balance: float,
+) -> tuple[int, list[str]]:
+    funding  = cia_intel.get("funding", {})
+    entropy  = cia_intel.get("entropy", {})
+    wash     = cia_intel.get("wash", {})
+    cluster  = cia_intel.get("cluster", {})
+    backdoor = v6.get("backdoor", {})
+    conc     = v6.get("concentration", {})
+    vel      = v6.get("velocity", {})
+    sweep    = v5.get("cex_sweep", {})
+    style    = v5.get("name_style", {})
+    xchain   = v5.get("cross_chain", {})
+
+    score = 8
+    reasons: list[str] = []
+
+    def add(points: int, reason: str) -> None:
+        nonlocal score
+        score += points
+        reasons.append(reason)
+
+    backdoor_score = int(backdoor.get("backdoor_risk_score", 0) or 0)
+    if backdoor.get("has_backdoor") or backdoor_score >= 40:
+        add(min(35, max(12, backdoor_score // 2)), f"Bytecode backdoor risk {backdoor_score}/100")
+    if backdoor.get("is_proxy"):
+        add(18, "Upgradeable proxy contract")
+    if backdoor.get("has_mint_function"):
+        add(18, "Mint function in bytecode")
+    if backdoor.get("has_blacklist"):
+        add(12, "Blacklist function")
+
+    top5 = float(conc.get("top5_pct", 0) or 0)
+    concentration = str(conc.get("concentration_risk", "LOW")).upper()
+    if concentration == "CRITICAL" or top5 >= 90:
+        add(30, f"Critical holder concentration top5={top5:.1f}%")
+    elif concentration == "HIGH" or top5 >= 75:
+        add(22, f"High holder concentration top5={top5:.1f}%")
+    elif concentration == "MEDIUM" or top5 >= 55:
+        add(10, f"Moderate holder concentration top5={top5:.1f}%")
+
+    if funding.get("all_fresh"):
+        add(12, "Fresh funding chain")
+    if entropy.get("is_bot_pattern"):
+        add(10, "Bot-like transaction entropy")
+    if wash.get("wash_detected"):
+        add(18, "Wash trading pattern detected")
+    if cluster.get("is_bot_farm"):
+        add(15, "Bot farm holder cluster")
+    velocity = float(vel.get("velocity_score", 0) or 0)
+    if vel.get("is_fast_rug") or velocity >= 0.65:
+        add(20, f"High rug velocity score {velocity}")
+
+    if sweep.get("sweep_to_cex"):
+        add(12, f"CEX sweep -> {sweep.get('cex_destination')}")
+    if style.get("name_scam_score", 0) > 50:
+        add(10, f"Scam name pattern {style.get('matched_patterns')}")
+    if xchain.get("cross_chain_match"):
+        add(16, f"Cross-chain scam match {xchain.get('match_chains')}")
+
+    creator_rug_rate = float(creator_stats.get("rug_rate", 0) or 0)
+    if creator_rug_rate >= 80:
+        score = max(score, 88)
+        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
+    elif creator_rug_rate >= 40:
+        score = max(score, 72)
+        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
+
+    holders = int(token_info.get("holders_count", 0) or 0)
+    if holders and holders < 10:
+        add(8, f"Very few holders ({holders})")
+    if deployer_balance and deployer_balance < 0.1:
+        add(6, f"Near-zero deployer balance ({deployer_balance:.4f} AVAX)")
+
+    if not reasons:
+        reasons.append("No hard Avalanche rug signals detected")
+
+    return max(0, min(98, round(score))), reasons[:8]
+
 # ---------------------------------------------------------------------------
 # Dataset writer
 # ---------------------------------------------------------------------------
@@ -1149,6 +1242,8 @@ def build_training_record_v6(
     v6: dict,
     label: str,
     risk_flags: list,
+    risk_percent: int | None = None,
+    avax_risk_reasons: list[str] | None = None,
 ) -> dict:
     funding  = cia_intel.get("funding", {})
     latency  = cia_intel.get("latency", {})
@@ -1162,6 +1257,8 @@ def build_training_record_v6(
     style    = v5.get("name_style", {})
     xchain   = v5.get("cross_chain", {})
     lifecycle = v5.get("lifecycle", {})
+    avax_risk_reasons = avax_risk_reasons or []
+    risk_percent = int(risk_percent if risk_percent is not None else 0)
 
     if creator_stats["total"] == 0:
         creator_risk = "NEW - no previous tokens"
@@ -1179,7 +1276,9 @@ Explorer: https://snowtrace.io/address/{contract_address}
 Deployer: {deployer[:20] + '...' if deployer else 'Unknown'}
 Total Supply: {token_info.get('total_supply', 'N/A')}
 Holders: {token_info.get('holders_count', 0)}
+RugBuster AVAX Risk: {risk_percent}%
 Risk Flags: {', '.join(risk_flags) or 'None detected'}
+Native Risk Reasons: {', '.join(avax_risk_reasons) or 'No hard Avalanche rug signals detected'}
 Deployer History: {creator_risk}
 --- CIA INTEL ---
 Funding Origin: Master wallet traced {funding.get('hop_count', 0)} hops | All fresh: {funding.get('all_fresh', False)}
@@ -1199,12 +1298,13 @@ Holder Concentration: top5={conc.get('top5_pct', 0)}% | top1={conc.get('top1_pct
 Rug Velocity: score={vel.get('velocity_score', 0)} | Fast rug: {vel.get('is_fast_rug', False)} | Volume decay: {vel.get('volume_decay', False)}"""
 
     cia_flags = f" CIA/V6 flags: {', '.join(risk_flags[:4])}." if risk_flags else ""
+    native_flags = f" RugBuster AVAX Risk: {risk_percent}%. Reasons: {', '.join(avax_risk_reasons[:3])}."
     if label == "DANGER":
-        output = f"DANGER - High risk AVAX token. Top flags: {', '.join(risk_flags[:3])}.{cia_flags} Deployer rug rate: {creator_stats['rug_rate']}%."
+        output = f"DANGER - High risk AVAX token.{native_flags}{cia_flags} Deployer rug rate: {creator_stats['rug_rate']}%."
     elif label == "WARN":
-        output = f"WARN - Moderate risk AVAX token. Flags: {', '.join(risk_flags[:3])}.{cia_flags}"
+        output = f"WARN - Moderate risk AVAX token.{native_flags}{cia_flags}"
     else:
-        output = f"GOOD - Low risk AVAX token. No major red flags. Deployer history: {creator_risk}."
+        output = f"GOOD - Low risk AVAX token. RugBuster AVAX Risk: {risk_percent}%. No major red flags. Deployer history: {creator_risk}."
 
     return {
         "instruction": "Analyze this Avalanche (AVAX) token and classify its risk level as DANGER, WARN, or GOOD.",
@@ -1216,6 +1316,10 @@ Rug Velocity: score={vel.get('velocity_score', 0)} | Fast rug: {vel.get('is_fast
         "output": output,
         "label": label,
         "chain": "AVAX",
+        "risk_engine": "rugbuster_avax_v1",
+        "risk_percent": risk_percent,
+        "rugbuster_avax_score": risk_percent,
+        "rugbuster_avax_reasons": avax_risk_reasons,
         "creator": deployer,
         "creator_rug_rate": creator_stats["rug_rate"],
         # CIA
@@ -1411,6 +1515,9 @@ def module_payloads(record: dict) -> list[dict]:
         }),
         ("final_verdict", {
             "flags": record.get("output", "")[:240],
+            "risk_engine": record.get("risk_engine", "rugbuster_avax_v1"),
+            "risk_percent": record.get("risk_percent", record.get("rugbuster_avax_score", 0)),
+            "reasons": list(record.get("rugbuster_avax_reasons") or [])[:3],
         }),
     ]
     return [
@@ -1726,6 +1833,7 @@ def send_telegram_alert_avax(record: dict, txs: list[dict]) -> None:
         f"Token: {token_label}\n"
         f"Address: {token}\n"
         f"Verdict: {record.get('label')}\n"
+        f"RugBuster AVAX Risk: {record.get('risk_percent', record.get('rugbuster_avax_score', 'UNKNOWN'))}%\n"
         f"Flags: {record.get('output', '')[:400]}\n"
         f"Explorer: https://snowtrace.io/address/{token}\n\n"
         f"On-chain module writes:\n{tx_lines}"
@@ -1791,11 +1899,22 @@ def process_token_avax(token_data: dict, output_path: Path) -> dict | None:
 
     log.info("  [V6] %s", v6_success_rate(v5_intel, v6_intel))
 
-    label, risk_flags = classify_avax_token_v6(token_info, cia_intel, v5_intel, v6_intel, deployer_balance)
+    _, risk_flags = classify_avax_token_v6(token_info, cia_intel, v5_intel, v6_intel, deployer_balance)
+    risk_percent, avax_risk_reasons = calculate_rugbuster_avax_risk(
+        token_info,
+        cia_intel,
+        v5_intel,
+        v6_intel,
+        creator_stats,
+        deployer_balance,
+    )
+    label = risk_status_from_percent(risk_percent)
+    merged_flags = list(dict.fromkeys([*avax_risk_reasons, *risk_flags]))
 
     record = build_training_record_v6(
         contract, token_info, deployer, deploy_timestamp,
-        creator_stats, cia_intel, v5_intel, v6_intel, label, risk_flags
+        creator_stats, cia_intel, v5_intel, v6_intel, label, merged_flags,
+        risk_percent, avax_risk_reasons
     )
     append_to_dataset(record, output_path)
     update_creator_history(deployer, label)
@@ -2248,7 +2367,17 @@ def scan_single_avax(address: str) -> None:
     )
     v6_intel = run_v6_analysis_avax(address, deployer, deploy_timestamp)
 
-    label, risk_flags = classify_avax_token_v6(token_info, cia_intel, v5_intel, v6_intel, deployer_balance)
+    _, risk_flags = classify_avax_token_v6(token_info, cia_intel, v5_intel, v6_intel, deployer_balance)
+    risk_percent, avax_risk_reasons = calculate_rugbuster_avax_risk(
+        token_info,
+        cia_intel,
+        v5_intel,
+        v6_intel,
+        creator_stats,
+        deployer_balance,
+    )
+    label = risk_status_from_percent(risk_percent)
+    risk_flags = list(dict.fromkeys([*avax_risk_reasons, *risk_flags]))
 
     backdoor = v6_intel.get("backdoor", {})
     conc     = v6_intel.get("concentration", {})
@@ -2264,6 +2393,7 @@ def scan_single_avax(address: str) -> None:
     print(f"  Balance  : {deployer_balance:.4f} AVAX")
     print(f"  Holders  : {token_info.get('holders_count', 0)}")
     print(f"  Label    : {label}")
+    print(f"  RB Risk  : {risk_percent}%")
     print(f"  Flags    : {', '.join(risk_flags) or 'None'}")
     print(f"--- CIA INTEL ---")
     print(f"  Latency  : {cia_intel.get('latency', {}).get('latency_ms', -1)}ms | Sniped: {cia_intel.get('latency', {}).get('is_sniped', False)}")

@@ -155,6 +155,7 @@ def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
         "address": address,
         "chain": chain,
         "verdict": record.get("label") or "UNKNOWN",
+        "risk_percent": record.get("risk_percent") or record.get("rugbuster_avax_score"),
         "flag": compact_recent_flag(record),
         "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at or ""),
         "explorer_url": record.get("explorer_url") or f"{explorer_base}/{address}",
@@ -219,6 +220,7 @@ def public_label_from_report(report: dict[str, Any]) -> str:
 def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any]:
     address = report.get("address") or report.get("contract_address") or ""
     risk_flags = list(report.get("rug_reasons") or [])[:4] + list(report.get("speculation_reasons") or [])[:4]
+    risk_percent = report.get("risk_percent") or report.get("rugbuster_avax_score") or report.get("rug_score")
     return {
         "ok": True,
         "address": Web3.to_checksum_address(address) if Web3.is_address(address) else address,
@@ -228,6 +230,10 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         "rug_status": report.get("rug_status"),
         "speculation_score": report.get("speculation_score"),
         "speculation_status": report.get("speculation_status"),
+        "risk_engine": report.get("risk_engine") or "rugbuster_avax_v1",
+        "risk_percent": risk_percent,
+        "rugbuster_avax_score": risk_percent,
+        "rugbuster_avax_reasons": report.get("rugbuster_avax_reasons") or report.get("rug_reasons") or [],
         "token_name": report.get("token_name"),
         "token_symbol": report.get("symbol") or report.get("token_symbol"),
         "risk_flags": risk_flags[:6],
@@ -605,6 +611,10 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "address": scoring_input["token"],
         "token_name": scoring_input["name"],
         "symbol": scoring_input["symbol"],
+        "risk_engine": "rugbuster_avax_v1",
+        "risk_percent": scores.rug.score,
+        "rugbuster_avax_score": scores.rug.score,
+        "rugbuster_avax_reasons": list(scores.rug.reasons),
         "rug_score": scores.rug.score,
         "rug_status": scores.rug.status,
         "rug_reasons": list(scores.rug.reasons),
