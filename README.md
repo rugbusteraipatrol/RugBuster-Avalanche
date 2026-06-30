@@ -11,7 +11,7 @@ Live project links:
 
 RugBuster Avalanche extends the RugBusterAI security engine into the Avalanche ecosystem as a public, verifiable risk layer for tokens, launchpads, wallets, DEX interfaces, and Culture Catalyst participants.
 
-The Solana prototype proved the core thesis: real-time token monitoring, external risk signals, structured datasets, and AI-assisted fraud classification can protect users before liquidity disappears. RugBuster Avalanche adapts that experience to an EVM-native flow: scan Avalanche tokens, produce a transparent safety score, and publish security attestations directly on-chain.
+RugBuster Avalanche is built around an Avalanche-native flow: scan Avalanche C-Chain tokens, produce a transparent safety score, and publish security attestations directly on-chain.
 
 ## Grant Thesis
 
@@ -67,8 +67,6 @@ wallets, launchpads, DEX interfaces, dashboards, and future Avalanche L1
 security tooling can query without copying the private evidence corpus.
 
 ## Product Model
-
-On Solana, RugBuster acts like an emergency alert system for retail traders.
 
 On Avalanche, RugBuster acts as a security certification layer:
 
@@ -231,66 +229,6 @@ State is stored in `avax_collector_state.json`; token count resets daily, while
 total AVAX/EUR spend is tracked until `RUN_UNTIL_DATE`. Transaction hashes are
 appended to `avax_scan_log.md`.
 
-## BNB Smart Chain Collector Worker
-
-`chains/bnb/bnb_collector_v1.py` is the BNB Smart Chain extension of the same
-EVM monitoring stack. It is intentionally deployed as a separate worker so the
-Avalanche Retro9000 flow can keep running unchanged while BNB data is collected
-for the BNB Chain grant track.
-
-The BNB worker monitors:
-
-- GeckoTerminal BSC new pools and top pools
-- PancakeSwap V2 `PairCreated` events
-- Biswap `PairCreated` events
-- ApeSwap `PairCreated` events
-- fallback contract deployments from recent BSC blocks
-
-It runs the same six module payloads:
-
-- `funding_origin`
-- `holder_concentration`
-- `backdoor_check`
-- `liquidity_status`
-- `rug_velocity`
-- `final_verdict`
-
-Recommended Railway variables for a first BNB test:
-
-```txt
-BNB_RPC=https://bsc-dataseed.binance.org/
-BSCSCAN_API_KEY=free_bscscan_api_key
-ONCHAIN_LOG_ENABLED=false
-BOT_PUBLISH_TO_REGISTRY=false
-BNB_REGISTRY_ADDRESS=
-BNB_LOG_PRIVATE_KEY=
-
-BNB_TELEGRAM_BOT_TOKEN=telegram_bot_token
-BNB_TELEGRAM_CHAT_ID=@RugBusterBNB
-RECENT_SCAN_FEED_URL=https://web-production-376bf.up.railway.app/api/recent-scans
-RECENT_SCAN_INGEST_TOKEN=
-
-GECKOTERMINAL_ENABLED=true
-GECKOTERMINAL_TOP_POOLS_ENABLED=true
-GECKOTERMINAL_POOL_PAGES=3
-GECKOTERMINAL_QUEUE_LOW_WATERMARK=10
-GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS=900
-RESCAN_COOLDOWN_SECONDS=2700
-REQUIRE_ERC20_METADATA=true
-
-MAX_TOKENS_PER_DAY=120
-MAX_EUR_TOTAL=20
-MAX_BNB_TOTAL=2
-TARGET_BNB_PER_SCAN=0.0002
-RUN_UNTIL_DATE=2026-07-01
-MIN_SCAN_DELAY_MINUTES=2
-MAX_SCAN_DELAY_MINUTES=3
-```
-
-For the first 24 hours, keep `ONCHAIN_LOG_ENABLED=false`. Once BSC scanning and
-Telegram alerts are stable, deploy a BNB registry contract and enable on-chain
-module writes with a dedicated BNB wallet.
-
 ## Local Scan API
 
 To power the website and local demos with a real RugBuster backend, start the local API:
@@ -452,4 +390,4 @@ Later phases replace or augment this with a fine-tuned RugBusterAI model trained
 
 ## Positioning
 
-RugBusterAI brings proven Solana fraud-detection experience to Avalanche as an AI-native security certification layer. The long-term goal is a multi-chain cyber-security protocol where each supported chain has its own adapter, dataset, scoring model, and public risk registry.
+RugBusterAI brings Avalanche-native fraud-detection infrastructure to builders as an AI-assisted security certification layer. The near-term goal is to give Avalanche L1 teams a reliable scanner, evidence corpus, API, alerting surface, and on-chain registry they can integrate before users interact with risky contracts.

@@ -147,7 +147,7 @@ def recent_scan_item(record: dict[str, Any], created_at: Any) -> dict[str, Any]:
         except json.JSONDecodeError:
             record = {}
     chain = str(record.get("chain") or "AVAX").lower()
-    explorer_base = "https://bscscan.com/address" if chain in {"bnb", "bsc"} else "https://snowtrace.io/address"
+    explorer_base = "https://snowtrace.io/address"
     address = record.get("contract_address") or ""
     return {
         "token_name": record.get("token_name") or "Unknown",

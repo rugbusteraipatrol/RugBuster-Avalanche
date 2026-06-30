@@ -44,7 +44,7 @@ standalone trading scanner.
   `0x5F30276B3A5079E088Ec3072884286de5a868355`
 - Recent AVAX scan feed and Telegram alerts
 - Postgres evidence storage for private model training
-- Multichain extension path: Solana, Avalanche, and BNB data pipelines
+- Avalanche-native extension path for L1 builder security integrations
 
 ## ICM / ICTT Plan
 
