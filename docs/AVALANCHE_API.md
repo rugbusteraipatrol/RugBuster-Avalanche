@@ -40,7 +40,7 @@ Example response shape:
 ```bash
 curl \
   -H "X-API-Key: <partner_or_internal_key>" \
-  "https://rugbuster-api-production.up.railway.app/scan?address=0x..."
+  "https://web-production-376bf.up.railway.app/scan?address=0x..."
 ```
 
 `GET /scan?address=0x...` is protected because it can perform deeper scoring

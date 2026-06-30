@@ -5,7 +5,7 @@
 Live project links:
 
 - Public scanner UI: `https://rugbusteraipatrol.github.io/RugBuster-Avalanche/`
-- Live builder API: `https://rugbuster-api-production.up.railway.app`
+- Live builder API: `https://web-production-376bf.up.railway.app`
 - Verified registry: `https://snowtrace.io/address/0x5F30276B3A5079E088Ec3072884286de5a868355`
 - L1 infrastructure update: [`docs/L1_INFRASTRUCTURE_UPDATE_2026-06-07.md`](docs/L1_INFRASTRUCTURE_UPDATE_2026-06-07.md)
 
@@ -52,7 +52,7 @@ not represented as shipped production features.
 RugBuster Apex now includes a live Avalanche builder API layer in addition to
 the on-chain registry and website scanner.
 
-- Live builder API: `https://rugbuster-api-production.up.railway.app`
+- Live builder API: `https://web-production-376bf.up.railway.app`
 - Public health endpoint: `GET /health`
 - Public cache score endpoint: `GET /score?address=0x...`
 - Protected deep scan endpoint: `GET /scan?address=0x...` with `X-API-Key`
@@ -403,7 +403,7 @@ The builder API is a separate protected service intended for integrations and
 Retro9000 L1 tooling evidence:
 
 ```txt
-https://rugbuster-api-production.up.railway.app
+https://web-production-376bf.up.railway.app
 ```
 
 Public endpoints:
