@@ -1169,6 +1169,7 @@
       </div>
       <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:var(--text-muted);text-align:left;">
         Portfolio scan uses your connected Avalanche wallet.<br>
+        <span style="color:var(--neon-cyan);">SCAN TOKEN</span> requires one Avalanche C-Chain wallet confirmation.<br>
         <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> requires an authorized reviewer wallet.<br>
         One registry write is confirmed in your wallet and burns AVAX from that wallet.
       </div>
@@ -1943,11 +1944,15 @@
   // =====================
   const RECEIVER = 'GwRUadL58katT5SJAeyNZSPFSgJfMP6Tng2dSQDEkhQA';
   const REGISTRY_ADDRESS = '0x5F30276B3A5079E088Ec3072884286de5a868355';
+  const ACTIVITY_LOGGER_ADDRESS = '0x4a5efBF362E1935a0e9cbCB5c686f3FAe7B0D32b';
   const REGISTRY_ABI = [
     'function owner() view returns (address)',
     'function authorizedReviewers(address) view returns (bool)',
     'function setReviewer(address reviewer, bool authorized) external',
     'function updateScore(address token, uint8 score, bytes32 metadataHash) external'
+  ];
+  const ACTIVITY_LOGGER_ABI = [
+    'function logModule(address token, string module, string verdict, uint8 score, bytes32 payloadHash) external'
   ];
   const AVAX_PRICE = 10; // approximate USD per AVAX for demo pricing
   let walletConnected = false;
@@ -2476,6 +2481,30 @@
     const signer = await provider.getSigner();
     const contract = new window.ethers.Contract(REGISTRY_ADDRESS, REGISTRY_ABI, signer);
     return { provider, signer, contract };
+  }
+
+  async function getActivityLoggerContractWithSigner() {
+    if (!ACTIVITY_LOGGER_ADDRESS || !window.ethers.isAddress(ACTIVITY_LOGGER_ADDRESS)) {
+      throw new Error('Activity logger contract is not configured');
+    }
+    if (!window.ethereum || !window.ethers) {
+      throw new Error('MetaMask or another EVM wallet is required');
+    }
+    await ensureAvalancheChain();
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const provider = new window.ethers.BrowserProvider(window.ethereum, 'any');
+    const network = await provider.getNetwork();
+    if (network.chainId !== 43114n) {
+      throw new Error('Wallet provider is not on Avalanche C-Chain yet');
+    }
+    const signer = await provider.getSigner();
+    const signerAddress = await signer.getAddress();
+    walletAddress = signerAddress;
+    walletConnected = true;
+    connectedProvider = 'evm';
+    updateWalletButtonState();
+    const contract = new window.ethers.Contract(ACTIVITY_LOGGER_ADDRESS, ACTIVITY_LOGGER_ABI, signer);
+    return { provider, signer, contract, signerAddress };
   }
 
   async function isAuthorizedReviewerAddress(address) {
@@ -3010,6 +3039,34 @@
     ];
   }
 
+  function scanVerificationScore(report) {
+    const score = Number(report.rugScore ?? report.riskPercent ?? report.rugbusterAvaxScore ?? 0);
+    return Math.max(0, Math.min(100, Number.isFinite(score) ? Math.round(score) : 0));
+  }
+
+  async function publishScanVerification(address, report) {
+    const { contract, signerAddress } = await getActivityLoggerContractWithSigner();
+    const payload = {
+      action: 'scan_verification',
+      token: address,
+      user: signerAddress,
+      tokenName: report.tokenName,
+      tokenSymbol: report.symbol,
+      rugScore: report.rugScore,
+      rugStatus: report.rugStatus,
+      speculationScore: report.speculationScore,
+      speculationStatus: report.speculationStatus,
+      source: report.source,
+      ts: Math.floor(Date.now() / 1000)
+    };
+    const metadataHash = await sha256Bytes32(payload);
+    const score = scanVerificationScore(report);
+    const verdict = finalScanVerdict(report).slice(0, 64);
+    const tx = await contract.logModule(address, 'scan_verification', verdict, score, metadataHash);
+    const receipt = await tx.wait();
+    return { txHash: tx.hash, gasUsed: receipt.gasUsed.toString(), signerAddress };
+  }
+
   async function fetchApexScanFromApi(address) {
     const res = await fetch(`${RUGBUSTER_API}/api/scan`, {
       method: 'POST',
@@ -3397,9 +3454,15 @@
     let apexData;
     try {
       apexData = await fetchApexScan(address);
+      await termLineDelay(`<span class="t-out">Requesting Avalanche wallet confirmation for scan verification...</span>`, 220);
+      const verification = await publishScanVerification(address, apexData);
+      apexData.scanVerificationTx = verification.txHash;
+      await termLineDelay(`<span class="t-success">✓ C-Chain scan verification confirmed.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Scan TX: ${verification.txHash}</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Gas used: ${verification.gasUsed}</span>`, 120);
     } catch (err) {
       await termLineDelay(`<span class="t-danger">✗ SCAN FAILED: ${err.message}</span>`, 400);
-      await termLineDelay(`<span class="t-out">// Ensure this is an Avalanche token address with live liquidity.</span>`, 200);
+      await termLineDelay(`<span class="t-out">// Scan requires an Avalanche C-Chain wallet confirmation.</span>`, 200);
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
       setCiaStatus('SCAN FAILED', 'danger');
       return;

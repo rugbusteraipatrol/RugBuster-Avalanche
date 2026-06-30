@@ -182,7 +182,7 @@ Do not paste private keys into chat. Set secrets in Railway variables or local
 AVAX_LOG_PRIVATE_KEY=verified_wallet_private_key
 AVAX_RPC=https://api.avax.network/ext/bc/C/rpc
 ONCHAIN_LOG_ENABLED=true
-ACTIVITY_LOGGER_ADDRESS=deployed_activity_logger_contract
+ACTIVITY_LOGGER_ADDRESS=0x4a5efBF362E1935a0e9cbCB5c686f3FAe7B0D32b
 REGISTRY_ADDRESS=0x5F30276B3A5079E088Ec3072884286de5a868355
 BOT_PUBLISH_TO_REGISTRY=true
 ONCHAIN_LOG_TO_ADDRESS=
