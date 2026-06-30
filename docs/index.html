@@ -2401,17 +2401,38 @@
   }
 
   async function loadRecentScans() {
+    const state = document.getElementById('recentScanState');
+    const list = document.getElementById('recentScanList');
+    if (state) {
+      state.textContent = 'SYNCING FEED';
+      state.style.color = 'var(--neon-green)';
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+
     try {
-      const res = await fetch(`${RUGBUSTER_API}/api/recent-scans?limit=10&t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`${RUGBUSTER_API}/api/recent-scans?limit=10&t=${Date.now()}`, {
+        cache: 'no-store',
+        signal: controller.signal
+      });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      renderRecentScans(data.items || []);
+      const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+      if (!res.ok || data.ok === false) throw new Error(data.error || data.warning || `HTTP ${res.status}`);
+      renderRecentScans(items);
     } catch (err) {
-      const state = document.getElementById('recentScanState');
       if (state) {
         state.textContent = 'FEED OFFLINE';
         state.style.color = '#ff7a00';
       }
+      if (list) {
+        list.innerHTML = `
+          <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.8;border:1px solid rgba(232,65,66,0.08);background:rgba(232,65,66,0.03);padding:14px 16px;">
+            Recent scan API unavailable: ${escapeHtml(err.message || 'request failed')}.
+          </div>`;
+      }
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
