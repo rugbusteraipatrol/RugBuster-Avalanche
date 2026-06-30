@@ -1468,7 +1468,7 @@
           " onmouseover="if(!this.disabled){this.style.color='var(--neon-green)'}" onmouseout="if(!this.disabled){this.style.color='rgba(35,209,139,0.55)'}" disabled>
             SEND ALERT
           </button>
-          <button onclick="loadExample('apex')" style="
+          <button onclick="runExampleScan()" style="
             font-family:'Share Tech Mono',monospace;
             font-size:11px;
             letter-spacing:2px;
@@ -2278,6 +2278,11 @@
       apex: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7'
     };
     document.getElementById('scanInput').value = examples[type] || examples.apex;
+  }
+
+  async function runExampleScan() {
+    loadExample('apex');
+    await runScan({ requireWalletVerification: false, exampleMode: true });
   }
 
   function formatUsd(value) {
@@ -3414,7 +3419,9 @@
     if (modal) modal.style.display = 'none';
   }
 
-  async function runScan() {
+  async function runScan(options = {}) {
+    const requireWalletVerification = options.requireWalletVerification !== false;
+    const exampleMode = Boolean(options.exampleMode);
     const address = document.getElementById('scanInput').value.trim();
     if (!address) {
       document.getElementById('scanInput').style.borderColor = '#ff3d3d';
@@ -3446,7 +3453,7 @@
     setCiaTarget(address);
     setCiaStatus('SCANNING', 'scanning');
 
-    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">scan ${short} --chain ${chain} --deep --ai</span>`);
+    termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">scan ${short} --chain ${chain} --deep --ai${exampleMode ? ' --example' : ''}</span>`);
     await termLineDelay(`<span class="t-out">Initializing threat engine...</span>`, 300);
     await termLineDelay(`<span class="t-out">Connecting to Avalanche live market feeds...</span>`, 500);
     await termLineDelay(`<span class="t-out">Fetching Apex token pairs and liquidity...</span>`, 700);
@@ -3454,15 +3461,20 @@
     let apexData;
     try {
       apexData = await fetchApexScan(address);
-      await termLineDelay(`<span class="t-out">Requesting Avalanche wallet confirmation for scan verification...</span>`, 220);
-      const verification = await publishScanVerification(address, apexData);
-      apexData.scanVerificationTx = verification.txHash;
-      await termLineDelay(`<span class="t-success">✓ C-Chain scan verification confirmed.</span>`, 220);
-      await termLineDelay(`<span class="t-out">// Scan TX: ${verification.txHash}</span>`, 120);
-      await termLineDelay(`<span class="t-out">// Gas used: ${verification.gasUsed}</span>`, 120);
+      if (requireWalletVerification) {
+        await termLineDelay(`<span class="t-out">Requesting Avalanche wallet confirmation for scan verification...</span>`, 220);
+        const verification = await publishScanVerification(address, apexData);
+        apexData.scanVerificationTx = verification.txHash;
+        await termLineDelay(`<span class="t-success">✓ C-Chain scan verification confirmed.</span>`, 220);
+        await termLineDelay(`<span class="t-out">// Scan TX: ${verification.txHash}</span>`, 120);
+        await termLineDelay(`<span class="t-out">// Gas used: ${verification.gasUsed}</span>`, 120);
+      } else {
+        await termLineDelay(`<span class="t-success">✓ Example scan loaded without wallet verification.</span>`, 220);
+        await termLineDelay(`<span class="t-out">// Demo mode: no wallet prompt, no AVAX gas.</span>`, 120);
+      }
     } catch (err) {
       await termLineDelay(`<span class="t-danger">✗ SCAN FAILED: ${err.message}</span>`, 400);
-      await termLineDelay(`<span class="t-out">// Scan requires an Avalanche C-Chain wallet confirmation.</span>`, 200);
+      await termLineDelay(`<span class="t-out">// ${requireWalletVerification ? 'Scan requires an Avalanche C-Chain wallet confirmation.' : 'Example scan should run without wallet confirmation; retry in a moment.'}</span>`, 200);
       termLine(`<span class="t-prompt">RB&gt;</span> <span class="cursor"></span>`);
       setCiaStatus('SCAN FAILED', 'danger');
       return;
