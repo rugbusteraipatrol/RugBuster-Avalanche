@@ -1170,7 +1170,7 @@
       <div style="margin-top:18px;font-family:'Share Tech Mono',monospace;font-size:11px;line-height:1.8;color:var(--text-muted);text-align:left;">
         Portfolio scan uses your connected Avalanche wallet.<br>
         <span style="color:var(--neon-cyan);">PUBLISH REPORT</span> requires an authorized reviewer wallet.<br>
-        Each module write is confirmed in your wallet and burns AVAX from that wallet.
+        One registry write is confirmed in your wallet and burns AVAX from that wallet.
       </div>
     </div>
   </div>
@@ -2990,61 +2990,21 @@
     };
     return [
       {
-        module: 'token_metadata',
-        score: report.tokenName && !/^Unknown/i.test(report.tokenName) ? 100 : 40,
-        payload: { ...base, image: report.tokenImage, dexId: report.dexId }
-      },
-      {
-        module: 'liquidity',
-        score: liquidityModuleScore(report.liquidityUsd),
-        payload: {
-          ...base,
-          liquidityUsd: report.liquidityUsd,
-          hasLiquidityEvidence: report.hasLiquidityEvidence,
-          pairAddress: report.pairAddress,
-          pairUrl: report.pairUrl,
-          dexId: report.dexId
-        }
-      },
-      {
-        module: 'market_activity',
-        score: marketActivityModuleScore(report),
-        payload: {
-          ...base,
-          volume24h: report.volume24h,
-          buys24h: report.buys24h,
-          sells24h: report.sells24h,
-          priceChange24h: report.priceChange24h
-        }
-      },
-      {
-        module: 'rug_risk',
-        score: Number(report.rugScore || 0),
-        payload: {
-          ...base,
-          status: report.rugStatus,
-          reasons: flattenReasons(report.rugReasons)
-        }
-      },
-      {
-        module: 'speculation_risk',
-        score: Number(report.speculationScore || 0),
-        payload: {
-          ...base,
-          status: report.speculationStatus,
-          reasons: flattenReasons(report.speculationReasons),
-          fdv: report.fdv
-        }
-      },
-      {
         module: 'final_verdict',
         score: Number(report.rugScore || 0),
         payload: {
           ...base,
+          liquidityUsd: report.liquidityUsd,
+          volume24h: report.volume24h,
+          dexId: report.dexId,
+          pairAddress: report.pairAddress,
+          pairUrl: report.pairUrl,
           rugScore: report.rugScore,
           rugStatus: report.rugStatus,
           speculationScore: report.speculationScore,
-          speculationStatus: report.speculationStatus
+          speculationStatus: report.speculationStatus,
+          rugReasons: flattenReasons(report.rugReasons),
+          speculationReasons: flattenReasons(report.speculationReasons)
         }
       }
     ];
@@ -3597,7 +3557,7 @@
 
     setPublishButtonState(false, 'PUBLISHING...');
     termLine(`<span class="t-prompt">RB&gt;</span> <span class="t-cmd">publish ${shortAddress(lastScannedAddress)} --registry</span>`);
-    await termLineDelay(`<span class="t-out">Preparing wallet-confirmed module registry writes...</span>`, 220);
+    await termLineDelay(`<span class="t-out">Preparing one wallet-confirmed registry write...</span>`, 220);
 
     try {
       if (!walletConnected || connectedProvider !== 'evm' || !window.ethereum) {
@@ -3615,7 +3575,7 @@
       const modules = buildWalletReportModules(lastScannedAddress, lastScanData);
       let totalGas = 0n;
       await termLineDelay(`<span class="t-out">// Signing with ${shortAddress(signerAddress)}</span>`, 120);
-      await termLineDelay(`<span class="t-out">// Wallet will ask for ${modules.length} module confirmations.</span>`, 120);
+      await termLineDelay(`<span class="t-out">// Wallet will ask for one Avalanche C-Chain confirmation.</span>`, 120);
 
       for (const item of modules) {
         const metadataHash = await sha256Bytes32({
@@ -3634,8 +3594,8 @@
         await termLineDelay(`<span class="t-success">✓ ${item.module} confirmed · gas ${receipt.gasUsed.toString()}</span>`, 120);
       }
 
-      await termLineDelay(`<span class="t-success">✓ Wallet-confirmed module publish complete.</span>`, 220);
-      await termLineDelay(`<span class="t-out">// Module TXs: ${modules.length}</span>`, 120);
+      await termLineDelay(`<span class="t-success">✓ Wallet-confirmed registry publish complete.</span>`, 220);
+      await termLineDelay(`<span class="t-out">// Registry TXs: ${modules.length}</span>`, 120);
       await termLineDelay(`<span class="t-out">// Total gas used: ${totalGas.toString()}</span>`, 120);
       setPublishButtonState(true, 'PUBLISHED');
       setTimeout(() => setPublishButtonState(true, 'PUBLISH REPORT'), 2600);
