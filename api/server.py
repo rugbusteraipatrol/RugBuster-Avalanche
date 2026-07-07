@@ -31,14 +31,33 @@ DEXSCREENER_API = "https://api.dexscreener.com/latest/dex/tokens"
 GLACIER_API = "https://glacier-api.avax.network"
 STABLE_QUOTES = {
     "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E": 1.0,  # USDC
+    "0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664": 1.0,  # USDC.e
     "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7": 1.0,  # USDT.e
 }
 COMMON_QUOTES = [
     "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",  # WAVAX
     "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",  # USDC
+    "0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664",  # USDC.e
     "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",  # USDT.e
     "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB",  # WETH.e
 ]
+KNOWN_TOKEN_METADATA = {
+    "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7": {
+        "name": "Wrapped AVAX",
+        "symbol": "WAVAX",
+        "decimals": 18,
+    },
+    "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664": {
+        "name": "USD Coin Bridged",
+        "symbol": "USDC.e",
+        "decimals": 6,
+    },
+    "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7": {
+        "name": "Tether USD",
+        "symbol": "USDT",
+        "decimals": 6,
+    },
+}
 MAINNET_FACTORIES = {
     "TRADERJOE": "0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10",
     "PANGOLIN": "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",
@@ -556,17 +575,32 @@ def fetch_portfolio_tokens(address: str) -> list[dict[str, Any]]:
 
 
 def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
+    checksum = Web3.to_checksum_address(address)
+    known = KNOWN_TOKEN_METADATA.get(checksum.lower(), {})
     token = web3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)
+    name = call_optional(token, "name")
+    symbol = call_optional(token, "symbol")
+    decimals = call_optional(token, "decimals")
+    total_supply = call_optional(token, "totalSupply")
     return {
-        "name": call_optional(token, "name") or "Unknown",
-        "symbol": call_optional(token, "symbol") or "Unknown",
-        "decimals": call_optional(token, "decimals"),
-        "total_supply": call_optional(token, "totalSupply"),
+        "name": name or known.get("name") or "Unknown",
+        "symbol": symbol or known.get("symbol") or "Unknown",
+        "decimals": decimals if decimals is not None else known.get("decimals"),
+        "total_supply": total_supply,
+        "is_known_chain_asset": bool(known),
+        "metadata_source": "erc20_call" if name or symbol or decimals is not None or total_supply is not None else "known_token_fallback" if known else "unavailable",
     }
 
 
 def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data: dict[str, Any] | None, source: str) -> dict[str, Any]:
     pair_data = pair_data or {}
+    token_checksum = Web3.to_checksum_address(address)
+    market_token = token_side_from_pair(pair_data, token_checksum)
+    if market_token:
+        if metadata.get("name") in (None, "", "Unknown") and market_token.get("name"):
+            metadata["name"] = market_token.get("name")
+        if metadata.get("symbol") in (None, "", "Unknown") and market_token.get("symbol"):
+            metadata["symbol"] = market_token.get("symbol")
     liquidity_raw = pair_data.get("liquidity", {}).get("usd")
     fdv_raw = pair_data.get("fdv") or pair_data.get("marketCap")
     volume_raw = pair_data.get("volume", {}).get("h24")
@@ -604,6 +638,7 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "website_count": len(websites),
         "image_url": pair_data.get("info", {}).get("imageUrl"),
         "contract_tx_count": metadata.get("contract_tx_count", 0),
+        "is_known_chain_asset": metadata.get("is_known_chain_asset", False),
     }
 
     scores = score_token(scoring_input)
@@ -632,6 +667,8 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "pair_url": scoring_input["pair_url"],
         "dex_id": scoring_input["dex_id"],
         "image_url": scoring_input["image_url"],
+        "metadata_source": metadata.get("metadata_source"),
+        "is_known_chain_asset": metadata.get("is_known_chain_asset", False),
         "network": NETWORKS[resolve_network()]["label"],
         "source": source,
     }
@@ -644,13 +681,38 @@ def fetch_dexscreener_pairs(address: str) -> list[dict[str, Any]]:
     return [pair for pair in (data.get("pairs") or []) if (pair.get("chainId") or "").lower() == "avalanche"]
 
  
+def token_side_from_pair(pair: dict[str, Any], address: str) -> dict[str, Any] | None:
+    if not pair:
+        return None
+    target = Web3.to_checksum_address(address).lower()
+    for side in ("baseToken", "quoteToken"):
+        token = pair.get(side) or {}
+        token_address = token.get("address")
+        if token_address and Web3.to_checksum_address(token_address).lower() == target:
+            return token
+    return None
+
+
+def pair_contains_token(pair: dict[str, Any], address: str) -> bool:
+    return token_side_from_pair(pair, address) is not None
+
+
+def pair_base_is_token(pair: dict[str, Any], address: str) -> bool:
+    token = (pair.get("baseToken") or {}).get("address")
+    return bool(token and Web3.to_checksum_address(token).lower() == Web3.to_checksum_address(address).lower())
+
+
 def get_market_data(address: str) -> dict[str, Any]:
     avalanche_pairs = fetch_dexscreener_pairs(address)
+    avalanche_pairs = [pair for pair in avalanche_pairs if pair_contains_token(pair, address)]
     if not avalanche_pairs:
         raise RuntimeError("Token not found on Avalanche liquidity venues")
 
+    base_token_pairs = [pair for pair in avalanche_pairs if pair_base_is_token(pair, address)]
+    candidate_pairs = base_token_pairs or avalanche_pairs
+
     return sorted(
-        avalanche_pairs,
+        candidate_pairs,
         key=lambda pair: float(pair.get("liquidity", {}).get("usd") or 0),
         reverse=True,
     )[0]

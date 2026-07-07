@@ -34,7 +34,7 @@ class DualScoreResult:
 
 def risk_status(score: int | None) -> str:
     if score is None:
-        return "UNKNOWN"
+        return "INSUFFICIENT_DATA"
     if score >= 75:
         return "HIGH"
     if score >= 45:
@@ -70,8 +70,6 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
     creator_rug_rate = float(metadata.get("creator_rug_rate") or 0)
     holders = int(metadata.get("holders_count") or 0)
     deployer_balance = float(metadata.get("deployer_balance_avax") or 0)
-    liquidity_usd = metadata.get("liquidity_usd")
-    fdv = metadata.get("fdv")
 
     if metadata.get("v6_has_backdoor") or backdoor_score >= 40:
         score += add_reason(reasons, min(35, max(12, backdoor_score // 2)), f"Bytecode backdoor risk score {backdoor_score}/100")
@@ -112,21 +110,6 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
     if deployer_balance and deployer_balance < 0.1:
         score += add_reason(reasons, 6, f"Near-zero deployer balance ({deployer_balance:.4f} AVAX)")
 
-    if liquidity_usd is None:
-        reasons.append("Liquidity evidence unavailable")
-    else:
-        liq = float(liquidity_usd)
-        if liq < 5_000:
-            score += add_reason(reasons, 16, f"Very thin live liquidity at ${liq:,.0f}")
-        elif liq < 25_000:
-            score += add_reason(reasons, 9, f"Thin live liquidity at ${liq:,.0f}")
-    if liquidity_usd and fdv:
-        ratio = float(liquidity_usd) / max(float(fdv), 1.0)
-        if ratio < 0.01:
-            score += add_reason(reasons, 18, "Liquidity to FDV ratio under 1%")
-        elif ratio < 0.03:
-            score += add_reason(reasons, 12, "Liquidity to FDV ratio under 3%")
-
     if not reasons:
         reasons.append("No hard Avalanche rug signals detected")
 
@@ -145,21 +128,23 @@ def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
     decimals = metadata.get("decimals")
     total_supply = metadata.get("total_supply")
 
+    metadata_missing = 0
+
     if not name or name.lower() == "unknown":
-        score += 14
-        reasons.append("Token name unavailable on-chain")
+        metadata_missing += 1
+        reasons.append("Token name unavailable on-chain (not counted as risk)")
     else:
         reasons.append("Token name readable on-chain")
 
     if not symbol or symbol.lower() == "unknown":
-        score += 14
-        reasons.append("Token symbol unavailable on-chain")
+        metadata_missing += 1
+        reasons.append("Token symbol unavailable on-chain (not counted as risk)")
     else:
         reasons.append("Token symbol readable on-chain")
 
     if decimals is None:
-        score += 18
-        reasons.append("Decimals unavailable on-chain")
+        metadata_missing += 1
+        reasons.append("Decimals unavailable on-chain (not counted as risk)")
     else:
         decimals_value = int(decimals)
         if decimals_value < 0 or decimals_value > 24:
@@ -169,8 +154,8 @@ def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
             reasons.append("Decimals value is within normal ERC-20 range")
 
     if total_supply is None:
-        score += 22
-        reasons.append("Total supply unavailable on-chain")
+        metadata_missing += 1
+        reasons.append("Total supply unavailable on-chain (not counted as risk)")
     else:
         supply_value = int(total_supply)
         if supply_value <= 0:
@@ -190,6 +175,24 @@ def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
     if native.score is not None and native.score > score:
         score = native.score
         reasons = native.reasons + reasons[:3]
+
+    hard_risk_reasons = [
+        reason
+        for reason in reasons
+        if "unavailable on-chain" not in reason
+        and "readable on-chain" not in reason
+        and "within normal ERC-20 range" not in reason
+        and reason != "No hard Avalanche rug signals detected"
+    ]
+    if metadata_missing >= 2 and not hard_risk_reasons:
+        return ScoreResult(
+            score=None,
+            status="INSUFFICIENT_DATA",
+            reasons=[
+                "ERC-20 metadata incomplete; not counted as rug risk",
+                *reasons[:5],
+            ][:8],
+        )
 
     return ScoreResult(score=clamp(score), status=risk_status(score), reasons=reasons[:8])
 
@@ -217,6 +220,7 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
     price_change24h = metadata.get("price_change_24h")
     buys24h = metadata.get("buys24h")
     sells24h = metadata.get("sells24h")
+    is_known_chain_asset = bool(metadata.get("is_known_chain_asset") or metadata.get("is_known_avax_asset"))
 
     if liquidity_usd is None:
         score += 14
@@ -239,7 +243,9 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
             score -= 2
             reasons.append(f"Meaningful live liquidity at ${liq:,.0f}")
 
-    if fdv is None:
+    if is_known_chain_asset:
+        reasons.append("Known Avalanche asset; FDV/liquidity ratio not used as risk signal")
+    elif fdv is None:
         reasons.append("FDV unavailable from market sources")
     else:
         fdv_value = float(fdv)
