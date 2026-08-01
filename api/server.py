@@ -72,6 +72,12 @@ KNOWN_TOKEN_METADATA = {
         "decimals": 18,
         "category": "canonical_wrapped_asset",
     },
+    "0x5947bb275c521040051d82396192181b413227a3": {
+        "name": "Chainlink Token",
+        "symbol": "LINK.e",
+        "decimals": 18,
+        "category": "canonical_bridged_asset",
+    },
     "0x152b9d0fdc40c096757f570a51e494bd4b943e50": {
         "name": "Bitcoin",
         "symbol": "BTC.b",
@@ -117,6 +123,24 @@ KNOWN_TOKEN_METADATA = {
     "0x60781c2586d68229fde47564546784ab3faca982": {
         "name": "Pangolin",
         "symbol": "PNG",
+        "decimals": 18,
+        "category": "established_protocol_token",
+    },
+    "0x62edc0692bd897d2295872a9ffcac5425011c661": {
+        "name": "GMX",
+        "symbol": "GMX",
+        "decimals": 18,
+        "category": "established_protocol_token",
+    },
+    "0x2f6f07cdcf3588944bf4c42ac74ff24bf56e7590": {
+        "name": "StargateToken",
+        "symbol": "STG",
+        "decimals": 18,
+        "category": "established_protocol_token",
+    },
+    "0x59414b3089ce2af0010e7523dc402ff594fd98cc": {
+        "name": "Yak Token",
+        "symbol": "YAK",
         "decimals": 18,
         "category": "established_protocol_token",
     },

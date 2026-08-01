@@ -98,6 +98,8 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
         score += add_reason(reasons, 18, f"Owner/admin control functions detected: {', '.join(admin_functions[:3])}")
     if has_operator_controls:
         score += add_reason(reasons, 20, "Operator/authorization controls can gate trading or privileges")
+    if admin_functions and not metadata.get("has_liquidity_evidence"):
+        score += add_reason(reasons, 20, "Admin controls present before supported live liquidity is found")
 
     if concentration == "CRITICAL" or top5 >= 90:
         score += add_reason(reasons, 30, f"Critical holder concentration top5={top5:.1f}%")
