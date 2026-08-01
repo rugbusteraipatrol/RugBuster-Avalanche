@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import hmac
 import os
 import sys
 import time
@@ -24,6 +26,15 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from bridge import publish_score, publish_score_modules, send_telegram_alert  # noqa: E402
 from risk_engine import score_token  # noqa: E402
 from network_config import NETWORKS, load_env, resolve_network, resolve_rpc  # noqa: E402
+from avax_collector_v6 import (  # noqa: E402
+    get_avax_balance as collector_get_avax_balance,
+    get_contract_transactions as collector_get_contract_transactions,
+    get_creator_stats as collector_get_creator_stats,
+    get_token_info_avax as collector_get_token_info_avax,
+    run_cia_analysis_avax as collector_run_cia_analysis_avax,
+    run_v5_analysis_avax as collector_run_v5_analysis_avax,
+    run_v6_analysis_avax as collector_run_v6_analysis_avax,
+)
 
 load_env()
 
@@ -250,6 +261,10 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "").strip()
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip()
 DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions").strip()
 DEEPSEEK_TIMEOUT_SECONDS = int(os.getenv("DEEPSEEK_TIMEOUT_SECONDS", "20"))
+USE_REMOTE_SCORING_ENGINE = os.getenv("USE_REMOTE_SCORING_ENGINE", "true").strip().lower() in {"1", "true", "yes", "on"}
+SCORING_ENGINE_URL = os.getenv("SCORING_ENGINE_URL", "").strip().rstrip("/")
+SCORING_ENGINE_HMAC_SECRET = os.getenv("SCORING_ENGINE_HMAC_SECRET", "").strip()
+SCORING_ENGINE_TIMEOUT_SECONDS = float(os.getenv("SCORING_ENGINE_TIMEOUT_SECONDS", "8"))
 
 
 def cache_key(address: str) -> str:
@@ -439,6 +454,9 @@ def root():
 
 
 def public_label_from_report(report: dict[str, Any]) -> str:
+    explicit = str(report.get("label") or report.get("verdict") or "").upper()
+    if explicit in {"GOOD", "WARN", "DANGER", "INSUFFICIENT_DATA", "UNKNOWN"}:
+        return explicit
     rug_status = str(report.get("rug_status") or "").upper()
     speculation_status = str(report.get("speculation_status") or "").upper()
     if rug_status == "HIGH" or speculation_status == "HIGH":
@@ -452,14 +470,17 @@ def public_label_from_report(report: dict[str, Any]) -> str:
 
 def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any]:
     address = report.get("address") or report.get("contract_address") or ""
-    rug_reasons = list(report.get("rug_reasons") or [])
-    priority_rug_reasons = [
-        reason
-        for reason in rug_reasons
-        if "admin control" in reason.lower() or "operator/authorization" in reason.lower()
-    ]
-    other_rug_reasons = [reason for reason in rug_reasons if reason not in priority_rug_reasons]
-    risk_flags = (priority_rug_reasons + other_rug_reasons)[:4] + list(report.get("speculation_reasons") or [])[:4]
+    if report.get("risk_flags"):
+        risk_flags = list(report.get("risk_flags") or [])
+    else:
+        rug_reasons = list(report.get("rug_reasons") or [])
+        priority_rug_reasons = [
+            reason
+            for reason in rug_reasons
+            if "admin control" in reason.lower() or "operator/authorization" in reason.lower()
+        ]
+        other_rug_reasons = [reason for reason in rug_reasons if reason not in priority_rug_reasons]
+        risk_flags = (priority_rug_reasons + other_rug_reasons)[:4] + list(report.get("speculation_reasons") or [])[:4]
     risk_percent = report.get("risk_percent") or report.get("rugbuster_avax_score") or report.get("rug_score")
     return {
         "ok": True,
@@ -479,6 +500,10 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         "risk_flags": risk_flags[:6],
         "classifier": "weighted_v2",
         "source": source,
+        "confidence": report.get("confidence") or report.get("data_confidence"),
+        "rug_risk": report.get("rug_risk"),
+        "market_liquidity_risk": report.get("market_liquidity_risk"),
+        "data_confidence": report.get("data_confidence"),
     }
 
 
@@ -523,23 +548,222 @@ def should_refresh_cached_score(score: dict[str, Any]) -> bool:
     return label in {"UNKNOWN", "ALLOW"}
 
 
+def remote_engine_configured() -> bool:
+    return bool(USE_REMOTE_SCORING_ENGINE and SCORING_ENGINE_URL and SCORING_ENGINE_HMAC_SECRET)
+
+
+def hmac_post_scoring_engine(payload: dict[str, Any]) -> dict[str, Any]:
+    body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    timestamp = str(int(time.time()))
+    signature = hmac.new(
+        SCORING_ENGINE_HMAC_SECRET.encode("utf-8"),
+        timestamp.encode("utf-8") + b"." + body,
+        hashlib.sha256,
+    ).hexdigest()
+    response = requests.post(
+        f"{SCORING_ENGINE_URL}/v1/score",
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-RugBuster-Timestamp": timestamp,
+            "X-RugBuster-Signature": signature,
+        },
+        timeout=SCORING_ENGINE_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def market_fields_from_pair(pair_data: dict[str, Any] | None) -> dict[str, Any]:
+    pair_data = pair_data or {}
+    liquidity_raw = pair_data.get("liquidity", {}).get("usd")
+    fdv_raw = pair_data.get("fdv") or pair_data.get("marketCap")
+    volume_raw = pair_data.get("volume", {}).get("h24")
+    price_change_raw = pair_data.get("priceChange", {}).get("h24")
+    txns24h = pair_data.get("txns", {}).get("h24") or {}
+    buys_raw = txns24h.get("buys")
+    sells_raw = txns24h.get("sells")
+    return {
+        "has_liquidity_evidence": bool(pair_data.get("pairAddress")),
+        "liquidity_usd": float(liquidity_raw) if liquidity_raw is not None else None,
+        "fdv": float(fdv_raw) if fdv_raw is not None else None,
+        "volume24h": float(volume_raw) if volume_raw is not None else None,
+        "price_change_24h": float(price_change_raw) if price_change_raw is not None else None,
+        "buys24h": int(buys_raw) if buys_raw is not None else None,
+        "sells24h": int(sells_raw) if sells_raw is not None else None,
+        "pair_address": pair_data.get("pairAddress"),
+        "pair_url": pair_data.get("url"),
+        "dex_id": str(pair_data.get("dexId") or "unknown").upper(),
+        "image_url": pair_data.get("info", {}).get("imageUrl"),
+    }
+
+
+def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    checksum = Web3.to_checksum_address(address)
+    web3 = get_web3()
+    onchain = get_onchain_metadata(web3, checksum)
+
+    try:
+        token_info = collector_get_token_info_avax(checksum)
+    except Exception:
+        token_info = {}
+    if not isinstance(token_info, dict):
+        token_info = {}
+    token_info = {
+        **token_info,
+        "name": token_info.get("name") or onchain.get("name") or "Unknown",
+        "symbol": token_info.get("symbol") or onchain.get("symbol") or "Unknown",
+        "decimals": token_info.get("decimals") if token_info.get("decimals") is not None else onchain.get("decimals"),
+        "total_supply": token_info.get("total_supply") if token_info.get("total_supply") is not None else onchain.get("total_supply"),
+        "is_known_chain_asset": onchain.get("is_known_chain_asset", False),
+        "known_asset_category": onchain.get("known_asset_category"),
+        "v6_admin_control_functions": onchain.get("v6_admin_control_functions", []),
+        "v6_has_owner_controls": onchain.get("v6_has_owner_controls", False),
+        "v6_has_operator_controls": onchain.get("v6_has_operator_controls", False),
+        "v6_has_mint": onchain.get("v6_has_mint", False),
+        "v6_has_blacklist": onchain.get("v6_has_blacklist", False),
+        "v6_is_proxy": onchain.get("v6_is_proxy", False),
+        "contract_tx_count": onchain.get("contract_tx_count", 0),
+    }
+
+    try:
+        pair_data = get_market_data(checksum)
+        pair_source = "dexscreener"
+    except Exception:
+        pair_data = None
+        pair_source = "none"
+    token_info.update(market_fields_from_pair(pair_data))
+
+    txs = collector_get_contract_transactions(checksum, limit=5)
+    deployer = ""
+    deploy_timestamp = int(time.time())
+    if txs:
+        first_tx = txs[0]
+        deployer = first_tx.get("from", "")
+        deploy_timestamp = int(first_tx.get("timeStamp", deploy_timestamp))
+
+    deployer_balance = collector_get_avax_balance(deployer) if deployer else 0.0
+    creator_stats = collector_get_creator_stats(deployer)
+    cia = collector_run_cia_analysis_avax(checksum, deployer, deploy_timestamp)
+    tx_amounts_raw = cia.get("entropy", {}).get("dominant_amount", 0)
+    tx_amounts = [tx_amounts_raw] if tx_amounts_raw else []
+    holder_count = cia.get("cluster", {}).get("total_checked", 0)
+    v5 = collector_run_v5_analysis_avax(
+        checksum,
+        deployer,
+        deploy_timestamp,
+        token_info.get("name", "Unknown"),
+        token_info.get("symbol", ""),
+        tx_amounts,
+        holder_count,
+        cia,
+        creator_stats.get("rug_rate", 0.0),
+    )
+    v6 = collector_run_v6_analysis_avax(checksum, deployer, deploy_timestamp)
+    token_info["deployer"] = deployer
+    token_info["deployer_balance_avax"] = deployer_balance
+
+    payload = {
+        "schema_version": "1",
+        "chain": "AVAX",
+        "token": token_info,
+        "cia": cia,
+        "v5": v5,
+        "v6": v6,
+        "creator_stats": creator_stats,
+        "deployer_balance": deployer_balance,
+    }
+    context = {"pair_data": pair_data or {}, "pair_source": pair_source, "deployer": deployer, "token": token_info}
+    return payload, context
+
+
+def report_from_remote_engine(address: str, result: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    token_info = context.get("token") or {}
+    risk_flags = [str(item.get("detail")) for item in result.get("risk_factors", []) if item.get("detail")]
+    rug_risk = result.get("rug_risk") or {}
+    market_risk = result.get("market_liquidity_risk") or {}
+    score = result.get("risk_score")
+    return {
+        "address": Web3.to_checksum_address(address),
+        "token_name": token_info.get("name") or "Unknown",
+        "symbol": token_info.get("symbol") or "Unknown",
+        "label": str(result.get("verdict") or "INSUFFICIENT_DATA").upper(),
+        "risk_engine": "rugbuster_private_scoring_engine",
+        "engine_version": result.get("engine_version"),
+        "risk_percent": score,
+        "rugbuster_avax_score": score,
+        "rugbuster_avax_reasons": risk_flags,
+        "risk_flags": risk_flags,
+        "rug_score": rug_risk.get("score"),
+        "rug_status": rug_risk.get("status"),
+        "rug_reasons": rug_risk.get("reasons") or [],
+        "speculation_score": market_risk.get("score"),
+        "speculation_status": market_risk.get("status"),
+        "speculation_reasons": market_risk.get("reasons") or [],
+        "rug_risk": rug_risk,
+        "market_liquidity_risk": market_risk,
+        "data_confidence": result.get("data_confidence") or result.get("confidence"),
+        "confidence": result.get("confidence"),
+        "has_liquidity_evidence": token_info.get("has_liquidity_evidence"),
+        "liquidity_usd": token_info.get("liquidity_usd"),
+        "fdv": token_info.get("fdv"),
+        "volume24h": token_info.get("volume24h"),
+        "buys24h": token_info.get("buys24h"),
+        "sells24h": token_info.get("sells24h"),
+        "pair_address": token_info.get("pair_address"),
+        "pair_url": token_info.get("pair_url"),
+        "dex_id": token_info.get("dex_id"),
+        "image_url": token_info.get("image_url"),
+        "is_known_chain_asset": token_info.get("is_known_chain_asset", False),
+        "known_asset_category": token_info.get("known_asset_category"),
+        "admin_control_functions": token_info.get("v6_admin_control_functions", []),
+        "network": NETWORKS[resolve_network()]["label"],
+        "source": "private_scoring_engine",
+    }
+
+
+def insufficient_data_report(address: str, reason: str) -> dict[str, Any]:
+    checksum = Web3.to_checksum_address(address)
+    return {
+        "address": checksum,
+        "token_name": "Unknown",
+        "symbol": "Unknown",
+        "label": "INSUFFICIENT_DATA",
+        "risk_engine": "rugbuster_private_scoring_engine",
+        "risk_percent": None,
+        "rug_score": None,
+        "rug_status": "INSUFFICIENT_DATA",
+        "rug_reasons": [reason],
+        "speculation_score": None,
+        "speculation_status": "UNKNOWN",
+        "speculation_reasons": ["Remote scoring engine unavailable; local fallback is not authoritative"],
+        "risk_flags": [reason, "Remote scoring unavailable; no GOOD verdict emitted from fallback"],
+        "data_confidence": {"level": "INSUFFICIENT_DATA", "missing_modules": ["private_scoring_engine"]},
+        "network": NETWORKS[resolve_network()]["label"],
+        "source": "remote_unavailable_insufficient_data",
+    }
+
+
+def score_with_private_engine(address: str) -> dict[str, Any]:
+    if not remote_engine_configured():
+        return insufficient_data_report(address, "Private scoring engine is not configured")
+    payload, context = build_remote_scoring_payload(address)
+    result = hmac_post_scoring_engine(payload)
+    return report_from_remote_engine(address, result, context)
+
+
 @app.route("/score", methods=["GET"])
 def public_score():
     address = str(request.args.get("address") or "").strip()
     if not Web3.is_address(address):
         return jsonify({"ok": False, "error": "Invalid Avalanche token address"}), 400
 
-    if not is_known_asset_address(address):
-        score = lookup_cached_score(address)
-        if score and not should_refresh_cached_score(score):
-            return jsonify(score)
-
     try:
-        report = scan_token(address)
+        report = score_with_private_engine(address)
     except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc), "address": address}), 404
+        report = insufficient_data_report(address, f"Private scoring engine failed: {type(exc).__name__}")
     put_cached_report(address, report)
-    return jsonify(compact_score_response(report, "live_score"))
+    return jsonify(compact_score_response(report, report.get("source") or "private_scoring_engine"))
 
 
 @app.route("/api/recent-scans", methods=["GET", "POST", "OPTIONS"])
