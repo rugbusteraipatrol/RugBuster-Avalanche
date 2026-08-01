@@ -236,7 +236,15 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
     inventing a number.
     """
 
+    is_known_chain_asset = bool(metadata.get("is_known_chain_asset") or metadata.get("is_known_avax_asset"))
+
     if not metadata.get("has_liquidity_evidence"):
+        if is_known_chain_asset:
+            return ScoreResult(
+                score=55,
+                status="ELEVATED",
+                reasons=["Known Avalanche asset, but no supported live liquidity evidence was found"],
+            )
         return ScoreResult(
             score=None,
             status="UNKNOWN",
@@ -252,8 +260,6 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
     price_change24h = metadata.get("price_change_24h")
     buys24h = metadata.get("buys24h")
     sells24h = metadata.get("sells24h")
-    is_known_chain_asset = bool(metadata.get("is_known_chain_asset") or metadata.get("is_known_avax_asset"))
-
     if liquidity_usd is None:
         score += 14
         reasons.append("Pair exists but USD liquidity could not be priced")
@@ -345,7 +351,12 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
             score -= 2
             reasons.append(f"Buy-side demand leads: {buys} buys vs {sells} sells")
 
-    return ScoreResult(score=clamp(score), status=risk_status(score), reasons=reasons)
+    final = clamp(score)
+    if is_known_chain_asset and final >= 75:
+        final = 60
+        reasons.append("Known Avalanche asset; liquidity weakness capped at warning level")
+
+    return ScoreResult(score=final, status=risk_status(final), reasons=reasons)
 
 
 def score_token(metadata: dict[str, Any]) -> DualScoreResult:

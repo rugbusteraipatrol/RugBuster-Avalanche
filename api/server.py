@@ -78,6 +78,30 @@ KNOWN_TOKEN_METADATA = {
         "decimals": 18,
         "category": "canonical_bridged_asset",
     },
+    "0xd586e7f844cea2f87f50152665bcbc2c279d8d70": {
+        "name": "Dai Stablecoin",
+        "symbol": "DAI.e",
+        "decimals": 18,
+        "category": "canonical_bridged_asset",
+    },
+    "0x50b7545627a5162f82a992c33b87adc75187b218": {
+        "name": "Wrapped BTC",
+        "symbol": "WBTC.e",
+        "decimals": 8,
+        "category": "canonical_bridged_asset",
+    },
+    "0x8ebaf22b6f053dffeaf46f4dd9efa95d89ba8580": {
+        "name": "Uniswap",
+        "symbol": "UNI.e",
+        "decimals": 18,
+        "category": "canonical_bridged_asset",
+    },
+    "0x37b60851c570232f6f6a2a15d8b8f692ec4e08d5": {
+        "name": "SushiToken",
+        "symbol": "SUSHI.e",
+        "decimals": 18,
+        "category": "canonical_bridged_asset",
+    },
     "0x152b9d0fdc40c096757f570a51e494bd4b943e50": {
         "name": "Bitcoin",
         "symbol": "BTC.b",
@@ -138,7 +162,7 @@ KNOWN_TOKEN_METADATA = {
         "decimals": 18,
         "category": "established_protocol_token",
     },
-    "0x59414b3089ce2af0010e7523dc402ff594fd98cc": {
+    "0x59414b3089ce2af0010e7523dea7e2b35d776ec7": {
         "name": "Yak Token",
         "symbol": "YAK",
         "decimals": 18,
