@@ -1,0 +1,386 @@
+endpoint: https://web-production-376bf.up.railway.app/score
+required_source: private_scoring_engine
+gates:
+  bluechip_all_must_pass: true
+  scam_min_pass_fraction: 0.8
+  scam_forbidden_labels:
+  - GOOD
+  reference_case_all_must_pass: true
+  required_source_for_all: private_scoring_engine
+entries:
+- symbol: WAVAX
+  address: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7'
+  category: bluechip
+  note: canonical wrapped native
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: USDC.e
+  address: '0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664'
+  category: bluechip
+  note: bridged stablecoin
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: USDt
+  address: '0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7'
+  category: bluechip
+  note: native tether
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: WETH.e
+  address: '0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab'
+  category: bluechip
+  note: bridged weth
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: JOE
+  address: '0x6e84a6216ea6dacc71ee8e6b0a5b7322eebc0fdd'
+  category: bluechip
+  note: trader joe token
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: QI
+  address: '0x8729438eb15e2c8b576fcc6aecda6a148776c0f5'
+  category: bluechip
+  note: benqi token
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: PNG
+  address: '0x60781c2586d68229fde47564546784ab3faca982'
+  category: bluechip
+  note: pangolin token
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: BTC.b
+  address: '0x152b9d0fdc40c096757f570a51e494bd4b943e50'
+  category: bluechip
+  note: bridged btc
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: sAVAX
+  address: '0x2b2c81e08f1af8835a78bb2a90ae924ace0ea4be'
+  category: bluechip
+  note: benqi staked avax
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: LINK.e
+  address: '0x5947bb275c521040051d82396192181b413227a3'
+  category: bluechip
+  note: bridged chainlink
+  expected_labels:
+  - GOOD
+  gate: true
+- symbol: XAVA
+  address: '0xd1c3f94de7e5b45fa4edbba472491a9f4b166fc4'
+  category: midtier
+  note: avalaunch, traderjoe top pair
+  gate: false
+- symbol: COQ
+  address: '0x420fca0121dc28039145009570975747295f2329'
+  category: midtier
+  note: coq inu, traderjoe top pair
+  gate: false
+- symbol: ARENA
+  address: '0xb8d7710f7d8349a506b75dd184f05777c82dad0c'
+  category: midtier
+  note: the arena, traderjoe top pair
+  gate: false
+- symbol: GGP
+  address: '0x69260b9483f9871ca57f81a90d91e2f96c2cd11d'
+  category: midtier
+  note: gogopool, traderjoe
+  gate: false
+- symbol: PEFI
+  address: '0xe896cdeaac9615145c0ca09c8cd5c25bced6384c'
+  category: midtier
+  note: penguin finance, pangolin
+  gate: false
+- symbol: AVAI
+  address: '0x346a59146b9b4a77100d369a3d18e8007a9f46a6'
+  category: midtier
+  note: pangolin pair
+  gate: false
+- symbol: TECH
+  address: '0x5ac04b69bde6f67c0bd5d6ba6fd5d816548b066a'
+  category: midtier
+  note: traderjoe pair
+  gate: false
+- symbol: GMX
+  address: '0x62edc0692bd897d2295872a9ffcac5425011c661'
+  category: midtier
+  note: gmx perp dex, traderjoe
+  gate: false
+- symbol: YAK
+  address: '0x59414b3089ce2af0010e7523dea7e2b35d776ec7'
+  category: midtier
+  note: yield yak, traderjoe
+  gate: false
+- symbol: STG
+  address: '0x2f6f07cdcf3588944bf4c42ac74ff24bf56e7590'
+  category: midtier
+  note: stargate, traderjoe
+  gate: false
+- symbol: SNOB
+  address: '0xc38f41a296a4493ff429f1238e030924a1542e50'
+  category: midtier
+  note: snowball, pangolin
+  gate: false
+- symbol: DYP
+  address: '0x961c8c0b1aad0c0b10a51fef6a867e3091bcef17'
+  category: midtier
+  note: dypius, pangolin
+  gate: false
+- symbol: LYD
+  address: '0x4c9b4e1ac6f24cde3660d5e4ef1ebf77c710c084'
+  category: midtier
+  note: pangolin pair
+  gate: false
+- symbol: BLS
+  address: '0x46b9144771cb3195d66e4eda643a7493fadcaf9d'
+  category: midtier
+  note: traderjoe pair
+  gate: false
+- symbol: KET
+  address: '0xffff003a6bad9b743d658048742935fffe2b6ed7'
+  category: midtier
+  note: pangolin pair
+  gate: false
+- symbol: HOTEMIN
+  address: '0x3de0cd6870a005aeef9363888c6d4ff1dc966cf8'
+  category: new_lowliq
+  note: new pool <48h
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: PUMLX
+  address: '0x5fc3c8523b355b084862fb9398a030fbce049c61'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: OUSTON
+  address: '0x8d52411a4907ce26143e154811733d3e99c582e5'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: WCC
+  address: '0xcd49bb3305e003cd9872403031540aa67f4b508d'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: CATFU
+  address: '0x981c1648ca5d913ddf94a6407e4d846bce674aa6'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: YUPFUN
+  address: '0x7cab5a958e1e291c6b3b52a69da9114dce26b20b'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: BEE
+  address: '0x504443d7cb349a40f8fc30d44b1c855ea50e8624'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: SOOTCASE
+  address: '0xf207274b8b9b971750e49985bb361e936dda8204'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: REPLACEMENT
+  address: '0x865ba27ee3ea097642a96062046ddf11f1ff800a'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: FLAG
+  address: '0x8ddacbcc323f7666a1b4cc8861ec449d9d4315d8'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: X1000
+  address: '0x2bee3cb0639fa956c9bf3d7b83724f5dcc288920'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: MATO
+  address: '0x07c275742350dc4fe3ad0f5d8dbd14728be445d8'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: ALR
+  address: '0xf8c1a71acbc6313cf7b049b89f762565e5bbbe3a'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: NIRE
+  address: '0x55aafd2c6af544cde07783ced9189cc0796f7638'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: LOGOS
+  address: '0xa983a978b671ca67a958621bfb8dcb9bfd117601'
+  category: new_lowliq
+  note: new pool <48h, near-zero liq
+  forbidden_labels:
+  - GOOD
+  gate: false
+  advisory: true
+- symbol: SDOG
+  address: '0xde9e52f1838951e4d2bb6c59723b003c353979b6'
+  category: scam
+  note: Snowdog - documented 2021-22 rug pull
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: TIME
+  address: '0x2b4c736ae7b23ef961ea7fcb7e02351df9c0053b'
+  category: scam
+  note: Wonderland - Jan 2022 treasury scandal/collapse
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: $BIRDFLU
+  address: '0x1823e7d4e02351c702e9809c6e45312327c2e432'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: $SOULS
+  address: '0xfb921c6e88aef45605db5722c2ef52e0073dbace'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: GUT
+  address: '0x0ddcf1bbd73a0b9b3bfbaad759def4554a954769'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BLOCK
+  address: '0xcf732c0674cebe2e6fc3d0f41a72973265bfd7cb'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BUNNY
+  address: '0x6a34f72addbbe571843d2309e88fbfe0c7e4c20f'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: HENTAI
+  address: '0xfef875df061da21bfd60f99f90bd5f34a4ef217e'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: GOONER
+  address: '0xbce31de987df0da4e2b0ed69d3d01b18dc5c67b1'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: CFX(fake)
+  address: '0x8c0f0f8e15c3504231d2cc119c6eba345cdc8efe'
+  category: scam
+  note: 'GoPlus: unverified, 1 holder=100%'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BITS
+  address: '0x48d64aef167ccc764b11d4ee6e657665c05eaec5'
+  category: reference_case
+  note: 'Original incident token: admin control (transferOwnership) + zero total_supply + no liquidity.
+    Must never resolve to GOOD.'
+  expected_labels:
+  - WARN
+  - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
