@@ -72,6 +72,36 @@ KNOWN_TOKEN_METADATA = {
         "decimals": 18,
         "category": "canonical_wrapped_asset",
     },
+    "0x152b9d0fdc40c096757f570a51e494bd4b943e50": {
+        "name": "Bitcoin",
+        "symbol": "BTC.b",
+        "decimals": 8,
+        "category": "canonical_bridged_asset",
+    },
+    "0xc891eb4cbdeff6e073e859e987815ed1505c2acd": {
+        "name": "Euro Coin",
+        "symbol": "EURC",
+        "decimals": 6,
+        "category": "canonical_stablecoin",
+    },
+    "0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64": {
+        "name": "Frax",
+        "symbol": "FRAX",
+        "decimals": 18,
+        "category": "canonical_stablecoin",
+    },
+    "0x130966628846bfd36ff31a822705796e8cb8c18d": {
+        "name": "Magic Internet Money",
+        "symbol": "MIM",
+        "decimals": 18,
+        "category": "canonical_stablecoin",
+    },
+    "0x2b2c81e08f1af8835a78bb2a90ae924ace0ea4be": {
+        "name": "Staked AVAX",
+        "symbol": "sAVAX",
+        "decimals": 18,
+        "category": "established_liquid_staking_token",
+    },
     "0x6e84a6216ea6dacc71ee8e6b0a5b7322eebc0fdd": {
         "name": "JoeToken",
         "symbol": "JOE",
