@@ -70,6 +70,21 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
     creator_rug_rate = float(metadata.get("creator_rug_rate") or 0)
     holders = int(metadata.get("holders_count") or 0)
     deployer_balance = float(metadata.get("deployer_balance_avax") or 0)
+    is_known_chain_asset = bool(metadata.get("is_known_chain_asset") or metadata.get("is_known_avax_asset"))
+    admin_functions = list(metadata.get("v6_admin_control_functions") or metadata.get("admin_control_functions") or [])
+    has_operator_controls = bool(metadata.get("v6_has_operator_controls"))
+
+    if is_known_chain_asset:
+        if metadata.get("v6_has_mint"):
+            score += add_reason(reasons, 18, "Known asset still exposes mint/admin supply controls")
+        if metadata.get("v6_has_blacklist"):
+            score += add_reason(reasons, 12, "Known asset still exposes blacklist controls")
+        if metadata.get("v6_is_proxy"):
+            score += add_reason(reasons, 10, "Known asset uses upgradeable proxy pattern")
+        if not reasons:
+            reasons.append("Known Avalanche canonical/established asset; new-token heuristics suppressed")
+        final = clamp(round(score))
+        return ScoreResult(score=final, status=risk_status(final), reasons=reasons[:8])
 
     if metadata.get("v6_has_backdoor") or backdoor_score >= 40:
         score += add_reason(reasons, min(35, max(12, backdoor_score // 2)), f"Bytecode backdoor risk score {backdoor_score}/100")
@@ -79,6 +94,10 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
         score += add_reason(reasons, 18, "Mint function detected in bytecode")
     if metadata.get("v6_has_blacklist"):
         score += add_reason(reasons, 12, "Blacklist function detected")
+    if admin_functions:
+        score += add_reason(reasons, 18, f"Owner/admin control functions detected: {', '.join(admin_functions[:3])}")
+    if has_operator_controls:
+        score += add_reason(reasons, 20, "Operator/authorization controls can gate trading or privileges")
 
     if concentration == "CRITICAL" or top5 >= 90:
         score += add_reason(reasons, 30, f"Critical holder concentration top5={top5:.1f}%")
@@ -127,6 +146,7 @@ def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
     symbol = str(metadata.get("symbol") or "").strip()
     decimals = metadata.get("decimals")
     total_supply = metadata.get("total_supply")
+    is_known_chain_asset = bool(metadata.get("is_known_chain_asset") or metadata.get("is_known_avax_asset"))
 
     metadata_missing = 0
 
@@ -175,6 +195,16 @@ def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
     if native.score is not None and native.score > score:
         score = native.score
         reasons = native.reasons + reasons[:3]
+    elif is_known_chain_asset:
+        reasons = native.reasons + reasons[:3]
+    elif native.score is not None:
+        native_hard_reasons = [
+            reason
+            for reason in native.reasons
+            if reason != "No hard Avalanche rug signals detected"
+        ]
+        if native_hard_reasons:
+            reasons = reasons + native_hard_reasons
 
     hard_risk_reasons = [
         reason
@@ -300,7 +330,10 @@ def score_speculation_risk(metadata: dict[str, Any]) -> ScoreResult:
         buys = int(buys24h)
         sells = int(sells24h)
         total = buys + sells
-        if total < 20:
+        if total <= 4 and not is_known_chain_asset:
+            score += 20
+            reasons.append("Near-zero organic 24h trading activity")
+        elif total < 20:
             score += 6
             reasons.append("Sparse 24h trading activity")
         if sells > buys * 3 and sells > 20:

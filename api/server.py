@@ -46,18 +46,71 @@ KNOWN_TOKEN_METADATA = {
         "name": "Wrapped AVAX",
         "symbol": "WAVAX",
         "decimals": 18,
+        "category": "canonical_wrapped_native",
+    },
+    "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e": {
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": 6,
+        "category": "canonical_stablecoin",
     },
     "0xa7d7079b0fead91f3e65f86e8915cb59c1a4c664": {
         "name": "USD Coin Bridged",
         "symbol": "USDC.e",
         "decimals": 6,
+        "category": "canonical_stablecoin",
     },
     "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7": {
         "name": "Tether USD",
         "symbol": "USDT",
         "decimals": 6,
+        "category": "canonical_stablecoin",
+    },
+    "0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab": {
+        "name": "Wrapped Ether",
+        "symbol": "WETH.e",
+        "decimals": 18,
+        "category": "canonical_wrapped_asset",
+    },
+    "0x6e84a6216ea6dacc71ee8e6b0a5b7322eebc0fdd": {
+        "name": "JoeToken",
+        "symbol": "JOE",
+        "decimals": 18,
+        "category": "established_protocol_token",
+    },
+    "0x8729438eb15e2c8b576fcc6aecda6a148776c0f5": {
+        "name": "BENQI",
+        "symbol": "QI",
+        "decimals": 18,
+        "category": "established_protocol_token",
+    },
+    "0x60781c2586d68229fde47564546784ab3faca982": {
+        "name": "Pangolin",
+        "symbol": "PNG",
+        "decimals": 18,
+        "category": "established_protocol_token",
     },
 }
+ADMIN_FUNCTION_SIGNATURES = {
+    "715018a6": "renounceOwnership()",
+    "8da5cb5b": "owner()",
+    "f2fde38b": "transferOwnership(address)",
+    "ac7475ed": "updateOperator(address)",
+    "6d44a3b2": "updateOperator(address,bool)",
+    "b3ab15fb": "setOperator(address)",
+    "558a7297": "setOperator(address,bool)",
+    "14fc2812": "setAuthorized(address)",
+    "711bf9b2": "setAuthorized(address,bool)",
+    "eecea000": "setAuthorization(address,bool)",
+    "b6a5d7de": "authorize(address)",
+    "fca3b5aa": "setMinter(address)",
+    "cf456ae7": "setMinter(address,bool)",
+    "40c10f19": "mint(address,uint256)",
+    "9dc29fac": "burn(address,uint256)",
+    "f9f92be4": "blacklist(address)",
+    "153b0d1e": "setBlacklist(address,bool)",
+}
+EIP1967_IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
 MAINNET_FACTORIES = {
     "TRADERJOE": "0x9Ad6C38BE94206cA50bb0d90783181662f0Cfa10",
     "PANGOLIN": "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",
@@ -137,6 +190,89 @@ def get_cached_report(address: str) -> dict[str, Any] | None:
 
 def put_cached_report(address: str, report: dict[str, Any]) -> None:
     SCAN_CACHE[cache_key(address)] = {"ts": time.time(), "report": report}
+
+
+def is_known_asset_address(address: str) -> bool:
+    if not Web3.is_address(address):
+        return False
+    return Web3.to_checksum_address(address).lower() in KNOWN_TOKEN_METADATA
+
+
+def implementation_address(web3: Web3, address: str) -> str | None:
+    try:
+        raw = web3.eth.get_storage_at(Web3.to_checksum_address(address), EIP1967_IMPLEMENTATION_SLOT)
+    except Exception:
+        return None
+    if not raw or int.from_bytes(raw, "big") == 0:
+        return None
+    candidate = "0x" + raw.hex()[-40:]
+    if int(candidate, 16) == 0:
+        return None
+    try:
+        checksum = Web3.to_checksum_address(candidate)
+        code = web3.eth.get_code(checksum)
+    except Exception:
+        return None
+    return checksum if code else None
+
+
+def detect_admin_controls(web3: Web3, address: str, is_known_asset: bool = False) -> dict[str, Any]:
+    addresses = [Web3.to_checksum_address(address)]
+    implementation = implementation_address(web3, address)
+    if implementation and implementation.lower() != addresses[0].lower():
+        addresses.append(implementation)
+
+    bytecodes: list[str] = []
+    for target in addresses:
+        try:
+            bytecodes.append(web3.eth.get_code(target).hex().lower().removeprefix("0x"))
+        except Exception:
+            continue
+    if not bytecodes:
+        return {"v6_admin_control_functions": [], "v6_has_owner_controls": False}
+
+    found = sorted(
+        {
+            signature
+            for selector, signature in ADMIN_FUNCTION_SIGNATURES.items()
+            if any(selector in bytecode for bytecode in bytecodes)
+        }
+    )
+    admin_found = [
+        signature
+        for signature in found
+        if signature
+        not in {
+            "owner()",
+            "renounceOwnership()",
+        }
+    ]
+    if is_known_asset:
+        admin_found = [
+            signature
+            for signature in admin_found
+            if signature
+            in {
+                "mint(address,uint256)",
+                "blacklist(address)",
+                "setBlacklist(address,bool)",
+            }
+        ]
+
+    has_operator_controls = any(
+        key in signature.lower()
+        for signature in admin_found
+        for key in ("operator", "authorized", "authorization", "minter", "mint", "blacklist")
+    )
+    return {
+        "v6_admin_control_functions": admin_found[:10],
+        "v6_has_owner_controls": bool(admin_found),
+        "v6_has_operator_controls": has_operator_controls,
+        "v6_has_mint": any("mint(" in signature.lower() or "minter" in signature.lower() for signature in admin_found),
+        "v6_has_blacklist": any("blacklist" in signature.lower() for signature in admin_found),
+        "v6_is_proxy": bool(implementation),
+        "v6_implementation_address": implementation,
+    }
 
 
 def cors(response):
@@ -238,7 +374,14 @@ def public_label_from_report(report: dict[str, Any]) -> str:
 
 def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any]:
     address = report.get("address") or report.get("contract_address") or ""
-    risk_flags = list(report.get("rug_reasons") or [])[:4] + list(report.get("speculation_reasons") or [])[:4]
+    rug_reasons = list(report.get("rug_reasons") or [])
+    priority_rug_reasons = [
+        reason
+        for reason in rug_reasons
+        if "admin control" in reason.lower() or "operator/authorization" in reason.lower()
+    ]
+    other_rug_reasons = [reason for reason in rug_reasons if reason not in priority_rug_reasons]
+    risk_flags = (priority_rug_reasons + other_rug_reasons)[:4] + list(report.get("speculation_reasons") or [])[:4]
     risk_percent = report.get("risk_percent") or report.get("rugbuster_avax_score") or report.get("rug_score")
     return {
         "ok": True,
@@ -291,15 +434,27 @@ def lookup_cached_score(address: str) -> dict[str, Any] | None:
         return None
 
 
+def should_refresh_cached_score(score: dict[str, Any]) -> bool:
+    source = str(score.get("source") or "")
+    if source != "postgres_cache":
+        return False
+    label = str(score.get("label") or score.get("verdict") or "").upper()
+    risk_percent = score.get("risk_percent")
+    if risk_percent is None:
+        return True
+    return label in {"UNKNOWN", "ALLOW"}
+
+
 @app.route("/score", methods=["GET"])
 def public_score():
     address = str(request.args.get("address") or "").strip()
     if not Web3.is_address(address):
         return jsonify({"ok": False, "error": "Invalid Avalanche token address"}), 400
 
-    score = lookup_cached_score(address)
-    if score:
-        return jsonify(score)
+    if not is_known_asset_address(address):
+        score = lookup_cached_score(address)
+        if score and not should_refresh_cached_score(score):
+            return jsonify(score)
 
     try:
         report = scan_token(address)
@@ -582,13 +737,16 @@ def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
     symbol = call_optional(token, "symbol")
     decimals = call_optional(token, "decimals")
     total_supply = call_optional(token, "totalSupply")
+    admin_controls = detect_admin_controls(web3, checksum, is_known_asset=bool(known))
     return {
         "name": name or known.get("name") or "Unknown",
         "symbol": symbol or known.get("symbol") or "Unknown",
         "decimals": decimals if decimals is not None else known.get("decimals"),
         "total_supply": total_supply,
         "is_known_chain_asset": bool(known),
+        "known_asset_category": known.get("category"),
         "metadata_source": "erc20_call" if name or symbol or decimals is not None or total_supply is not None else "known_token_fallback" if known else "unavailable",
+        **admin_controls,
     }
 
 
@@ -639,6 +797,12 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "image_url": pair_data.get("info", {}).get("imageUrl"),
         "contract_tx_count": metadata.get("contract_tx_count", 0),
         "is_known_chain_asset": metadata.get("is_known_chain_asset", False),
+        "known_asset_category": metadata.get("known_asset_category"),
+        "v6_admin_control_functions": metadata.get("v6_admin_control_functions", []),
+        "v6_has_owner_controls": metadata.get("v6_has_owner_controls", False),
+        "v6_has_operator_controls": metadata.get("v6_has_operator_controls", False),
+        "v6_has_mint": metadata.get("v6_has_mint", False),
+        "v6_has_blacklist": metadata.get("v6_has_blacklist", False),
     }
 
     scores = score_token(scoring_input)
@@ -669,6 +833,8 @@ def build_report_from_metadata(address: str, metadata: dict[str, Any], pair_data
         "image_url": scoring_input["image_url"],
         "metadata_source": metadata.get("metadata_source"),
         "is_known_chain_asset": metadata.get("is_known_chain_asset", False),
+        "known_asset_category": metadata.get("known_asset_category"),
+        "admin_control_functions": metadata.get("v6_admin_control_functions", []),
         "network": NETWORKS[resolve_network()]["label"],
         "source": source,
     }
