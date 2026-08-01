@@ -472,6 +472,15 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
     address = report.get("address") or report.get("contract_address") or ""
     if report.get("risk_flags"):
         risk_flags = list(report.get("risk_flags") or [])
+        priority_flags = [
+            flag
+            for flag in risk_flags
+            if any(
+                marker in str(flag).lower()
+                for marker in ("admin control", "operator/authorization", "backdoor", "blacklist", "mint", "concentration")
+            )
+        ]
+        risk_flags = priority_flags + [flag for flag in risk_flags if flag not in priority_flags]
     else:
         rug_reasons = list(report.get("rug_reasons") or [])
         priority_rug_reasons = [
