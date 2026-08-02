@@ -52,6 +52,92 @@ def add_reason(reasons: list[str], points: int, reason: str) -> int:
     return points
 
 
+def track_record_factor(metadata: dict[str, Any]) -> float:
+    """How much independent evidence exists that this token has been survived.
+
+    Returns 0.0 (no evidence) to 1.0 (long, wide, public track record).
+
+    A contract capability is not by itself abuse. `mint()` on a stablecoin is
+    the design; `mint()` on a three-hour-old contract with one holder is a
+    loaded gun. The same bytecode therefore has to be weighted by whether a
+    real population of holders has lived with it without being drained. This
+    is what the hand-maintained canonical whitelist was standing in for, and
+    unlike a list it extends to every asset on the chain.
+
+    Only capability penalties are damped by this factor. Evidence of actual
+    abuse -- backdoors, wash trading, a deployer with a rug history -- is never
+    reduced, however established the token looks.
+
+    Missing evidence yields 0.0, never a discount: an unknown token must not be
+    treated as a mature one just because the data source was unavailable.
+    """
+    # A track record only speaks to unexercised capability. Once there is
+    # evidence that something was actually done -- a backdoor in the bytecode,
+    # wash trading, a fast rug, a deployer who has rugged before -- the history
+    # stops being reassuring and no discount applies. Without this guard a
+    # mature token carrying a real backdoor lands below the ELEVATED threshold
+    # purely because its other penalties were damped.
+    backdoor_score = int(metadata.get("v6_backdoor_risk_score") or metadata.get("backdoor_risk_score") or 0)
+    abuse_evidence = (
+        bool(metadata.get("v6_has_backdoor"))
+        or backdoor_score >= 40
+        or bool(metadata.get("cia_wash_detected"))
+        or bool(metadata.get("cia_bot_farm"))
+        or bool(metadata.get("v6_is_fast_rug"))
+        or float(metadata.get("creator_rug_rate") or 0) >= 40
+    )
+    if abuse_evidence:
+        return 0.0
+
+    holders = int(metadata.get("holders_count") or 0)
+    age_days = metadata.get("token_age_days")
+
+    if holders >= 50_000:
+        holder_factor = 1.0
+    elif holders >= 10_000:
+        holder_factor = 0.85
+    elif holders >= 2_000:
+        holder_factor = 0.65
+    elif holders >= 500:
+        holder_factor = 0.45
+    elif holders >= 100:
+        holder_factor = 0.25
+    else:
+        holder_factor = 0.0
+
+    if age_days is None:
+        age_factor = 0.0
+    else:
+        age = float(age_days)
+        if age >= 365:
+            age_factor = 1.0
+        elif age >= 180:
+            age_factor = 0.8
+        elif age >= 90:
+            age_factor = 0.6
+        elif age >= 30:
+            age_factor = 0.35
+        else:
+            age_factor = 0.0
+
+    # Both dimensions must be present to earn full credit: a token can buy
+    # holders quickly, and a dormant contract can be old without ever having
+    # been trusted with anything.
+    if holder_factor <= 0 or age_factor <= 0:
+        return min(holder_factor, age_factor)
+    return round(min(1.0, 0.6 * holder_factor + 0.4 * age_factor), 3)
+
+
+def track_record_reason(metadata: dict[str, Any], maturity: float) -> str:
+    holders = int(metadata.get("holders_count") or 0)
+    age_days = metadata.get("token_age_days")
+    age_text = f"{float(age_days):.0f}d" if age_days is not None else "unknown age"
+    return (
+        f"Capability risk discounted: {holders:,} holders over {age_text} "
+        f"without an observed drain (track record {maturity:.2f})"
+    )
+
+
 def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
     """RugBuster's Avalanche-native RugCheck-style score.
 
@@ -86,27 +172,40 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
         final = clamp(round(score))
         return ScoreResult(score=final, status=risk_status(final), reasons=reasons[:8])
 
+    maturity = track_record_factor(metadata)
+    capability_weight = 1.0 - (0.75 * maturity)
+
+    def capability_penalty(points: int) -> int:
+        return int(round(points * capability_weight))
+
     if metadata.get("v6_has_backdoor") or backdoor_score >= 40:
         score += add_reason(reasons, min(35, max(12, backdoor_score // 2)), f"Bytecode backdoor risk score {backdoor_score}/100")
     if metadata.get("v6_is_proxy"):
-        score += add_reason(reasons, 18, "Upgradeable proxy contract")
+        score += add_reason(reasons, capability_penalty(18), "Upgradeable proxy contract")
     if metadata.get("v6_has_mint"):
-        score += add_reason(reasons, 18, "Mint function detected in bytecode")
+        score += add_reason(reasons, capability_penalty(18), "Mint function detected in bytecode")
     if metadata.get("v6_has_blacklist"):
-        score += add_reason(reasons, 12, "Blacklist function detected")
+        score += add_reason(reasons, capability_penalty(12), "Blacklist function detected")
     if admin_functions:
-        score += add_reason(reasons, 18, f"Owner/admin control functions detected: {', '.join(admin_functions[:3])}")
+        score += add_reason(reasons, capability_penalty(18), f"Owner/admin control functions detected: {', '.join(admin_functions[:3])}")
     if has_operator_controls:
-        score += add_reason(reasons, 20, "Operator/authorization controls can gate trading or privileges")
+        score += add_reason(reasons, capability_penalty(20), "Operator/authorization controls can gate trading or privileges")
     if admin_functions and not metadata.get("has_liquidity_evidence"):
-        score += add_reason(reasons, 20, "Admin controls present before supported live liquidity is found")
+        score += add_reason(reasons, capability_penalty(20), "Admin controls present before supported live liquidity is found")
+    if maturity >= 0.5 and reasons:
+        reasons.append(track_record_reason(metadata, maturity))
 
-    if concentration == "CRITICAL" or top5 >= 90:
+    # Thresholds calibrated against live Avalanche data rather than intuition:
+    # legitimate tokens routinely concentrate in treasury, staking and LP
+    # contracts (JOE sits near 70% across its top five, JPYC near 84%), while
+    # abandoned single-holder deployments sit at 100%. Penalising at 55% would
+    # tax normal tokens for a distribution shape that is simply typical.
+    if concentration == "CRITICAL" or top5 >= 97:
         score += add_reason(reasons, 30, f"Critical holder concentration top5={top5:.1f}%")
-    elif concentration == "HIGH" or top5 >= 75:
+    elif concentration == "HIGH" or top5 >= 92:
         score += add_reason(reasons, 22, f"High holder concentration top5={top5:.1f}%")
-    elif concentration == "MEDIUM" or top5 >= 55:
-        score += add_reason(reasons, 10, f"Moderate holder concentration top5={top5:.1f}%")
+    elif top5 >= 88:
+        score += add_reason(reasons, 10, f"Elevated holder concentration top5={top5:.1f}%")
 
     if metadata.get("cia_all_fresh_wallets"):
         score += add_reason(reasons, 12, "Fresh funding chain")

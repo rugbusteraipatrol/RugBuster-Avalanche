@@ -652,6 +652,91 @@ class NotTokenAddress(ValueError):
     pass
 
 
+HOLDER_INTEL_API = os.getenv("HOLDER_INTEL_API", "https://api.gopluslabs.io/api/v1/token_security/43114").strip()
+HOLDER_INTEL_TIMEOUT_SECONDS = float(os.getenv("HOLDER_INTEL_TIMEOUT_SECONDS", "8"))
+HOLDER_INTEL_TTL_SECONDS = int(os.getenv("HOLDER_INTEL_TTL_SECONDS", "900"))
+HOLDER_INTEL_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def fetch_holder_intel(address: str) -> dict[str, Any]:
+    """Holder count and concentration for a token.
+
+    Returns {} when the upstream has no data. That empty result is meaningful:
+    callers must treat missing holder evidence as "unknown", never as "fine".
+
+    Query one address at a time. Batched queries against this API silently drop
+    members of the batch under throttling instead of erroring, which during QA
+    made 94% of a sample look unlisted when the data existed.
+    """
+    key = address.lower()
+    cached = HOLDER_INTEL_CACHE.get(key)
+    if cached and time.time() - cached["ts"] < HOLDER_INTEL_TTL_SECONDS:
+        return cached["intel"]
+
+    try:
+        response = requests.get(
+            HOLDER_INTEL_API,
+            params={"contract_addresses": key},
+            timeout=HOLDER_INTEL_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+        info = (response.json().get("result") or {}).get(key) or {}
+    except Exception:
+        return {}
+
+    if not info:
+        return {}
+
+    try:
+        holder_count = int(info.get("holder_count") or 0)
+    except (TypeError, ValueError):
+        holder_count = 0
+
+    percents = []
+    for holder in info.get("holders") or []:
+        try:
+            percents.append(float(holder.get("percent") or 0.0))
+        except (TypeError, ValueError):
+            continue
+    percents.sort(reverse=True)
+
+    intel: dict[str, Any] = {"holder_intel_source": "goplus"}
+    if holder_count > 0:
+        intel["holders_count"] = holder_count
+    if percents:
+        # `percent` is already a fraction of total supply, so this is real
+        # concentration rather than a share of whichever holders were sampled.
+        intel["v6_top5_concentration_pct"] = round(sum(percents[:5]) * 100, 1)
+        intel["v6_top1_concentration_pct"] = round(percents[0] * 100, 1)
+
+    top5 = intel.get("v6_top5_concentration_pct")
+    if top5 is not None:
+        # Deliberately conservative: legitimate tokens routinely hold large
+        # balances in treasury, staking or LP contracts. JOE sits near 69% and
+        # JPYC near 79% across their top five, so anything below the extremes
+        # is left unlabelled rather than scored as a risk.
+        if top5 >= 95:
+            intel["v6_concentration_risk"] = "CRITICAL"
+        elif top5 >= 88:
+            intel["v6_concentration_risk"] = "HIGH"
+        else:
+            intel["v6_concentration_risk"] = "LOW"
+
+    HOLDER_INTEL_CACHE[key] = {"ts": time.time(), "intel": intel}
+    return intel
+
+
+def token_age_days_from_pair(pair_data: dict[str, Any] | None) -> float | None:
+    """Days since the token's oldest observed market appeared, or None."""
+    created_ms = (pair_data or {}).get("pairCreatedAt")
+    if not created_ms:
+        return None
+    try:
+        return max(0.0, (time.time() - float(created_ms) / 1000.0) / 86400.0)
+    except (TypeError, ValueError):
+        return None
+
+
 def flatten_intel_for_scoring(cia: dict[str, Any], v6: dict[str, Any], creator_stats: dict[str, Any]) -> dict[str, Any]:
     """Flatten collector intel onto the token dict under the keys the scorer reads.
 
@@ -736,6 +821,10 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         pair_data = None
         pair_source = "none"
     token_info.update(market_fields_from_pair(pair_data))
+    token_info.update(fetch_holder_intel(checksum))
+    age_days = token_age_days_from_pair(pair_data)
+    if age_days is not None:
+        token_info["token_age_days"] = round(age_days, 1)
 
     txs = collector_get_contract_transactions(checksum, limit=5)
     deployer = ""
