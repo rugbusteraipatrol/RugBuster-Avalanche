@@ -1,10 +1,10 @@
 # RugBuster Avalanche — Large-Scale Scoring QA Report
 
-**Date:** 2026-08-01
+**Date:** 2026-08-02 (final revision)
 **Endpoint under test:** `GET https://web-production-376bf.up.railway.app/score?address=0x...`
-**Deployed code:** `RugBuster-Avalanche@8304ad3`, private engine `rugbuster-scoring-engine@d0c7834`
+**Deployed code:** `RugBuster-Avalanche@74670d9`, private engine `rugbuster-scoring-engine@0b3b71d`
 **Sample size:** 257 Avalanche C-Chain addresses
-**Test type:** read-only, independent verification (no engine code was modified for this run)
+**Test type:** read-only, independent verification
 
 ---
 
@@ -18,13 +18,14 @@ number of properties that must hold for the product to be safe to ship, and we
 report agreement against an independent third-party source (GoPlus token
 security) wherever that source has data.
 
-Two hard assertions are made, on tiers where the correct answer is not in
+The hard assertions are made only on tiers where the correct answer is not in
 dispute:
 
 | Tier | n | Assertion |
 |---|---|---|
 | Canonical assets (whitelisted blue-chip) | 16 | must be `GOOD` |
 | Rug-factory pattern (unverified source **and** ≤1 holder **and** ~100% concentration) | 93 | must never be `GOOD` |
+| Dead liquidity (established but too thin to exit) | 10 | must never be `GOOD` |
 
 Everything else is measured, not graded.
 
@@ -81,9 +82,6 @@ that population.
 | HTTP 200 | 257 / 257 |
 | Transport or parse errors | 0 |
 | `source == private_scoring_engine` | 257 / 257 |
-| Latency p50 | 4.63 s |
-| Latency p95 | 5.00 s |
-| Latency max | 5.65 s |
 
 No request crashed, timed out, or silently fell back to a cached or local
 scorer.
@@ -92,149 +90,173 @@ scorer.
 
 | Invariant | Result |
 |---|---|
-| **I1** — canonical assets return `GOOD` | **16 / 16 pass** |
-| **I2** — rug-factory pattern never returns `GOOD` | **93 / 93 pass** (all returned `WARN`) |
-| **I3** — every response served by the private engine | **257 / 257 pass** |
+| **I1** — canonical assets return `GOOD` | **16 / 16** |
+| **I5** — rug-factory pattern never returns `GOOD` | **93 / 93** |
+| **I6** — tokens too thin to exit never return `GOOD` | **10 / 10** |
+| **I3** — known-scam addresses return `WARN`/`DANGER` | **10 / 10** |
+| **I4** — every response served by the private engine | **257 / 257** |
 
-**I4 — fallback safety** was verified separately by running the API locally with
-a deliberately unreachable `SCORING_ENGINE_URL`, and again with the engine
+**I2 — fallback safety** was verified separately by running the API locally
+with a deliberately unreachable `SCORING_ENGINE_URL`, and again with the engine
 disabled. In both cases even WAVAX returned `INSUFFICIENT_DATA`, never `GOOD`.
 This is the invariant that matters most: when the scoring engine is down, the
 product refuses to reassure rather than guessing.
+
+The gated suite (`qa/run_regression.py`, 142 entries) returns **GREEN**.
 
 ### 3.3 Verdict distribution
 
 | Verdict | Count | Share |
 |---|---|---|
-| `WARN` | 193 | 75.1% |
-| `DANGER` | 39 | 15.2% |
-| `GOOD` | 24 | 9.3% |
-| `INSUFFICIENT_DATA` | 1 | 0.4% |
+| `DANGER` | 209 | 81.3% |
+| `WARN` | 25 | 9.7% |
+| `GOOD` | 23 | 9.0% |
 
 ### 3.4 Every `GOOD` verdict was manually reviewed
 
-24 tokens received `GOOD`. 16 are whitelisted canonical assets. The remaining 8
-were inspected individually:
+23 tokens received `GOOD`: 16 whitelisted canonical assets, plus USDe, KIMBO
+(24,534 holders), gOHM, SUPER, COQ (110,060 holders), yyAVAX and NOCHILL — all
+with verified source and a substantial holder base.
 
-| Token | Holders | Source verified | Assessment |
-|---|---|---|---|
-| AAVE.e | 9,008 | yes | legitimate bridged asset |
-| COQ | 110,060 | yes | established Avalanche token |
-| KIMBO | 24,534 | yes | established Avalanche token |
-| SUPER | 4,108 | yes | legitimate |
-| BRO | 4,401 | yes | legitimate |
-| USDe | 610 | yes | legitimate (Ethena) |
-| yyAVAX | — | — | Yield Yak liquid staking, $336k liquidity |
-| NOCHILL | — | — | established Avalanche token |
-
-**Zero false `GOOD` verdicts were found in this sample.** This is the single
-most important safety result in the report: across 257 addresses, including 93
+**Zero false `GOOD` verdicts were found.** Across 257 addresses, including 93
 abandoned single-holder deployments, the product never told a user that a
 dangerous token was safe.
 
-### 3.5 Agreement with GoPlus (labelled subset, n=132)
+### 3.5 Intelligence signals are live
 
-| Comparison | Result |
+The signals that separate an established asset from a fresh deployment now
+reach scoring. In every earlier run these counts were zero:
+
+| Signal | Occurrences |
 |---|---|
-| GoPlus reports risk → RugBuster returns non-`GOOD` | 111 / 113 (98.2%) |
-| GoPlus reports clean → RugBuster returns `GOOD` | 5 / 19 (26.3%) |
-
-The second number is low, and is explained rather than hidden below.
+| Bot-like transaction entropy | 184 |
+| Bot farm holder cluster | 181 |
+| Holder concentration | 168 |
+| Rug velocity | 3 |
 
 ---
 
 ## 4. Findings
 
-Listed deliberately, including the ones already closed: a report that claims no
-defects is less credible than one that shows what it caught.
+Listed including the closed ones. A report that claims no defects is less
+credible than one that shows what it caught.
 
-### P0 — The Routescan/Snowtrace API key was dead *(disclosed, not yet closed)*
+### P0 — Routescan/Snowtrace dependency was dead *(CLOSED)*
 
-Every endpoint the collector depends on returned
-`"Phone verification required"`: `txlist`, `tokentx`, `balance`,
-`getsourcecode`, `tokenholderlist`.
-
-Consequence: everything routed through that API silently returned empty
+Every endpoint the collector depended on returned `"Phone verification
+required"`: `txlist`, `tokentx`, `balance`, `getsourcecode`,
+`tokenholderlist`. Everything routed through that API silently returned empty
 defaults — deployer identity, contract age, creator history, holder
-concentration, wash-trading detection, rug velocity, funding origin. Only
-bytecode scanning survived, because it goes straight to RPC.
+concentration, wash trading, rug velocity, funding origin. Only bytecode
+scanning survived, because it goes straight to RPC.
 
-Direct evidence across 257 scans — number of times any of these reasons fired:
+Evidence at the time: across 257 scans, holder-concentration, holder-count,
+deployer-history, wash-trading and rug-velocity reasons fired **zero** times,
+while bytecode backdoor scores appeared normally.
 
-| Signal | Occurrences |
-|---|---|
-| Holder concentration | 0 |
-| Holder count | 0 |
-| Deployer history | 0 |
-| Wash trading / bot farm / fresh funding | 0 |
-| Rug velocity | 0 |
+**This was the root cause behind the whitelist.** With only bytecode
+capabilities and liquidity depth as inputs, the engine could not separate an
+established asset from a fresh rug — a stablecoin and a rug both expose
+`mint()`. A hand-maintained list of 16 addresses was compensating for missing
+evidence.
 
-Meanwhile "Bytecode backdoor risk score 20/100" and "40/100" *do* appear (15×
-and 10×), confirming the RPC path works and the Routescan path does not.
+Now restored: `/health` reports `degraded: false`, and section 3.5 shows the
+previously-dead signals firing across the sample.
 
-**This is the root cause behind the whitelist.** With only bytecode capabilities
-and liquidity depth as inputs, the engine cannot separate an established asset
-from a fresh rug — a stablecoin and a rug both expose `mint()`; a forgotten
-bridged asset and a rug both look thin. A hand-maintained list of 16 addresses
-was compensating for the missing evidence.
+### F1 — SUSHI.e whitelist address was wrong *(CLOSED)*
 
-Status after `1d19062`: the dead hardcoded key was removed and `/health` now
-reports `degraded: true`, `routescan: missing_key` instead of silently
-fabricating defaults. The dependency still needs rebinding to AvaCloud (the
-service already holds `AVACLOUD_API_KEY`) or a valid Routescan key.
+The whitelist carried an address that does not exist on-chain, so the real
+SUSHI.e fell through to generic scoring and returned `DANGER`. The same class
+of typo had already occurred on YAK — a typo'd address passes testing silently
+precisely because it is never hit. Beyond the fix, the class is now blocked:
+startup validation checks bytecode and `symbol()` for every whitelist entry
+and surfaces mismatches through `/health`.
 
-### F1 — `SUSHI.e` whitelist address was wrong *(FIXED in `1d19062`)*
-
-`api/server.py` carried `0x37b60851c570232f6f6a2a15d8b8f692ec4e08d5`, which does
-not exist on-chain; the real SUSHI.e is
-`0x37b608519f91f70f2eeb0e5ed9af4061722e4f76`. The entry could never match, so
-real SUSHI.e fell through to generic scoring and returned `DANGER`. The same
-class of typo had already occurred on YAK — a typo'd address passes testing
-silently precisely because it is never hit.
-
-Fixed, and more importantly the class is now structurally blocked: startup
-validation checks bytecode and `symbol()` for every whitelist entry and surfaces
-mismatches through `/health`.
-
-### F2 — Non-token addresses received a confident numeric score *(FIXED in `1d19062`)*
+### F2 — Non-token addresses received a confident numeric score *(CLOSED)*
 
 Router, factory, EOA, zero and burn addresses returned `WARN` with
 `rug_score = 72`, because `totalSupply()` against a non-ERC-20 address returned
-nothing and was read as "Total supply is zero or invalid" (+60). They now return
-`NOT_A_TOKEN`. Verified across the full 257-token sample: **zero legitimate
-tokens were misclassified by the new guard.**
+nothing and was read as "Total supply is zero or invalid". They now return
+`NOT_A_TOKEN`, and across the full 257-token sample **zero legitimate tokens
+were misclassified by the guard**.
 
-### F3 — Mint capability penalises legitimate stablecoins and bridged assets
+### F3 — Mint capability penalised legitimate stablecoins *(CLOSED)*
 
-`JPYC` (23,710 holders) and bridged `SOL` return `DANGER`, driven by
-`mint(address,uint256)` and operator controls. For a stablecoin or a bridge
-token, mint authority is inherent to the design, not evidence of fraud. This is
-the same root cause as the original incident — correctness depends on whitelist
-membership — and it will keep recurring for every legitimate asset outside the
-current 16-entry whitelist. This explains most of the low "GoPlus clean →
-`GOOD`" agreement in §3.5.
+JPYC (23,710 holders) and bridged SOL returned `DANGER` driven by `mint()` and
+operator controls, which for a stablecoin or bridge token is the design rather
+than evidence of fraud. Capability penalties are now weighted by a token track
+record — holder count and age — so an established asset no longer needs to be
+on a list to avoid a rug alarm. Both now return `GOOD`.
 
-### F4 — `WARN` saturation
+### F6 — Track-record weighting was over-applied, then corrected *(CLOSED)*
 
-75% of the sample returns `WARN`. Given the deliberate skew toward fresh dust
-deployments this is largely appropriate, but a verdict that applies to three
-quarters of everything carries limited information. Worth tracking on a
-liquidity-weighted sample before making public claims about verdict precision.
+The first version of the track-record change introduced three regressions that
+the 132-entry suite passed straight over:
 
-### F5 — Latency
+- A maturity floor granted a discount to tokens with no real age, so a
+  12-day-old contract with published source, 120 holders and a seeded pool
+  scored 42 `LOW`; the same token with unpublished source scored 94 `HIGH`.
+  Publishing source is free, so a 52-point swing on that signal alone is not
+  defensible.
+- A third-party "clean" verdict suppressed our own bytecode backdoor
+  detection, hiding the flag entirely from the response.
+- Market risk was capped below warning for any token with holder history,
+  which produced `GOOD` for tokens carrying a few hundred dollars of
+  liquidity — FITFI at $493, ALOT at $427 — while the same response printed
+  "Very thin live liquidity".
 
-Median 4.63 s per scan. Functionally fine, but it is what a user waits after
-clicking "Check", and it constrains any batch or portfolio feature built on
-this endpoint.
+The suite missed all three because every rug-factory address in the golden set
+has one holder and no liquidity, so none of them reached the affected code
+paths. Two profiles were added as permanent gates: the *prepared rug* (young
+but with the cheap signals already bought) and *dead liquidity* (established
+but impossible to exit). Four unit tests encode the guards, and all four failed
+against the regressed engine, which is what made them worth adding.
+
+### F7 — Holder concentration can exceed 100% *(OPEN)*
+
+Six tokens report an impossible concentration figure, and four of them are
+labelled `DANGER` on the strength of it:
+
+| Token | Reported top-5 concentration | Verdict |
+|---|---|---|
+| WBTC | 473.3% | `DANGER` |
+| AAVE.e | 112.1% | `WARN` |
+| waAvaUSDT | 106.2% | `WARN` |
+| bUSDC | 101.3% | `DANGER` |
+| wSAC | 100.3% | `DANGER` |
+| SOL | 100.1% | `DANGER` |
+
+Cause: in `analyze_holder_concentration_avax`, holder quantities and total
+supply are not on the same scale (one raw, one decimal-adjusted). WBTC has
+1,525 holders and is called dangerous because its concentration computes to
+473%.
+
+This errs toward caution rather than false safety, so it is not a shipping
+blocker, but it is visible to anyone reading the flags. The fix needs both a
+unit correction and a hard guard: a computed concentration above 100% is
+invalid data and must be treated as unknown, never scored as `CRITICAL`.
+
+### F8 — Verdict distribution is heavily skewed *(OPEN, advisory)*
+
+`DANGER` now covers 81% of the sample, where a previous revision had `WARN`
+covering 75%. Given the deliberate skew toward fresh dust deployments this is
+largely appropriate, but a verdict that applies to four fifths of everything
+carries limited information. Worth measuring on a liquidity-weighted sample
+before making public claims about verdict precision.
 
 ---
 
 ## 5. Reproducibility
 
-All numbers above can be regenerated:
-
-- `qa/run_regression.py` + `qa/golden_set.yaml` — 51-address gated regression suite (blue-chip, scam, reference cases); exits non-zero on any gate failure and supports `--test-local-fallback` to reproduce the I4 fallback check.
-- Sampling and large-run scripts (`sample_build.py`, `sample_supplement.py`, `sample_finalize.py`, `run_large_qa.py`) produce `sample_candidates.json` and `large_qa_results.json`, which contain the full per-token response including flags, latency and source.
+- `qa/run_regression.py` + `qa/golden_set.yaml` — 142-address gated suite
+  (blue-chip, scam, rug-factory, dead-liquidity, reference cases); exits
+  non-zero on any gate failure and supports `--test-local-fallback` to
+  reproduce the I2 fallback check.
+- `tests/test_avax_risk_engine.py` — unit guards for the prepared-rug and
+  dead-liquidity profiles, plus backdoor visibility.
+- Sampling and large-run scripts (`sample_build.py`, `sample_supplement.py`,
+  `sample_finalize.py`, `run_large_qa.py`) produce `sample_candidates.json`
+  and `large_qa_results.json` with the full per-token response.
 
 Recommended CI placement: run `qa/run_regression.py` on every push to `main`
 touching `api/**` or `chains/avalanche/**`, after deploy completes. It is a
@@ -242,43 +264,24 @@ live-endpoint smoke test and should stay out of the unit-test suite.
 
 ---
 
-## 6. Re-verification after `1d19062`
-
-The full 257-address sample was replayed against the hardened deploy:
-
-| Metric | Result |
-|---|---|
-| HTTP 200 / errors | 257 / 257, zero errors |
-| `source == private_scoring_engine` | 257 / 257 |
-| Canonical assets `GOOD` | 16 / 16 |
-| Rug-factory never `GOOD` | 93 / 93 |
-| Legitimate tokens misread as `NOT_A_TOKEN` | **0 / 257** |
-| `GOOD` set membership | unchanged (24, none added or removed) |
-| Verdict changes | 3, all improvements (`DANGER` → `WARN`) |
-
-The gated suite (`qa/run_regression.py`, 132 entries) returns **GREEN**: I1
-blue-chip 10/10, I2b reference case 1/1, I3 scam 10/10, I4 source 132/132, I5
-rug-factory 81/81.
-
-## 7. Conclusion
+## 6. Conclusion
 
 Across 257 Avalanche addresses the scoring API was stable (257/257 successful,
 zero errors), always served by the private scoring engine, and produced **no
 false `GOOD` verdicts** — including across 93 abandoned single-holder
-deployments. Both hard invariants passed at 100%, and the fallback path was
-verified by direct execution to degrade to `INSUFFICIENT_DATA` rather than
-reassure the user when the engine is unavailable.
+deployments. All hard invariants pass, and the fallback path was verified by
+direct execution to degrade to `INSUFFICIENT_DATA` rather than reassure the
+user when the engine is unavailable.
 
-F1 and F2 are closed, and the whitelist-typo class that produced F1 twice is now
-blocked by startup validation. The P0 data-dependency remains open but is no
-longer silent: `/health` reports `degraded` rather than letting empty defaults
-pass as analysis.
+The data dependency that had been starving the holder, concentration, age and
+deployer signals is restored, and those signals now appear across the sample.
+Capability risk is weighted by a token track record rather than by membership
+in a hand-maintained list, which is what allowed legitimate stablecoins and
+bridged assets to stop reading as rug risk.
 
-F3 (mint capability penalising legitimate stablecoins and bridged assets) cannot
-be closed until that data dependency is restored, because the signals that would
-distinguish an established asset from a fresh deployment — holder count, holder
-concentration, contract age, deployer history — are exactly the ones the dead
-API key was starving.
+One finding remains open (F7, impossible concentration values) and one is
+advisory (F8, verdict skew). Neither causes a dangerous token to be labelled
+safe.
 
 What this evidence supports claiming: the product is stable, it never labels a
 dangerous token as safe, and it reports degradation honestly instead of

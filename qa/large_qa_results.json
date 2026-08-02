@@ -31,11 +31,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Very thin live liquidity at $3,980",
+      "Very thin live liquidity at $3,969",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 4.79
+    "latency_s": 6.35
   },
   {
     "symbol": "NXPC",
@@ -57,20 +57,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "DANGER",
+    "label": "WARN",
     "rug_score": 12,
-    "risk_percent": 99,
+    "risk_percent": 54,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Thin live liquidity at $8,222",
-      "Liquidity to FDV ratio is under 1% - exit liquidity risk is extreme"
+      "Thin live liquidity at $7,969",
+      "Capability risk discounted: 54,243 holders over 444d without an observed drain (track record 1.00)"
     ],
     "error": null,
-    "latency_s": 3.4
+    "latency_s": 10.34
   },
   {
     "symbol": "GOAT",
@@ -95,19 +95,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
-    "risk_percent": 76,
+    "rug_score": 96,
+    "risk_percent": 96,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Admin controls present before supported live liquidity is found",
+      "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 23.66
   },
   {
     "symbol": "FINANCE",
@@ -132,7 +132,7 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
+    "rug_score": 82,
     "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
@@ -140,11 +140,11 @@
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Near-zero deployer balance (0.0025 AVAX)",
+      "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.89
+    "latency_s": 19.84
   },
   {
     "symbol": "MAXI",
@@ -168,20 +168,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 8.88
   },
   {
     "symbol": "AQUA",
@@ -205,20 +205,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 8.86
   },
   {
     "symbol": "GIF",
@@ -242,20 +242,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.49
+    "latency_s": 9.33
   },
   {
     "symbol": "BUMPER",
@@ -279,20 +279,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 8.69
   },
   {
     "symbol": "WISE",
@@ -315,19 +315,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
-    "risk_percent": 76,
+    "rug_score": 92,
+    "risk_percent": 92,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Bot-like transaction entropy",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 23.13
   },
   {
     "symbol": "KNIGHT",
@@ -351,20 +351,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.64
+    "latency_s": 9.04
   },
   {
     "symbol": "FELICETTE",
@@ -388,20 +388,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.93
+    "latency_s": 9.4
   },
   {
     "symbol": "DOV",
@@ -425,20 +425,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.77
+    "latency_s": 8.44
   },
   {
     "symbol": "CLAM",
@@ -461,19 +461,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 38,
+    "rug_score": 60,
     "risk_percent": 88,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "High holder concentration top5=94.6%",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $13,407"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 28.92
   },
   {
     "symbol": "WCC",
@@ -497,20 +497,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 9.35
   },
   {
     "symbol": "SMRT",
@@ -534,20 +534,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.5
+    "latency_s": 8.7
   },
   {
     "symbol": "PEPEWIFHAT",
@@ -571,20 +571,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.51
+    "latency_s": 8.61
   },
   {
     "symbol": "PEMDAS",
@@ -608,20 +608,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 8.58
   },
   {
     "symbol": "FOREHEAD",
@@ -645,20 +645,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.76
+    "latency_s": 9.29
   },
   {
     "symbol": "PHAR",
@@ -681,19 +681,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
-    "risk_percent": 76,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Critical holder concentration top5=96.5%",
+      "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 19.97
   },
   {
     "symbol": "MANYU",
@@ -717,20 +717,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 9.57
   },
   {
     "symbol": "SCRIBBLI",
@@ -754,20 +754,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 9.51
   },
   {
     "symbol": "SHELL",
@@ -791,7 +791,7 @@
     "ok": true,
     "label": "WARN",
     "rug_score": 38,
-    "risk_percent": 73,
+    "risk_percent": 71,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
@@ -799,10 +799,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $30,850"
+      "Shallow live liquidity at $30,711"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 20.28
   },
   {
     "symbol": "ADION",
@@ -826,20 +826,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.47
+    "latency_s": 8.63
   },
   {
     "symbol": "NICK",
@@ -863,20 +863,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 10.75
   },
   {
     "symbol": "CHIBI",
@@ -900,20 +900,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.74
+    "latency_s": 9.24
   },
   {
     "symbol": "METAL",
@@ -937,20 +937,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 9.29
   },
   {
     "symbol": "JOJO",
@@ -974,20 +974,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 9.76
   },
   {
     "symbol": "UNBAGGED",
@@ -1011,20 +1011,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.8
+    "latency_s": 7.32
   },
   {
     "symbol": "LSD",
@@ -1048,20 +1048,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 8.18
   },
   {
     "symbol": "$INTERN",
@@ -1085,20 +1085,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 13.63
   },
   {
     "symbol": "HERESY",
@@ -1122,19 +1122,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 38,
+    "rug_score": 54,
     "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Bot-like transaction entropy",
+      "Near-zero deployer balance (0.0424 AVAX)",
       "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $16,976"
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.55
+    "latency_s": 31.38
   },
   {
     "symbol": "JOE",
@@ -1165,11 +1165,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $242,989",
+      "Meaningful live liquidity at $243,547",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 5.6
   },
   {
     "symbol": "JANRO",
@@ -1193,20 +1193,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.55
+    "latency_s": 7.01
   },
   {
     "symbol": "SHIB",
@@ -1230,20 +1230,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 7.28
   },
   {
     "symbol": "GOONER",
@@ -1267,20 +1267,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 6.98
   },
   {
     "symbol": "BCAT",
@@ -1304,20 +1304,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 7.44
   },
   {
     "symbol": "SOLANA",
@@ -1341,20 +1341,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.52
+    "latency_s": 7.06
   },
   {
     "symbol": "WESLEY",
@@ -1378,20 +1378,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 7.21
   },
   {
     "symbol": "USTREAM",
@@ -1415,20 +1415,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 7.16
   },
   {
     "symbol": "VAULT",
@@ -1452,20 +1452,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.98
+    "latency_s": 6.92
   },
   {
     "symbol": "USH",
@@ -1489,20 +1489,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 7.01
   },
   {
     "symbol": "MEOW",
@@ -1526,20 +1526,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.9
+    "latency_s": 7.27
   },
   {
     "symbol": "PAPERCLIPS",
@@ -1563,20 +1563,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 8.83
   },
   {
     "symbol": "FUR",
@@ -1600,20 +1600,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.51
+    "latency_s": 8.8
   },
   {
     "symbol": "$PRIME",
@@ -1637,20 +1637,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 7.02
   },
   {
     "symbol": "FARTHER",
@@ -1674,20 +1674,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 6.96
   },
   {
     "symbol": "$HUSKY",
@@ -1711,20 +1711,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.55
+    "latency_s": 6.88
   },
   {
     "symbol": "$BIRDFLU",
@@ -1748,20 +1748,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.56
+    "latency_s": 6.71
   },
   {
     "symbol": "PRINT",
@@ -1785,20 +1785,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.64
+    "latency_s": 6.92
   },
   {
     "symbol": "TIAI",
@@ -1822,20 +1822,46 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 7.56
+  },
+  {
+    "symbol": "EURC",
+    "address": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+    "tier": "A_bluechip",
+    "expectation": "must_be_GOOD",
+    "discovery": "bluechip_control",
+    "reserve_usd": null,
+    "age_hours": null,
+    "goplus": null,
+    "http_status": 200,
+    "ok": true,
+    "label": "GOOD",
+    "rug_score": 18,
+    "risk_percent": 28,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Known asset uses upgradeable proxy pattern",
+      "Token name readable on-chain",
+      "Token symbol readable on-chain",
+      "Decimals value is within normal ERC-20 range",
+      "Meaningful live liquidity at $200,231",
+      "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
+    ],
+    "error": null,
+    "latency_s": 27.3
   },
   {
     "symbol": "CRAB",
@@ -1859,20 +1885,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.59
+    "latency_s": 5.16
   },
   {
     "symbol": "NIRE",
@@ -1896,20 +1922,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.56
+    "latency_s": 4.06
   },
   {
     "symbol": "+",
@@ -1933,20 +1959,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.52
+    "latency_s": 3.95
   },
   {
     "symbol": "T8008",
@@ -1970,20 +1996,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.51
+    "latency_s": 3.96
   },
   {
     "symbol": "ASTA",
@@ -2007,20 +2033,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 4.2
   },
   {
     "symbol": "waAvaUSDT",
@@ -2042,19 +2068,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "INSUFFICIENT_DATA",
-    "rug_score": 12,
-    "risk_percent": 12,
+    "label": "WARN",
+    "rug_score": 66,
+    "risk_percent": 66,
     "source": "private_scoring_engine",
     "risk_flags": [
+      "Critical holder concentration top5=106.2%",
+      "High rug velocity score 0.6",
+      "Very few holders (5)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Total supply readable on-chain",
-      "No live liquidity evidence found on supported Avalanche venues"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.8
+    "latency_s": 24.64
   },
   {
     "symbol": "bUSDT",
@@ -2089,7 +2116,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.89
+    "latency_s": 19.18
   },
   {
     "symbol": "YAKA",
@@ -2113,20 +2140,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 3.86
   },
   {
     "symbol": "REMILIA",
@@ -2150,20 +2177,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 3.96
   },
   {
     "symbol": "INVITE",
@@ -2187,20 +2214,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.5
+    "latency_s": 4.02
   },
   {
     "symbol": "KEVIN",
@@ -2224,20 +2251,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 3.97
   },
   {
     "symbol": "UFO",
@@ -2261,20 +2288,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 3.96
   },
   {
     "symbol": "NFTBS",
@@ -2298,20 +2325,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.48
+    "latency_s": 3.89
   },
   {
     "symbol": "LOS",
@@ -2335,20 +2362,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.56
+    "latency_s": 4.05
   },
   {
     "symbol": "FLAG",
@@ -2372,20 +2399,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 3.7
   },
   {
     "symbol": "L",
@@ -2409,20 +2436,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 3.91
   },
   {
     "symbol": "STELAI",
@@ -2446,20 +2473,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.72
+    "latency_s": 3.86
   },
   {
     "symbol": "WSB",
@@ -2483,20 +2510,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.49
+    "latency_s": 3.89
   },
   {
     "symbol": "STG",
@@ -2520,18 +2547,18 @@
     "ok": true,
     "label": "WARN",
     "rug_score": 12,
-    "risk_percent": 70,
+    "risk_percent": 72,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Known Avalanche canonical/established asset; new-token heuristics suppressed",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Very thin live liquidity at $1,146",
+      "Very thin live liquidity at $1,114",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.43
+    "latency_s": 5.38
   },
   {
     "symbol": "CAP",
@@ -2555,20 +2582,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 3.78
   },
   {
     "symbol": "SHIKA-YAN",
@@ -2592,20 +2619,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.5
+    "latency_s": 4.01
   },
   {
     "symbol": "AISCII",
@@ -2629,20 +2656,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.75
+    "latency_s": 3.9
   },
   {
     "symbol": "LTD",
@@ -2666,20 +2693,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 3.88
   },
   {
     "symbol": "BOOBS",
@@ -2703,20 +2730,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 3.82
   },
   {
     "symbol": "REPLACEMENT",
@@ -2740,20 +2767,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 3.63
   },
   {
     "symbol": "wSAC",
@@ -2776,19 +2803,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 38,
+    "rug_score": 74,
     "risk_percent": 83,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Critical holder concentration top5=100.3%",
+      "Near-zero deployer balance (0.0072 AVAX)",
       "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $25,042"
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 20.77
   },
   {
     "symbol": "LAMBOW",
@@ -2812,20 +2839,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 3.99
   },
   {
     "symbol": "MAFIA",
@@ -2849,20 +2876,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 3.92
   },
   {
     "symbol": "bUSDC",
@@ -2893,11 +2920,11 @@
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
       "Admin controls present before supported live liquidity is found",
-      "Upgradeable proxy contract",
-      "Token name readable on-chain"
+      "Critical holder concentration top5=101.3%",
+      "Upgradeable proxy contract"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 9.52
   },
   {
     "symbol": "ALR",
@@ -2921,20 +2948,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.51
+    "latency_s": 3.85
   },
   {
     "symbol": "BUNNY",
@@ -2958,20 +2985,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.48
+    "latency_s": 4.17
   },
   {
     "symbol": "RAGE",
@@ -2995,20 +3022,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 3.96
   },
   {
     "symbol": "BSOP",
@@ -3032,20 +3059,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 3.86
   },
   {
     "symbol": "MATO",
@@ -3069,20 +3096,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 3.63
   },
   {
     "symbol": "AINL",
@@ -3106,20 +3133,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.64
+    "latency_s": 3.99
   },
   {
     "symbol": "HOPPY",
@@ -3143,20 +3170,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.81
+    "latency_s": 3.85
   },
   {
     "symbol": "WBTC",
@@ -3178,20 +3205,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 38,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 78,
+    "risk_percent": 78,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Critical holder concentration top5=473.3%",
+      "Bot-like transaction entropy",
       "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $67,078"
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.45
+    "latency_s": 25.33
   },
   {
     "symbol": "ICC",
@@ -3215,20 +3242,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 3.85
   },
   {
     "symbol": "bAUSD",
@@ -3259,11 +3286,11 @@
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
       "Admin controls present before supported live liquidity is found",
-      "Upgradeable proxy contract",
-      "Token name readable on-chain"
+      "Critical holder concentration top5=92.6%",
+      "Upgradeable proxy contract"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 9.06
   },
   {
     "symbol": "KIGU",
@@ -3287,20 +3314,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 3.85
   },
   {
     "symbol": "OLIVIA",
@@ -3324,20 +3351,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 3.94
   },
   {
     "symbol": "LEIA",
@@ -3361,20 +3388,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 4.09
   },
   {
     "symbol": "CUR",
@@ -3398,20 +3425,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.51
+    "latency_s": 3.94
   },
   {
     "symbol": "BDOGE",
@@ -3435,20 +3462,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 3.87
   },
   {
     "symbol": "GLMPS",
@@ -3472,20 +3499,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 3.93
   },
   {
     "symbol": "WIZ",
@@ -3509,20 +3536,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 3.79
   },
   {
     "symbol": "F",
@@ -3546,20 +3573,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 3.99
   },
   {
     "symbol": "aAVAXb",
@@ -3582,19 +3609,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 84,
+    "rug_score": 100,
     "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 40/100",
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Upgradeable proxy contract",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=97.1%",
+      "Upgradeable proxy contract"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 21.25
   },
   {
     "symbol": "T7",
@@ -3618,17 +3645,17 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
     "latency_s": 3.97
@@ -3655,20 +3682,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.81
+    "latency_s": 4.07
   },
   {
     "symbol": "AAVE.e",
@@ -3690,20 +3717,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "GOOD",
-    "rug_score": 20,
-    "risk_percent": 20,
+    "label": "WARN",
+    "rug_score": 50,
+    "risk_percent": 50,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
+      "Critical holder concentration top5=112.1%",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $257,239",
-      "Liquidity to FDV ratio is very healthy"
+      "Meaningful live liquidity at $258,452"
     ],
     "error": null,
-    "latency_s": 3.44
+    "latency_s": 15.63
   },
   {
     "symbol": "ZERO",
@@ -3727,20 +3754,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.73
+    "latency_s": 3.99
   },
   {
     "symbol": "$SOULS",
@@ -3764,20 +3791,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.93
+    "latency_s": 3.97
   },
   {
     "symbol": "LOGOS",
@@ -3801,20 +3828,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 3.83
   },
   {
     "symbol": "$KEK",
@@ -3838,20 +3865,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 3.73
   },
   {
     "symbol": "BLACK",
@@ -3886,7 +3913,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 26.3
   },
   {
     "symbol": "X1000",
@@ -3910,20 +3937,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 3.75
   },
   {
     "symbol": "MC",
@@ -3947,20 +3974,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.71
+    "latency_s": 3.91
   },
   {
     "symbol": "SUGAR",
@@ -3984,20 +4011,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.72
+    "latency_s": 3.96
   },
   {
     "symbol": "BUTTCOIN",
@@ -4021,20 +4048,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.9
+    "latency_s": 4.01
   },
   {
     "symbol": "PEGECOIN",
@@ -4058,20 +4085,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.88
+    "latency_s": 4.07
   },
   {
     "symbol": "MUSK",
@@ -4095,20 +4122,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.71
+    "latency_s": 3.93
   },
   {
     "symbol": "CAMEL",
@@ -4132,20 +4159,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.64
+    "latency_s": 4.03
   },
   {
     "symbol": "SYN",
@@ -4165,20 +4192,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "DANGER",
+    "label": "WARN",
     "rug_score": 12,
-    "risk_percent": 100,
+    "risk_percent": 60,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Very thin live liquidity at $3,219",
-      "Liquidity to FDV ratio is under 5% - exit liquidity looks fragile"
+      "Very thin live liquidity at $3,190",
+      "Capability risk discounted: 3,069 holders over 1795d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 3.84
+    "latency_s": 5.59
   },
   {
     "symbol": "XAVA",
@@ -4207,11 +4234,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $419,582",
+      "Meaningful live liquidity at $419,513",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 4.61
   },
   {
     "symbol": "MUON",
@@ -4244,7 +4271,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.74
+    "latency_s": 22.8
   },
   {
     "symbol": "JPYC",
@@ -4264,20 +4291,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "DANGER",
-    "rug_score": 46,
-    "risk_percent": 100,
+    "label": "WARN",
+    "rug_score": 23,
+    "risk_percent": 60,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
+      "Capability risk discounted: 23,710 holders over 279d without an observed drain (track record 0.83)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $14,214"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.84
+    "latency_s": 4.91
   },
   {
     "symbol": "SOL",
@@ -4298,7 +4325,7 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
+    "rug_score": 100,
     "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
@@ -4306,11 +4333,11 @@
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Critical holder concentration top5=100.1%",
+      "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.86
+    "latency_s": 4.74
   },
   {
     "symbol": "AVAXAI",
@@ -4343,7 +4370,7 @@
       "Very thin live liquidity at $1,619"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 5.78
   },
   {
     "symbol": "BLKSTR",
@@ -4364,19 +4391,19 @@
     "http_status": 200,
     "ok": true,
     "label": "WARN",
-    "rug_score": 38,
+    "rug_score": 46,
     "risk_percent": 46,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Very few holders (2)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $11,885"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 5.95
+    "latency_s": 20.1
   },
   {
     "symbol": "USDe",
@@ -4397,19 +4424,19 @@
     "http_status": 200,
     "ok": true,
     "label": "GOOD",
-    "rug_score": 38,
-    "risk_percent": 38,
+    "rug_score": 44,
+    "risk_percent": 44,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Near-zero deployer balance (0.0000 AVAX)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $499,718"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.45
+    "latency_s": 16.73
   },
   {
     "symbol": "ORNG",
@@ -4438,11 +4465,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $16,754",
+      "Thin live liquidity at $16,762",
       "Liquidity to FDV ratio is under 1% - exit liquidity risk is extreme"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 5.74
   },
   {
     "symbol": "ZRO",
@@ -4475,7 +4502,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.55
+    "latency_s": 18.76
   },
   {
     "symbol": "KIMBO",
@@ -4505,10 +4532,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $39,548"
+      "Shallow live liquidity at $39,456"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 15.98
   },
   {
     "symbol": "KET",
@@ -4529,19 +4556,19 @@
     "http_status": 200,
     "ok": true,
     "label": "WARN",
-    "rug_score": 38,
+    "rug_score": 48,
     "risk_percent": 48,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Bot-like transaction entropy",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $126,601"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 5.9
   },
   {
     "symbol": "gOHM",
@@ -4561,20 +4588,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
+    "label": "GOOD",
     "rug_score": 12,
-    "risk_percent": 56,
+    "risk_percent": 28,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Meaningful live liquidity at $130,187",
-      "Liquidity to FDV ratio is under 5% - exit liquidity looks fragile"
+      "Meaningful live liquidity at $129,171",
+      "Capability risk discounted: 7,462 holders over 1708d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 3.47
+    "latency_s": 16.83
   },
   {
     "symbol": "SUPER",
@@ -4595,19 +4622,19 @@
     "http_status": 200,
     "ok": true,
     "label": "GOOD",
-    "rug_score": 38,
-    "risk_percent": 38,
+    "rug_score": 44,
+    "risk_percent": 44,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Near-zero deployer balance (0.0147 AVAX)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $256,709"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 16.89
   },
   {
     "symbol": "BRO",
@@ -4627,20 +4654,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "GOOD",
-    "rug_score": 12,
-    "risk_percent": 36,
+    "label": "WARN",
+    "rug_score": 50,
+    "risk_percent": 50,
     "source": "private_scoring_engine",
     "risk_flags": [
+      "High holder concentration top5=91.0%",
+      "High rug velocity score 0.6",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Total supply readable on-chain",
-      "Shallow live liquidity at $94,015",
-      "Liquidity to FDV ratio is very healthy"
+      "Shallow live liquidity at $94,015"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 18.51
   },
   {
     "symbol": "COQAI",
@@ -4661,19 +4688,19 @@
     "http_status": 200,
     "ok": true,
     "label": "WARN",
-    "rug_score": 38,
+    "rug_score": 54,
     "risk_percent": 74,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
+      "Bot-like transaction entropy",
+      "Near-zero deployer balance (0.0945 AVAX)",
       "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $9,841"
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 18.26
   },
   {
     "symbol": "FOLKS",
@@ -4694,19 +4721,19 @@
     "http_status": 200,
     "ok": true,
     "label": "WARN",
-    "rug_score": 46,
-    "risk_percent": 63,
+    "rug_score": 59,
+    "risk_percent": 59,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address)",
       "Operator/authorization controls can gate trading or privileges",
+      "Critical holder concentration top5=95.6%",
+      "Capability risk discounted: 838 holders over 269d without an observed drain (track record 0.59)",
       "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $36,660"
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.82
+    "latency_s": 19.4
   },
   {
     "symbol": "COQ",
@@ -4736,10 +4763,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $415,885"
+      "Meaningful live liquidity at $418,275"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 5.68
   },
   {
     "symbol": "ncash",
@@ -4760,19 +4787,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 84,
-    "risk_percent": 86,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 40/100",
       "Owner/admin control functions detected: mint(address,uint256)",
       "Operator/authorization controls can gate trading or privileges",
       "Upgradeable proxy contract",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "High rug velocity score 0.6",
+      "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.76
+    "latency_s": 24.03
   },
   {
     "symbol": "ALTSEASON",
@@ -4785,20 +4812,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.59
+    "latency_s": 5.94
   },
   {
     "symbol": "PONKEI",
@@ -4811,20 +4838,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.64
+    "latency_s": 5.87
   },
   {
     "symbol": "SOOTCASE",
@@ -4837,20 +4864,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.72
+    "latency_s": 4.12
   },
   {
     "symbol": "JEWEL",
@@ -4863,20 +4890,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "DANGER",
+    "label": "WARN",
     "rug_score": 12,
-    "risk_percent": 92,
+    "risk_percent": 60,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Very thin live liquidity at $3,911",
-      "Liquidity to FDV ratio is under 15% - market depth is shallow"
+      "Very thin live liquidity at $3,945",
+      "Capability risk discounted: 4,062 holders over 968d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 5.94
   },
   {
     "symbol": "YUPFUN",
@@ -4889,20 +4916,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.87
+    "latency_s": 4.1
   },
   {
     "symbol": "G",
@@ -4915,20 +4942,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 5.93
   },
   {
     "symbol": "LEPER",
@@ -4941,20 +4968,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 5.92
   },
   {
     "symbol": "YOM",
@@ -4968,19 +4995,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 46,
-    "risk_percent": 83,
+    "rug_score": 91,
+    "risk_percent": 91,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Owner/admin control functions detected: setBlacklist(address,bool)",
       "Operator/authorization controls can gate trading or privileges",
+      "Critical holder concentration top5=94.8%",
+      "Bot farm holder cluster",
       "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $76,715"
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 10.69
   },
   {
     "symbol": "READ",
@@ -4993,20 +5020,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 5.91
   },
   {
     "symbol": "FETCHR",
@@ -5019,20 +5046,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.48
+    "latency_s": 6.23
   },
   {
     "symbol": "CMEM",
@@ -5045,20 +5072,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.55
+    "latency_s": 5.97
   },
   {
     "symbol": "FITFI",
@@ -5080,11 +5107,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Very thin live liquidity at $528",
+      "Very thin live liquidity at $513",
       "Liquidity to FDV ratio is under 1% - exit liquidity risk is extreme"
     ],
     "error": null,
-    "latency_s": 3.75
+    "latency_s": 5.96
   },
   {
     "symbol": "RIZZMASEVE",
@@ -5097,20 +5124,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.71
+    "latency_s": 5.79
   },
   {
     "symbol": "HOTEMIN",
@@ -5124,19 +5151,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
-    "risk_percent": 76,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "High holder concentration top5=89.9%",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 5.6
   },
   {
     "symbol": "HOODRAT",
@@ -5149,20 +5176,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.87
+    "latency_s": 5.89
   },
   {
     "symbol": "ARENA",
@@ -5177,18 +5204,18 @@
     "ok": true,
     "label": "WARN",
     "rug_score": 20,
-    "risk_percent": 61,
+    "risk_percent": 53,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $183,420",
+      "Meaningful live liquidity at $183,412",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 5.76
   },
   {
     "symbol": "axlUSDC",
@@ -5214,7 +5241,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 22.26
   },
   {
     "symbol": "BRUVS",
@@ -5227,20 +5254,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 5.59
   },
   {
     "symbol": "AI",
@@ -5253,20 +5280,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 6.11
   },
   {
     "symbol": "SUICY",
@@ -5279,20 +5306,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.73
+    "latency_s": 5.42
   },
   {
     "symbol": "PIGWIF",
@@ -5305,20 +5332,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.66
+    "latency_s": 5.79
   },
   {
     "symbol": "XAUt0",
@@ -5332,19 +5359,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 84,
-    "risk_percent": 84,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 40/100",
       "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
       "Upgradeable proxy contract",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Bot-like transaction entropy",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 24.19
   },
   {
     "symbol": "BLARP",
@@ -5357,20 +5384,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 5.83
   },
   {
     "symbol": "BANX",
@@ -5383,20 +5410,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 5.83
   },
   {
     "symbol": "$DCAY",
@@ -5409,20 +5436,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.56
+    "latency_s": 5.8
   },
   {
     "symbol": "OUSTON",
@@ -5435,20 +5462,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.49
+    "latency_s": 4.06
   },
   {
     "symbol": "LITE",
@@ -5462,19 +5489,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
-    "risk_percent": 76,
+    "rug_score": 99,
+    "risk_percent": 99,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Bot farm holder cluster",
+      "Very few holders (4)"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 12.28
   },
   {
     "symbol": "HENTAI",
@@ -5487,20 +5514,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 3.94
   },
   {
     "symbol": "SEDUX",
@@ -5513,20 +5540,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 5.87
   },
   {
     "symbol": "WAG",
@@ -5539,20 +5566,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 5.75
   },
   {
     "symbol": "BRAINROT",
@@ -5565,20 +5592,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 5.78
   },
   {
     "symbol": "UNITED",
@@ -5591,20 +5618,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 6.04
   },
   {
     "symbol": "CNR",
@@ -5617,20 +5644,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "DANGER",
+    "label": "WARN",
     "rug_score": 12,
-    "risk_percent": 100,
+    "risk_percent": 60,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Very thin live liquidity at $4,308",
-      "Liquidity to FDV ratio is under 5% - exit liquidity looks fragile"
+      "Very thin live liquidity at $4,310",
+      "Capability risk discounted: 2,803 holders over 411d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 5.55
   },
   {
     "symbol": "CFX",
@@ -5643,20 +5670,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.59
+    "latency_s": 3.86
   },
   {
     "symbol": "ALOT",
@@ -5679,10 +5706,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Very thin live liquidity at $427"
+      "Very thin live liquidity at $444"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 20.03
   },
   {
     "symbol": "p33",
@@ -5697,18 +5724,18 @@
     "ok": true,
     "label": "WARN",
     "rug_score": 20,
-    "risk_percent": 73,
+    "risk_percent": 71,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $53,733",
+      "Shallow live liquidity at $53,843",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 3.74
+    "latency_s": 13.34
   },
   {
     "symbol": "FUND",
@@ -5721,20 +5748,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 6.0
   },
   {
     "symbol": "COMRADES",
@@ -5747,20 +5774,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.79
+    "latency_s": 6.08
   },
   {
     "symbol": "SBTC",
@@ -5773,20 +5800,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 6.03
   },
   {
     "symbol": "UNDEAD",
@@ -5812,7 +5839,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 19.36
   },
   {
     "symbol": "PUMPKIN",
@@ -5825,20 +5852,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.72
+    "latency_s": 6.68
   },
   {
     "symbol": "$KITA",
@@ -5851,20 +5878,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 5.63
   },
   {
     "symbol": "GATO",
@@ -5877,20 +5904,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.8
+    "latency_s": 5.99
   },
   {
     "symbol": "PEARL",
@@ -5903,20 +5930,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 5.78
   },
   {
     "symbol": "GOAI",
@@ -5929,20 +5956,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 5.79
   },
   {
     "symbol": "QI",
@@ -5964,11 +5991,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $118,395",
+      "Meaningful live liquidity at $119,809",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 7.06
   },
   {
     "symbol": "SFIT",
@@ -5981,20 +6008,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 6.41
   },
   {
     "symbol": "HUNDRED",
@@ -6017,10 +6044,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $540,950"
+      "Deep live liquidity at $541,581"
     ],
     "error": null,
-    "latency_s": 3.81
+    "latency_s": 22.04
   },
   {
     "symbol": "FITCOIN",
@@ -6033,20 +6060,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 5.64
   },
   {
     "symbol": "GUN",
@@ -6059,20 +6086,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "DANGER",
-    "rug_score": 46,
-    "risk_percent": 99,
+    "label": "WARN",
+    "rug_score": 29,
+    "risk_percent": 54,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256)",
       "Operator/authorization controls can gate trading or privileges",
+      "Capability risk discounted: 5,032 holders over 388d without an observed drain (track record 0.79)",
+      "Near-zero deployer balance (0.0020 AVAX)",
       "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $9,475"
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.46
+    "latency_s": 18.68
   },
   {
     "symbol": "BBRETT",
@@ -6085,20 +6112,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.57
+    "latency_s": 5.7
   },
   {
     "symbol": "ALASKA",
@@ -6111,20 +6138,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.82
+    "latency_s": 6.11
   },
   {
     "symbol": "$SCARF",
@@ -6137,20 +6164,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.75
+    "latency_s": 10.68
   },
   {
     "symbol": "LINK.e",
@@ -6172,11 +6199,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $57,533",
+      "Shallow live liquidity at $57,273",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.38
+    "latency_s": 13.88
   },
   {
     "symbol": "USAID",
@@ -6189,20 +6216,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.44
+    "latency_s": 5.78
   },
   {
     "symbol": "MGAMES",
@@ -6215,20 +6242,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.47
+    "latency_s": 6.82
   },
   {
     "symbol": "CORN",
@@ -6241,20 +6268,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 5.59
   },
   {
     "symbol": "SPECU",
@@ -6267,20 +6294,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.49
+    "latency_s": 5.78
   },
   {
     "symbol": "SHITCOIN",
@@ -6293,20 +6320,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.59
+    "latency_s": 7.28
   },
   {
     "symbol": "LINGYAN",
@@ -6319,20 +6346,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 5.7
   },
   {
     "symbol": "PNG",
@@ -6354,11 +6381,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $171,794",
+      "Meaningful live liquidity at $172,973",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 11.7
   },
   {
     "symbol": "PUMLX",
@@ -6371,20 +6398,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 3.92
   },
   {
     "symbol": "SHEEP",
@@ -6397,20 +6424,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 5.69
   },
   {
     "symbol": "JAPAN",
@@ -6423,20 +6450,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 7.48
   },
   {
     "symbol": "SHAKEY",
@@ -6449,20 +6476,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.75
+    "latency_s": 6.59
   },
   {
     "symbol": "WATER",
@@ -6475,20 +6502,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.87
+    "latency_s": 6.36
   },
   {
     "symbol": "NAZAREAI",
@@ -6501,20 +6528,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 5.81
   },
   {
     "symbol": "LOCK",
@@ -6527,20 +6554,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.72
+    "latency_s": 5.93
   },
   {
     "symbol": "LIDUM",
@@ -6553,20 +6580,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 5.72
   },
   {
     "symbol": "FOID",
@@ -6579,20 +6606,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 5.7
   },
   {
     "symbol": "GOF",
@@ -6605,20 +6632,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.55
+    "latency_s": 6.27
   },
   {
     "symbol": "DARKHORSE",
@@ -6631,20 +6658,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.44
+    "latency_s": 5.65
   },
   {
     "symbol": "BLUE",
@@ -6657,20 +6684,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.59
+    "latency_s": 6.32
   },
   {
     "symbol": "DARK",
@@ -6683,20 +6710,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 6.22
   },
   {
     "symbol": "SNAKE2025",
@@ -6709,20 +6736,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 5.8
   },
   {
     "symbol": "FOG",
@@ -6735,20 +6762,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 5.91
   },
   {
     "symbol": "AICRYNODE",
@@ -6761,20 +6788,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 6.98
   },
   {
     "symbol": "YAK",
@@ -6796,11 +6823,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $6,392",
+      "Very thin live liquidity at $2,427",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.67
+    "latency_s": 5.68
   },
   {
     "symbol": "hCASH",
@@ -6826,7 +6853,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 11.43
   },
   {
     "symbol": "USDV",
@@ -6840,19 +6867,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 46,
-    "risk_percent": 94,
+    "rug_score": 68,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 40/100",
+      "High holder concentration top5=89.5%",
       "Upgradeable proxy contract",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Very thin live liquidity at $551"
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 20.78
   },
   {
     "symbol": "HUCH",
@@ -6865,20 +6892,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.79
+    "latency_s": 5.72
   },
   {
     "symbol": "DGRWON",
@@ -6891,20 +6918,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 5.69
   },
   {
     "symbol": "yyAVAX",
@@ -6918,19 +6945,19 @@
     "http_status": 200,
     "ok": true,
     "label": "GOOD",
-    "rug_score": 12,
-    "risk_percent": 26,
+    "rug_score": 29,
+    "risk_percent": 34,
     "source": "private_scoring_engine",
     "risk_flags": [
+      "Extreme holder concentration top5=98.4% damped by token track record",
+      "Near-zero deployer balance (0.0721 AVAX)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Total supply readable on-chain",
-      "Meaningful live liquidity at $348,746",
-      "Liquidity to FDV ratio is very healthy"
+      "Meaningful live liquidity at $349,009"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 27.91
   },
   {
     "symbol": "COININI",
@@ -6943,20 +6970,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.74
+    "latency_s": 5.44
   },
   {
     "symbol": "KLINK",
@@ -6969,20 +6996,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 5.85
   },
   {
     "symbol": "SKULL",
@@ -6995,20 +7022,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.84
+    "latency_s": 5.63
   },
   {
     "symbol": "NAMI",
@@ -7021,20 +7048,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 7.31
   },
   {
     "symbol": "CATFU",
@@ -7047,20 +7074,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.46
+    "latency_s": 3.8
   },
   {
     "symbol": "PFVS",
@@ -7073,20 +7100,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 8.22
   },
   {
     "symbol": "$POOKU",
@@ -7099,20 +7126,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.73
+    "latency_s": 5.61
   },
   {
     "symbol": "DEAI",
@@ -7125,20 +7152,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 5.56
   },
   {
     "symbol": "HUSKY",
@@ -7160,11 +7187,11 @@
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Thin live liquidity at $14,023",
+      "Thin live liquidity at $14,006",
       "Liquidity to FDV ratio is under 15% - market depth is shallow"
     ],
     "error": null,
-    "latency_s": 3.71
+    "latency_s": 6.35
   },
   {
     "symbol": "BANDS",
@@ -7190,7 +7217,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.45
+    "latency_s": 9.43
   },
   {
     "symbol": "KOI",
@@ -7203,20 +7230,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 5.66
   },
   {
     "symbol": "sAVAX",
@@ -7242,7 +7269,7 @@
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 20.78
   },
   {
     "symbol": "JUICE",
@@ -7264,11 +7291,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $10,123",
+      "Thin live liquidity at $10,202",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 3.59
+    "latency_s": 5.77
   },
   {
     "symbol": "DREAM",
@@ -7281,20 +7308,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.57
+    "latency_s": 6.36
   },
   {
     "symbol": "THE",
@@ -7307,20 +7334,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.66
+    "latency_s": 5.6
   },
   {
     "symbol": "avUSD",
@@ -7334,7 +7361,7 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 76,
+    "rug_score": 98,
     "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
@@ -7342,11 +7369,11 @@
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address,bool), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "High holder concentration top5=94.0%",
+      "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 24.48
   },
   {
     "symbol": "UST",
@@ -7372,7 +7399,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 3.65
+    "latency_s": 19.78
   },
   {
     "symbol": "AGF",
@@ -7385,20 +7412,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 5.8
   },
   {
     "symbol": "NOVA",
@@ -7411,20 +7438,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.52
+    "latency_s": 6.05
   },
   {
     "symbol": "BLOCK",
@@ -7437,20 +7464,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 3.92
   },
   {
     "symbol": "NYX",
@@ -7463,20 +7490,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.62
+    "latency_s": 5.83
   },
   {
     "symbol": "ILIS",
@@ -7489,20 +7516,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.5
+    "latency_s": 5.76
   },
   {
     "symbol": "HOONI",
@@ -7515,20 +7542,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 6.04
   },
   {
     "symbol": "GUT",
@@ -7541,20 +7568,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 4.01
   },
   {
     "symbol": "BEE",
@@ -7567,20 +7594,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.69
+    "latency_s": 3.88
   },
   {
     "symbol": "BEAM",
@@ -7606,7 +7633,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 19.36
   },
   {
     "symbol": "RICHGUY",
@@ -7619,20 +7646,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 5.82
   },
   {
     "symbol": "JANNY",
@@ -7645,20 +7672,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.6
+    "latency_s": 6.09
   },
   {
     "symbol": "BTCWIZ",
@@ -7671,20 +7698,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 89,
+    "risk_percent": 89,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 3.5
+    "latency_s": 6.01
   },
   {
     "symbol": "NOCHILL",
@@ -7706,11 +7733,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $50,294",
+      "Shallow live liquidity at $49,693",
       "Liquidity to FDV ratio is healthy"
     ],
     "error": null,
-    "latency_s": 3.56
+    "latency_s": 18.36
   },
   {
     "symbol": "PLUTO",
@@ -7723,20 +7750,20 @@
     "goplus": null,
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 58,
-    "risk_percent": 58,
+    "label": "DANGER",
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.58
+    "latency_s": 5.75
   },
   {
     "symbol": "WAVAX",
@@ -7758,11 +7785,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $8,487,907",
+      "Deep live liquidity at $8,505,291",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.52
+    "latency_s": 15.79
   },
   {
     "symbol": "USDC",
@@ -7784,11 +7811,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $41,359",
+      "Shallow live liquidity at $41,362",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.54
+    "latency_s": 19.15
   },
   {
     "symbol": "USDC.e",
@@ -7810,11 +7837,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $480,666",
+      "Meaningful live liquidity at $480,664",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.61
+    "latency_s": 16.68
   },
   {
     "symbol": "USDt",
@@ -7836,11 +7863,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $5,221,312",
+      "Deep live liquidity at $5,221,133",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.53
+    "latency_s": 20.45
   },
   {
     "symbol": "WETH.e",
@@ -7862,11 +7889,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $3,581,592",
+      "Deep live liquidity at $3,604,046",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.5
+    "latency_s": 19.22
   },
   {
     "symbol": "BTC.b",
@@ -7888,11 +7915,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $1,765,167",
+      "Deep live liquidity at $1,777,542",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.45
+    "latency_s": 24.22
   },
   {
     "symbol": "DAI.e",
@@ -7907,18 +7934,18 @@
     "ok": true,
     "label": "GOOD",
     "rug_score": 12,
-    "risk_percent": 28,
+    "risk_percent": 26,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Known Avalanche canonical/established asset; new-token heuristics suppressed",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $30,476",
+      "Shallow live liquidity at $30,462",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.55
+    "latency_s": 14.97
   },
   {
     "symbol": "WBTC.e",
@@ -7940,11 +7967,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $227,466",
+      "Meaningful live liquidity at $226,785",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.42
+    "latency_s": 16.75
   },
   {
     "symbol": "MIM",
@@ -7966,11 +7993,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $130,047",
+      "Meaningful live liquidity at $129,608",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.68
+    "latency_s": 23.38
   },
   {
     "symbol": "FRAX",
@@ -7992,36 +8019,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $185,960",
+      "Meaningful live liquidity at $186,810",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 3.65
-  },
-  {
-    "symbol": "EURC",
-    "address": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
-    "tier": "A_bluechip",
-    "expectation": "must_be_GOOD",
-    "discovery": "bluechip_control",
-    "reserve_usd": null,
-    "age_hours": null,
-    "goplus": null,
-    "http_status": 200,
-    "ok": true,
-    "label": "GOOD",
-    "rug_score": 18,
-    "risk_percent": 28,
-    "source": "private_scoring_engine",
-    "risk_flags": [
-      "Known asset uses upgradeable proxy pattern",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $200,207",
-      "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
-    ],
-    "error": null,
-    "latency_s": 3.47
+    "latency_s": 25.51
   }
 ]
