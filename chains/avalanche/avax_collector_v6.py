@@ -544,9 +544,11 @@ def analyze_holder_concentration_avax(contract_address: str) -> dict:
         return result
 
     try:
-        # Routescan vraća TokenHolderQuantity kao string
+        # Routescan returns TokenHolderQuantity as a raw integer string. Prefer
+        # RPC totalSupply because it is guaranteed to be in the same raw unit.
+        rpc_info = get_erc20_metadata_rpc(contract_address) or {}
         token_info = get_token_info_avax(contract_address)
-        total_supply = float(str(token_info.get("total_supply") or "0").replace(",", ""))
+        total_supply = float(str(rpc_info.get("total_supply") or token_info.get("total_supply") or "0").replace(",", ""))
         if total_supply <= 0:
             return result
 
@@ -557,9 +559,25 @@ def analyze_holder_concentration_avax(contract_address: str) -> dict:
 
         top5 = sum(amounts[:5])
         top1 = amounts[0]
+        decimals = int(rpc_info.get("decimals") or token_info.get("decimals") or 0)
+        if decimals > 0 and top1 > total_supply:
+            scaled_total = total_supply * (10 ** decimals)
+            if top1 <= scaled_total:
+                total_supply = scaled_total
 
-        result["top5_pct"] = round(top5 / total_supply * 100, 1)
-        result["top1_pct"] = round(top1 / total_supply * 100, 1)
+        top5_pct = round(top5 / total_supply * 100, 1)
+        top1_pct = round(top1 / total_supply * 100, 1)
+        if not (0 <= top5_pct <= 100 and 0 <= top1_pct <= 100):
+            log.warning(
+                "  [V6] Holder concentration impossible for %s: top5=%s top1=%s; ignoring source data",
+                contract_address[:12],
+                top5_pct,
+                top1_pct,
+            )
+            return result
+
+        result["top5_pct"] = top5_pct
+        result["top1_pct"] = top1_pct
         result["is_concentrated"] = result["top5_pct"] > 80
 
         if result["top5_pct"] > 90:

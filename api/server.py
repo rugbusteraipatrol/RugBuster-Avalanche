@@ -715,8 +715,11 @@ def fetch_holder_intel(address: str) -> dict[str, Any]:
     if percents:
         # `percent` is already a fraction of total supply, so this is real
         # concentration rather than a share of whichever holders were sampled.
-        intel["v6_top5_concentration_pct"] = round(sum(percents[:5]) * 100, 1)
-        intel["v6_top1_concentration_pct"] = round(percents[0] * 100, 1)
+        top5_pct = round(sum(percents[:5]) * 100, 1)
+        top1_pct = round(percents[0] * 100, 1)
+        if 0 <= top5_pct <= 100 and 0 <= top1_pct <= 100:
+            intel["v6_top5_concentration_pct"] = top5_pct
+            intel["v6_top1_concentration_pct"] = top1_pct
 
     top5 = intel.get("v6_top5_concentration_pct")
     if top5 is not None:
