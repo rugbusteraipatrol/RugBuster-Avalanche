@@ -703,6 +703,15 @@ def fetch_holder_intel(address: str) -> dict[str, Any]:
     intel: dict[str, Any] = {"holder_intel_source": "goplus"}
     if holder_count > 0:
         intel["holders_count"] = holder_count
+    for source_key, target_key in (
+        ("is_open_source", "goplus_is_open_source"),
+        ("is_mintable", "goplus_is_mintable"),
+        ("is_proxy", "goplus_is_proxy"),
+        ("hidden_owner", "goplus_hidden_owner"),
+        ("owner_change_balance", "goplus_owner_change_balance"),
+    ):
+        if source_key in info:
+            intel[target_key] = str(info.get(source_key))
     if percents:
         # `percent` is already a fraction of total supply, so this is real
         # concentration rather than a share of whichever holders were sampled.
