@@ -35,7 +35,7 @@
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 6.35
+    "latency_s": 20.66
   },
   {
     "symbol": "NXPC",
@@ -66,11 +66,11 @@
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Thin live liquidity at $7,969",
-      "Capability risk discounted: 54,243 holders over 444d without an observed drain (track record 1.00)"
+      "Thin live liquidity at $8,062",
+      "Capability risk discounted: 54,250 holders over 445d without an observed drain (track record 1.00)"
     ],
     "error": null,
-    "latency_s": 10.34
+    "latency_s": 22.0
   },
   {
     "symbol": "GOAT",
@@ -95,19 +95,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 96,
-    "risk_percent": 96,
+    "rug_score": 76,
+    "risk_percent": 76,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Admin controls present before supported live liquidity is found",
-      "Token name readable on-chain"
+      "Token name readable on-chain",
+      "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 23.66
+    "latency_s": 18.44
   },
   {
     "symbol": "FINANCE",
@@ -144,7 +144,7 @@
       "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 19.84
+    "latency_s": 23.9
   },
   {
     "symbol": "MAXI",
@@ -181,7 +181,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.88
+    "latency_s": 7.7
   },
   {
     "symbol": "AQUA",
@@ -218,7 +218,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.86
+    "latency_s": 5.77
   },
   {
     "symbol": "GIF",
@@ -255,7 +255,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.33
+    "latency_s": 8.01
   },
   {
     "symbol": "BUMPER",
@@ -280,19 +280,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.69
+    "latency_s": 5.62
   },
   {
     "symbol": "WISE",
@@ -327,7 +327,7 @@
       "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 23.13
+    "latency_s": 20.43
   },
   {
     "symbol": "KNIGHT",
@@ -364,7 +364,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.04
+    "latency_s": 8.06
   },
   {
     "symbol": "FELICETTE",
@@ -401,7 +401,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.4
+    "latency_s": 5.74
   },
   {
     "symbol": "DOV",
@@ -438,7 +438,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.44
+    "latency_s": 5.68
   },
   {
     "symbol": "CLAM",
@@ -473,7 +473,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 28.92
+    "latency_s": 22.01
   },
   {
     "symbol": "WCC",
@@ -510,7 +510,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.35
+    "latency_s": 5.66
   },
   {
     "symbol": "SMRT",
@@ -547,7 +547,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.7
+    "latency_s": 6.37
   },
   {
     "symbol": "PEPEWIFHAT",
@@ -584,7 +584,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.61
+    "latency_s": 6.48
   },
   {
     "symbol": "PEMDAS",
@@ -621,7 +621,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.58
+    "latency_s": 5.86
   },
   {
     "symbol": "FOREHEAD",
@@ -646,19 +646,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.29
+    "latency_s": 6.0
   },
   {
     "symbol": "PHAR",
@@ -689,11 +689,11 @@
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Critical holder concentration top5=96.5%",
+      "Critical holder concentration top5=97.6%",
       "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 19.97
+    "latency_s": 16.16
   },
   {
     "symbol": "MANYU",
@@ -730,7 +730,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.57
+    "latency_s": 5.59
   },
   {
     "symbol": "SCRIBBLI",
@@ -767,7 +767,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.51
+    "latency_s": 5.61
   },
   {
     "symbol": "SHELL",
@@ -799,10 +799,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $30,711"
+      "Shallow live liquidity at $31,134"
     ],
     "error": null,
-    "latency_s": 20.28
+    "latency_s": 16.44
   },
   {
     "symbol": "ADION",
@@ -827,19 +827,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.63
+    "latency_s": 6.65
   },
   {
     "symbol": "NICK",
@@ -876,7 +876,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 10.75
+    "latency_s": 5.72
   },
   {
     "symbol": "CHIBI",
@@ -913,7 +913,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.24
+    "latency_s": 5.66
   },
   {
     "symbol": "METAL",
@@ -950,7 +950,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.29
+    "latency_s": 6.13
   },
   {
     "symbol": "JOJO",
@@ -987,7 +987,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 9.76
+    "latency_s": 5.41
   },
   {
     "symbol": "UNBAGGED",
@@ -1012,19 +1012,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.32
+    "latency_s": 6.37
   },
   {
     "symbol": "LSD",
@@ -1049,19 +1049,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.18
+    "latency_s": 5.27
   },
   {
     "symbol": "$INTERN",
@@ -1098,7 +1098,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 13.63
+    "latency_s": 5.75
   },
   {
     "symbol": "HERESY",
@@ -1134,7 +1134,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 31.38
+    "latency_s": 20.87
   },
   {
     "symbol": "JOE",
@@ -1158,18 +1158,18 @@
     "ok": true,
     "label": "GOOD",
     "rug_score": 26,
-    "risk_percent": 26,
+    "risk_percent": 28,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Known asset still exposes mint/admin supply controls",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $243,547",
+      "Meaningful live liquidity at $244,272",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 5.6
+    "latency_s": 22.04
   },
   {
     "symbol": "JANRO",
@@ -1206,7 +1206,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.01
+    "latency_s": 5.54
   },
   {
     "symbol": "SHIB",
@@ -1243,7 +1243,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.28
+    "latency_s": 5.4
   },
   {
     "symbol": "GOONER",
@@ -1280,7 +1280,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.98
+    "latency_s": 5.31
   },
   {
     "symbol": "BCAT",
@@ -1317,7 +1317,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.44
+    "latency_s": 5.67
   },
   {
     "symbol": "SOLANA",
@@ -1354,7 +1354,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.06
+    "latency_s": 5.25
   },
   {
     "symbol": "WESLEY",
@@ -1391,7 +1391,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.21
+    "latency_s": 5.42
   },
   {
     "symbol": "USTREAM",
@@ -1416,19 +1416,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.16
+    "latency_s": 5.31
   },
   {
     "symbol": "VAULT",
@@ -1453,19 +1453,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.92
+    "latency_s": 5.34
   },
   {
     "symbol": "USH",
@@ -1490,19 +1490,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.01
+    "latency_s": 5.69
   },
   {
     "symbol": "MEOW",
@@ -1539,7 +1539,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.27
+    "latency_s": 5.25
   },
   {
     "symbol": "PAPERCLIPS",
@@ -1576,7 +1576,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.83
+    "latency_s": 5.78
   },
   {
     "symbol": "FUR",
@@ -1613,7 +1613,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.8
+    "latency_s": 30.71
   },
   {
     "symbol": "$PRIME",
@@ -1638,19 +1638,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.02
+    "latency_s": 9.81
   },
   {
     "symbol": "FARTHER",
@@ -1675,19 +1675,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.96
+    "latency_s": 10.49
   },
   {
     "symbol": "$HUSKY",
@@ -1712,19 +1712,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.88
+    "latency_s": 9.72
   },
   {
     "symbol": "$BIRDFLU",
@@ -1761,7 +1761,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.71
+    "latency_s": 10.25
   },
   {
     "symbol": "PRINT",
@@ -1786,19 +1786,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.92
+    "latency_s": 10.33
   },
   {
     "symbol": "TIAI",
@@ -1835,33 +1835,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.56
-  },
-  {
-    "symbol": "EURC",
-    "address": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
-    "tier": "A_bluechip",
-    "expectation": "must_be_GOOD",
-    "discovery": "bluechip_control",
-    "reserve_usd": null,
-    "age_hours": null,
-    "goplus": null,
-    "http_status": 200,
-    "ok": true,
-    "label": "GOOD",
-    "rug_score": 18,
-    "risk_percent": 28,
-    "source": "private_scoring_engine",
-    "risk_flags": [
-      "Known asset uses upgradeable proxy pattern",
-      "Token name readable on-chain",
-      "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $200,231",
-      "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
-    ],
-    "error": null,
-    "latency_s": 27.3
+    "latency_s": 10.05
   },
   {
     "symbol": "CRAB",
@@ -1898,7 +1872,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.16
+    "latency_s": 10.04
   },
   {
     "symbol": "NIRE",
@@ -1935,7 +1909,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.06
+    "latency_s": 10.2
   },
   {
     "symbol": "+",
@@ -1972,7 +1946,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.95
+    "latency_s": 9.32
   },
   {
     "symbol": "T8008",
@@ -2009,7 +1983,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.96
+    "latency_s": 10.32
   },
   {
     "symbol": "ASTA",
@@ -2046,7 +2020,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.2
+    "latency_s": 10.28
   },
   {
     "symbol": "waAvaUSDT",
@@ -2068,20 +2042,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 66,
-    "risk_percent": 66,
+    "label": "INSUFFICIENT_DATA",
+    "rug_score": 36,
+    "risk_percent": 36,
     "source": "private_scoring_engine",
     "risk_flags": [
-      "Critical holder concentration top5=106.2%",
       "High rug velocity score 0.6",
       "Very few holders (5)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
-      "Decimals value is within normal ERC-20 range"
+      "Decimals value is within normal ERC-20 range",
+      "No live liquidity evidence found on supported Avalanche venues"
     ],
     "error": null,
-    "latency_s": 24.64
+    "latency_s": 10.04
   },
   {
     "symbol": "bUSDT",
@@ -2116,7 +2090,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 19.18
+    "latency_s": 19.27
   },
   {
     "symbol": "YAKA",
@@ -2153,7 +2127,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.86
+    "latency_s": 9.52
   },
   {
     "symbol": "REMILIA",
@@ -2190,7 +2164,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.96
+    "latency_s": 10.01
   },
   {
     "symbol": "INVITE",
@@ -2227,7 +2201,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.02
+    "latency_s": 10.39
   },
   {
     "symbol": "KEVIN",
@@ -2264,7 +2238,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.97
+    "latency_s": 10.2
   },
   {
     "symbol": "UFO",
@@ -2301,7 +2275,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.96
+    "latency_s": 27.44
   },
   {
     "symbol": "NFTBS",
@@ -2338,7 +2312,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.89
+    "latency_s": 26.0
   },
   {
     "symbol": "LOS",
@@ -2375,7 +2349,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.05
+    "latency_s": 24.37
   },
   {
     "symbol": "FLAG",
@@ -2412,7 +2386,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.7
+    "latency_s": 22.49
   },
   {
     "symbol": "L",
@@ -2449,7 +2423,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.91
+    "latency_s": 27.12
   },
   {
     "symbol": "STELAI",
@@ -2486,7 +2460,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.86
+    "latency_s": 27.92
   },
   {
     "symbol": "WSB",
@@ -2523,7 +2497,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.89
+    "latency_s": 30.42
   },
   {
     "symbol": "STG",
@@ -2554,11 +2528,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Very thin live liquidity at $1,114",
+      "Very thin live liquidity at $1,145",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 5.38
+    "latency_s": 22.82
   },
   {
     "symbol": "CAP",
@@ -2595,7 +2569,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.78
+    "latency_s": 5.64
   },
   {
     "symbol": "SHIKA-YAN",
@@ -2620,19 +2594,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.01
+    "latency_s": 5.32
   },
   {
     "symbol": "AISCII",
@@ -2657,19 +2631,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.9
+    "latency_s": 5.61
   },
   {
     "symbol": "LTD",
@@ -2706,7 +2680,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.88
+    "latency_s": 5.2
   },
   {
     "symbol": "BOOBS",
@@ -2743,7 +2717,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.82
+    "latency_s": 6.29
   },
   {
     "symbol": "REPLACEMENT",
@@ -2780,7 +2754,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 5.63
   },
   {
     "symbol": "wSAC",
@@ -2809,13 +2783,13 @@
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
-      "Critical holder concentration top5=100.3%",
+      "Critical holder concentration top5=99.7%",
       "Near-zero deployer balance (0.0072 AVAX)",
       "Token name readable on-chain",
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 20.77
+    "latency_s": 5.56
   },
   {
     "symbol": "LAMBOW",
@@ -2852,7 +2826,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.99
+    "latency_s": 5.21
   },
   {
     "symbol": "MAFIA",
@@ -2889,7 +2863,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.92
+    "latency_s": 5.4
   },
   {
     "symbol": "bUSDC",
@@ -2920,11 +2894,11 @@
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
       "Admin controls present before supported live liquidity is found",
-      "Critical holder concentration top5=101.3%",
+      "Critical holder concentration top5=97.1%",
       "Upgradeable proxy contract"
     ],
     "error": null,
-    "latency_s": 9.52
+    "latency_s": 5.77
   },
   {
     "symbol": "ALR",
@@ -2949,19 +2923,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.85
+    "latency_s": 5.79
   },
   {
     "symbol": "BUNNY",
@@ -2998,7 +2972,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.17
+    "latency_s": 5.35
   },
   {
     "symbol": "RAGE",
@@ -3035,7 +3009,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.96
+    "latency_s": 5.42
   },
   {
     "symbol": "BSOP",
@@ -3072,7 +3046,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.86
+    "latency_s": 5.75
   },
   {
     "symbol": "MATO",
@@ -3109,7 +3083,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.63
+    "latency_s": 5.23
   },
   {
     "symbol": "AINL",
@@ -3146,7 +3120,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.99
+    "latency_s": 5.22
   },
   {
     "symbol": "HOPPY",
@@ -3183,7 +3157,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.85
+    "latency_s": 5.56
   },
   {
     "symbol": "WBTC",
@@ -3205,20 +3179,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "DANGER",
-    "rug_score": 78,
-    "risk_percent": 78,
+    "label": "WARN",
+    "rug_score": 48,
+    "risk_percent": 52,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
-      "Critical holder concentration top5=473.3%",
       "Bot-like transaction entropy",
       "Token name readable on-chain",
-      "Token symbol readable on-chain"
+      "Token symbol readable on-chain",
+      "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 25.33
+    "latency_s": 5.49
   },
   {
     "symbol": "ICC",
@@ -3255,7 +3229,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.85
+    "latency_s": 5.47
   },
   {
     "symbol": "bAUSD",
@@ -3286,11 +3260,11 @@
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
       "Admin controls present before supported live liquidity is found",
-      "Critical holder concentration top5=92.6%",
+      "Critical holder concentration top5=92.7%",
       "Upgradeable proxy contract"
     ],
     "error": null,
-    "latency_s": 9.06
+    "latency_s": 10.15
   },
   {
     "symbol": "KIGU",
@@ -3327,7 +3301,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.85
+    "latency_s": 5.51
   },
   {
     "symbol": "OLIVIA",
@@ -3364,7 +3338,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.94
+    "latency_s": 5.7
   },
   {
     "symbol": "LEIA",
@@ -3401,7 +3375,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.09
+    "latency_s": 5.37
   },
   {
     "symbol": "CUR",
@@ -3438,7 +3412,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.94
+    "latency_s": 5.27
   },
   {
     "symbol": "BDOGE",
@@ -3475,7 +3449,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.87
+    "latency_s": 5.49
   },
   {
     "symbol": "GLMPS",
@@ -3512,7 +3486,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.93
+    "latency_s": 5.38
   },
   {
     "symbol": "WIZ",
@@ -3537,19 +3511,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.79
+    "latency_s": 5.17
   },
   {
     "symbol": "F",
@@ -3574,19 +3548,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.99
+    "latency_s": 5.34
   },
   {
     "symbol": "aAVAXb",
@@ -3617,11 +3591,11 @@
       "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
       "Admin controls present before supported live liquidity is found",
-      "Critical holder concentration top5=97.1%",
+      "Critical holder concentration top5=96.9%",
       "Upgradeable proxy contract"
     ],
     "error": null,
-    "latency_s": 21.25
+    "latency_s": 19.46
   },
   {
     "symbol": "T7",
@@ -3658,7 +3632,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.97
+    "latency_s": 13.77
   },
   {
     "symbol": "SAMBA",
@@ -3695,7 +3669,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.07
+    "latency_s": 5.44
   },
   {
     "symbol": "AAVE.e",
@@ -3717,20 +3691,20 @@
     },
     "http_status": 200,
     "ok": true,
-    "label": "WARN",
-    "rug_score": 50,
-    "risk_percent": 50,
+    "label": "GOOD",
+    "rug_score": 20,
+    "risk_percent": 20,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
-      "Critical holder concentration top5=112.1%",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $258,452"
+      "Meaningful live liquidity at $258,816",
+      "Liquidity to FDV ratio is very healthy"
     ],
     "error": null,
-    "latency_s": 15.63
+    "latency_s": 5.5
   },
   {
     "symbol": "ZERO",
@@ -3767,7 +3741,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.99
+    "latency_s": 5.46
   },
   {
     "symbol": "$SOULS",
@@ -3804,7 +3778,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.97
+    "latency_s": 5.46
   },
   {
     "symbol": "LOGOS",
@@ -3841,7 +3815,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.83
+    "latency_s": 5.44
   },
   {
     "symbol": "$KEK",
@@ -3878,7 +3852,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.73
+    "latency_s": 5.77
   },
   {
     "symbol": "BLACK",
@@ -3898,11 +3872,11 @@
       "is_open_source": "1",
       "token_symbol": "BLACK"
     },
-    "http_status": 200,
-    "ok": true,
+    "http_status": 500,
+    "ok": false,
     "label": "DANGER",
     "rug_score": 76,
-    "risk_percent": 76,
+    "risk_percent": null,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
@@ -3913,7 +3887,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 26.3
+    "latency_s": 30.68
   },
   {
     "symbol": "X1000",
@@ -3950,7 +3924,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.75
+    "latency_s": 8.53
   },
   {
     "symbol": "MC",
@@ -3987,7 +3961,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.91
+    "latency_s": 5.75
   },
   {
     "symbol": "SUGAR",
@@ -4024,7 +3998,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.96
+    "latency_s": 5.69
   },
   {
     "symbol": "BUTTCOIN",
@@ -4061,7 +4035,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.01
+    "latency_s": 6.06
   },
   {
     "symbol": "PEGECOIN",
@@ -4098,7 +4072,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.07
+    "latency_s": 5.36
   },
   {
     "symbol": "MUSK",
@@ -4135,7 +4109,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.93
+    "latency_s": 5.96
   },
   {
     "symbol": "CAMEL",
@@ -4172,7 +4146,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.03
+    "latency_s": 6.54
   },
   {
     "symbol": "SYN",
@@ -4205,7 +4179,7 @@
       "Capability risk discounted: 3,069 holders over 1795d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 5.59
+    "latency_s": 20.27
   },
   {
     "symbol": "XAVA",
@@ -4234,11 +4208,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $419,513",
+      "Meaningful live liquidity at $418,645",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 4.61
+    "latency_s": 19.41
   },
   {
     "symbol": "MUON",
@@ -4271,7 +4245,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 22.8
+    "latency_s": 20.34
   },
   {
     "symbol": "JPYC",
@@ -4298,13 +4272,13 @@
     "risk_flags": [
       "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Capability risk discounted: 23,710 holders over 279d without an observed drain (track record 0.83)",
+      "Capability risk discounted: 23,709 holders over 279d without an observed drain (track record 0.83)",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 4.91
+    "latency_s": 12.98
   },
   {
     "symbol": "SOL",
@@ -4333,11 +4307,11 @@
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "Critical holder concentration top5=100.1%",
+      "Critical holder concentration top5=91.9%",
       "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 4.74
+    "latency_s": 4.6
   },
   {
     "symbol": "AVAXAI",
@@ -4370,7 +4344,7 @@
       "Very thin live liquidity at $1,619"
     ],
     "error": null,
-    "latency_s": 5.78
+    "latency_s": 20.65
   },
   {
     "symbol": "BLKSTR",
@@ -4403,7 +4377,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 20.1
+    "latency_s": 19.87
   },
   {
     "symbol": "USDe",
@@ -4436,7 +4410,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 16.73
+    "latency_s": 20.01
   },
   {
     "symbol": "ORNG",
@@ -4465,11 +4439,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $16,762",
+      "Thin live liquidity at $16,798",
       "Liquidity to FDV ratio is under 1% - exit liquidity risk is extreme"
     ],
     "error": null,
-    "latency_s": 5.74
+    "latency_s": 17.26
   },
   {
     "symbol": "ZRO",
@@ -4502,7 +4476,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 18.76
+    "latency_s": 19.02
   },
   {
     "symbol": "KIMBO",
@@ -4532,10 +4506,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $39,456"
+      "Shallow live liquidity at $39,550"
     ],
     "error": null,
-    "latency_s": 15.98
+    "latency_s": 18.88
   },
   {
     "symbol": "KET",
@@ -4568,7 +4542,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 5.9
+    "latency_s": 21.45
   },
   {
     "symbol": "gOHM",
@@ -4597,11 +4571,11 @@
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Meaningful live liquidity at $129,171",
+      "Meaningful live liquidity at $129,507",
       "Capability risk discounted: 7,462 holders over 1708d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 16.83
+    "latency_s": 16.94
   },
   {
     "symbol": "SUPER",
@@ -4634,7 +4608,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 16.89
+    "latency_s": 17.56
   },
   {
     "symbol": "BRO",
@@ -4664,10 +4638,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $94,015"
+      "No live liquidity evidence found on supported Avalanche venues"
     ],
     "error": null,
-    "latency_s": 18.51
+    "latency_s": 19.22
   },
   {
     "symbol": "COQAI",
@@ -4700,7 +4674,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 18.26
+    "latency_s": 19.78
   },
   {
     "symbol": "FOLKS",
@@ -4733,7 +4707,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 19.4
+    "latency_s": 16.9
   },
   {
     "symbol": "COQ",
@@ -4755,7 +4729,7 @@
     "ok": true,
     "label": "GOOD",
     "rug_score": 38,
-    "risk_percent": 38,
+    "risk_percent": 42,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
@@ -4763,10 +4737,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $418,275"
+      "Meaningful live liquidity at $419,065"
     ],
     "error": null,
-    "latency_s": 5.68
+    "latency_s": 19.63
   },
   {
     "symbol": "ncash",
@@ -4799,7 +4773,7 @@
       "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 24.03
+    "latency_s": 20.92
   },
   {
     "symbol": "ALTSEASON",
@@ -4825,7 +4799,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.94
+    "latency_s": 6.66
   },
   {
     "symbol": "PONKEI",
@@ -4851,7 +4825,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.87
+    "latency_s": 5.5
   },
   {
     "symbol": "SOOTCASE",
@@ -4877,7 +4851,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.12
+    "latency_s": 5.76
   },
   {
     "symbol": "JEWEL",
@@ -4900,10 +4874,10 @@
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
       "Very thin live liquidity at $3,945",
-      "Capability risk discounted: 4,062 holders over 968d without an observed drain (track record 0.79)"
+      "Capability risk discounted: 4,066 holders over 968d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 5.94
+    "latency_s": 13.85
   },
   {
     "symbol": "YUPFUN",
@@ -4929,7 +4903,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.1
+    "latency_s": 5.9
   },
   {
     "symbol": "G",
@@ -4955,7 +4929,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.93
+    "latency_s": 5.45
   },
   {
     "symbol": "LEPER",
@@ -4981,7 +4955,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.92
+    "latency_s": 5.62
   },
   {
     "symbol": "YOM",
@@ -4995,19 +4969,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 91,
-    "risk_percent": 91,
+    "rug_score": 83,
+    "risk_percent": 83,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Owner/admin control functions detected: setBlacklist(address,bool)",
       "Operator/authorization controls can gate trading or privileges",
-      "Critical holder concentration top5=94.8%",
+      "High holder concentration top5=94.8%",
       "Bot farm holder cluster",
       "Token name readable on-chain",
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 10.69
+    "latency_s": 9.46
   },
   {
     "symbol": "READ",
@@ -5033,7 +5007,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.91
+    "latency_s": 5.52
   },
   {
     "symbol": "FETCHR",
@@ -5059,7 +5033,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.23
+    "latency_s": 5.43
   },
   {
     "symbol": "CMEM",
@@ -5070,11 +5044,11 @@
     "reserve_usd": 0.1174,
     "age_hours": 36.3,
     "goplus": null,
-    "http_status": 200,
-    "ok": true,
+    "http_status": null,
+    "ok": false,
     "label": "DANGER",
     "rug_score": 100,
-    "risk_percent": 100,
+    "risk_percent": null,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
@@ -5085,7 +5059,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.97
+    "latency_s": 28.4
   },
   {
     "symbol": "FITFI",
@@ -5096,11 +5070,11 @@
     "reserve_usd": 548.6901,
     "age_hours": 37183.1,
     "goplus": null,
-    "http_status": 200,
-    "ok": true,
+    "http_status": null,
+    "ok": false,
     "label": "DANGER",
     "rug_score": 20,
-    "risk_percent": 100,
+    "risk_percent": null,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
@@ -5111,7 +5085,7 @@
       "Liquidity to FDV ratio is under 1% - exit liquidity risk is extreme"
     ],
     "error": null,
-    "latency_s": 5.96
+    "latency_s": 0.0
   },
   {
     "symbol": "RIZZMASEVE",
@@ -5137,7 +5111,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.79
+    "latency_s": 7.38
   },
   {
     "symbol": "HOTEMIN",
@@ -5163,7 +5137,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.6
+    "latency_s": 13.78
   },
   {
     "symbol": "HOODRAT",
@@ -5189,7 +5163,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.89
+    "latency_s": 5.79
   },
   {
     "symbol": "ARENA",
@@ -5211,11 +5185,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $183,412",
+      "Meaningful live liquidity at $186,263",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 5.76
+    "latency_s": 23.26
   },
   {
     "symbol": "axlUSDC",
@@ -5241,7 +5215,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 22.26
+    "latency_s": 21.93
   },
   {
     "symbol": "BRUVS",
@@ -5267,7 +5241,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.59
+    "latency_s": 5.69
   },
   {
     "symbol": "AI",
@@ -5293,7 +5267,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.11
+    "latency_s": 5.67
   },
   {
     "symbol": "SUICY",
@@ -5319,7 +5293,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.42
+    "latency_s": 5.59
   },
   {
     "symbol": "PIGWIF",
@@ -5345,7 +5319,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.79
+    "latency_s": 6.03
   },
   {
     "symbol": "XAUt0",
@@ -5371,7 +5345,7 @@
       "Near-zero deployer balance (0.0000 AVAX)"
     ],
     "error": null,
-    "latency_s": 24.19
+    "latency_s": 23.61
   },
   {
     "symbol": "BLARP",
@@ -5397,7 +5371,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.83
+    "latency_s": 6.08
   },
   {
     "symbol": "BANX",
@@ -5423,7 +5397,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.83
+    "latency_s": 5.78
   },
   {
     "symbol": "$DCAY",
@@ -5449,7 +5423,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.8
+    "latency_s": 5.68
   },
   {
     "symbol": "OUSTON",
@@ -5475,7 +5449,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.06
+    "latency_s": 5.38
   },
   {
     "symbol": "LITE",
@@ -5501,7 +5475,7 @@
       "Very few holders (4)"
     ],
     "error": null,
-    "latency_s": 12.28
+    "latency_s": 15.1
   },
   {
     "symbol": "HENTAI",
@@ -5527,7 +5501,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.94
+    "latency_s": 5.68
   },
   {
     "symbol": "SEDUX",
@@ -5553,7 +5527,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.87
+    "latency_s": 5.62
   },
   {
     "symbol": "WAG",
@@ -5579,7 +5553,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.75
+    "latency_s": 5.36
   },
   {
     "symbol": "BRAINROT",
@@ -5605,7 +5579,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.78
+    "latency_s": 6.4
   },
   {
     "symbol": "UNITED",
@@ -5631,7 +5605,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.04
+    "latency_s": 6.14
   },
   {
     "symbol": "CNR",
@@ -5653,11 +5627,11 @@
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
-      "Very thin live liquidity at $4,310",
+      "Very thin live liquidity at $4,270",
       "Capability risk discounted: 2,803 holders over 411d without an observed drain (track record 0.79)"
     ],
     "error": null,
-    "latency_s": 5.55
+    "latency_s": 22.85
   },
   {
     "symbol": "CFX",
@@ -5683,7 +5657,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.86
+    "latency_s": 5.43
   },
   {
     "symbol": "ALOT",
@@ -5709,7 +5683,7 @@
       "Very thin live liquidity at $444"
     ],
     "error": null,
-    "latency_s": 20.03
+    "latency_s": 5.8
   },
   {
     "symbol": "p33",
@@ -5724,18 +5698,18 @@
     "ok": true,
     "label": "WARN",
     "rug_score": 20,
-    "risk_percent": 71,
+    "risk_percent": 73,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 20/100",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $53,843",
+      "Shallow live liquidity at $53,693",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 13.34
+    "latency_s": 13.13
   },
   {
     "symbol": "FUND",
@@ -5761,7 +5735,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.0
+    "latency_s": 5.61
   },
   {
     "symbol": "COMRADES",
@@ -5787,7 +5761,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.08
+    "latency_s": 5.56
   },
   {
     "symbol": "SBTC",
@@ -5813,7 +5787,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.03
+    "latency_s": 5.47
   },
   {
     "symbol": "UNDEAD",
@@ -5839,7 +5813,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 19.36
+    "latency_s": 20.56
   },
   {
     "symbol": "PUMPKIN",
@@ -5853,19 +5827,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.68
+    "latency_s": 5.63
   },
   {
     "symbol": "$KITA",
@@ -5879,19 +5853,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.63
+    "latency_s": 5.67
   },
   {
     "symbol": "GATO",
@@ -5905,19 +5879,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.99
+    "latency_s": 5.49
   },
   {
     "symbol": "PEARL",
@@ -5943,7 +5917,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.78
+    "latency_s": 5.27
   },
   {
     "symbol": "GOAI",
@@ -5969,7 +5943,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.79
+    "latency_s": 5.7
   },
   {
     "symbol": "QI",
@@ -5991,11 +5965,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $119,809",
+      "Meaningful live liquidity at $118,177",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 7.06
+    "latency_s": 19.93
   },
   {
     "symbol": "SFIT",
@@ -6021,7 +5995,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.41
+    "latency_s": 5.51
   },
   {
     "symbol": "HUNDRED",
@@ -6044,10 +6018,10 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $541,581"
+      "Deep live liquidity at $541,934"
     ],
     "error": null,
-    "latency_s": 22.04
+    "latency_s": 22.08
   },
   {
     "symbol": "FITCOIN",
@@ -6073,7 +6047,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.64
+    "latency_s": 5.85
   },
   {
     "symbol": "GUN",
@@ -6099,7 +6073,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 18.68
+    "latency_s": 14.49
   },
   {
     "symbol": "BBRETT",
@@ -6125,7 +6099,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.7
+    "latency_s": 5.32
   },
   {
     "symbol": "ALASKA",
@@ -6151,7 +6125,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.11
+    "latency_s": 5.67
   },
   {
     "symbol": "$SCARF",
@@ -6177,7 +6151,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 10.68
+    "latency_s": 5.34
   },
   {
     "symbol": "LINK.e",
@@ -6203,7 +6177,7 @@
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 13.88
+    "latency_s": 18.26
   },
   {
     "symbol": "USAID",
@@ -6217,19 +6191,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.78
+    "latency_s": 5.46
   },
   {
     "symbol": "MGAMES",
@@ -6255,7 +6229,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.82
+    "latency_s": 5.7
   },
   {
     "symbol": "CORN",
@@ -6281,7 +6255,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.59
+    "latency_s": 5.3
   },
   {
     "symbol": "SPECU",
@@ -6307,7 +6281,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.78
+    "latency_s": 5.74
   },
   {
     "symbol": "SHITCOIN",
@@ -6333,7 +6307,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.28
+    "latency_s": 5.88
   },
   {
     "symbol": "LINGYAN",
@@ -6359,7 +6333,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.7
+    "latency_s": 5.72
   },
   {
     "symbol": "PNG",
@@ -6381,11 +6355,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $172,973",
+      "Meaningful live liquidity at $171,769",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 11.7
+    "latency_s": 19.47
   },
   {
     "symbol": "PUMLX",
@@ -6411,7 +6385,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.92
+    "latency_s": 5.39
   },
   {
     "symbol": "SHEEP",
@@ -6425,19 +6399,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.69
+    "latency_s": 6.01
   },
   {
     "symbol": "JAPAN",
@@ -6463,7 +6437,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.48
+    "latency_s": 5.24
   },
   {
     "symbol": "SHAKEY",
@@ -6489,7 +6463,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.59
+    "latency_s": 5.74
   },
   {
     "symbol": "WATER",
@@ -6515,7 +6489,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.36
+    "latency_s": 5.35
   },
   {
     "symbol": "NAZAREAI",
@@ -6541,7 +6515,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.81
+    "latency_s": 5.88
   },
   {
     "symbol": "LOCK",
@@ -6567,7 +6541,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.93
+    "latency_s": 5.41
   },
   {
     "symbol": "LIDUM",
@@ -6593,7 +6567,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.72
+    "latency_s": 6.41
   },
   {
     "symbol": "FOID",
@@ -6619,7 +6593,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.7
+    "latency_s": 5.43
   },
   {
     "symbol": "GOF",
@@ -6633,19 +6607,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.27
+    "latency_s": 5.31
   },
   {
     "symbol": "DARKHORSE",
@@ -6659,19 +6633,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.65
+    "latency_s": 5.41
   },
   {
     "symbol": "BLUE",
@@ -6697,7 +6671,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.32
+    "latency_s": 5.87
   },
   {
     "symbol": "DARK",
@@ -6723,7 +6697,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.22
+    "latency_s": 5.44
   },
   {
     "symbol": "SNAKE2025",
@@ -6749,7 +6723,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.8
+    "latency_s": 5.63
   },
   {
     "symbol": "FOG",
@@ -6775,7 +6749,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.91
+    "latency_s": 5.57
   },
   {
     "symbol": "AICRYNODE",
@@ -6801,7 +6775,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.98
+    "latency_s": 5.76
   },
   {
     "symbol": "YAK",
@@ -6823,11 +6797,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Very thin live liquidity at $2,427",
+      "Very thin live liquidity at $4,425",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 5.68
+    "latency_s": 26.15
   },
   {
     "symbol": "hCASH",
@@ -6853,7 +6827,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 11.43
+    "latency_s": 10.14
   },
   {
     "symbol": "USDV",
@@ -6879,7 +6853,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 20.78
+    "latency_s": 20.75
   },
   {
     "symbol": "HUCH",
@@ -6905,7 +6879,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.72
+    "latency_s": 5.33
   },
   {
     "symbol": "DGRWON",
@@ -6931,7 +6905,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.69
+    "latency_s": 6.0
   },
   {
     "symbol": "yyAVAX",
@@ -6957,7 +6931,7 @@
       "Meaningful live liquidity at $349,009"
     ],
     "error": null,
-    "latency_s": 27.91
+    "latency_s": 25.34
   },
   {
     "symbol": "COININI",
@@ -6983,7 +6957,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.44
+    "latency_s": 5.29
   },
   {
     "symbol": "KLINK",
@@ -7009,7 +6983,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.85
+    "latency_s": 5.29
   },
   {
     "symbol": "SKULL",
@@ -7035,7 +7009,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.63
+    "latency_s": 6.5
   },
   {
     "symbol": "NAMI",
@@ -7061,7 +7035,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 7.31
+    "latency_s": 5.67
   },
   {
     "symbol": "CATFU",
@@ -7087,7 +7061,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.8
+    "latency_s": 5.55
   },
   {
     "symbol": "PFVS",
@@ -7113,7 +7087,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 8.22
+    "latency_s": 5.66
   },
   {
     "symbol": "$POOKU",
@@ -7139,7 +7113,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.61
+    "latency_s": 5.21
   },
   {
     "symbol": "DEAI",
@@ -7165,7 +7139,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.56
+    "latency_s": 6.13
   },
   {
     "symbol": "HUSKY",
@@ -7180,7 +7154,7 @@
     "ok": true,
     "label": "WARN",
     "rug_score": 12,
-    "risk_percent": 74,
+    "risk_percent": 60,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Token name readable on-chain",
@@ -7188,10 +7162,10 @@
       "Decimals value is within normal ERC-20 range",
       "Total supply readable on-chain",
       "Thin live liquidity at $14,006",
-      "Liquidity to FDV ratio is under 15% - market depth is shallow"
+      "Capability risk discounted: 25,742 holders over 1908d without an observed drain (track record 0.91)"
     ],
     "error": null,
-    "latency_s": 6.35
+    "latency_s": 18.99
   },
   {
     "symbol": "BANDS",
@@ -7217,7 +7191,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 9.43
+    "latency_s": 9.25
   },
   {
     "symbol": "KOI",
@@ -7243,7 +7217,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.66
+    "latency_s": 5.92
   },
   {
     "symbol": "sAVAX",
@@ -7265,11 +7239,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $174,784",
+      "Meaningful live liquidity at $372,994",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 20.78
+    "latency_s": 20.58
   },
   {
     "symbol": "JUICE",
@@ -7291,11 +7265,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Thin live liquidity at $10,202",
+      "Thin live liquidity at $10,226",
       "Liquidity to FDV ratio is under 3% - market depth is dangerously thin"
     ],
     "error": null,
-    "latency_s": 5.77
+    "latency_s": 15.82
   },
   {
     "symbol": "DREAM",
@@ -7321,7 +7295,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.36
+    "latency_s": 5.64
   },
   {
     "symbol": "THE",
@@ -7347,7 +7321,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.6
+    "latency_s": 5.71
   },
   {
     "symbol": "avUSD",
@@ -7369,11 +7343,11 @@
       "Mint function detected in bytecode",
       "Owner/admin control functions detected: mint(address,uint256), setMinter(address,bool), transferOwnership(address)",
       "Operator/authorization controls can gate trading or privileges",
-      "High holder concentration top5=94.0%",
+      "High holder concentration top5=92.4%",
       "Token name readable on-chain"
     ],
     "error": null,
-    "latency_s": 24.48
+    "latency_s": 23.97
   },
   {
     "symbol": "UST",
@@ -7399,7 +7373,7 @@
       "Token symbol readable on-chain"
     ],
     "error": null,
-    "latency_s": 19.78
+    "latency_s": 18.27
   },
   {
     "symbol": "AGF",
@@ -7425,7 +7399,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.8
+    "latency_s": 6.38
   },
   {
     "symbol": "NOVA",
@@ -7451,7 +7425,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.05
+    "latency_s": 5.44
   },
   {
     "symbol": "BLOCK",
@@ -7465,19 +7439,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.92
+    "latency_s": 5.58
   },
   {
     "symbol": "NYX",
@@ -7491,19 +7465,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.83
+    "latency_s": 5.48
   },
   {
     "symbol": "ILIS",
@@ -7529,7 +7503,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.76
+    "latency_s": 5.63
   },
   {
     "symbol": "HOONI",
@@ -7555,7 +7529,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.04
+    "latency_s": 5.79
   },
   {
     "symbol": "GUT",
@@ -7581,7 +7555,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 4.01
+    "latency_s": 5.88
   },
   {
     "symbol": "BEE",
@@ -7607,7 +7581,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 3.88
+    "latency_s": 6.35
   },
   {
     "symbol": "BEAM",
@@ -7633,7 +7607,7 @@
       "Decimals value is within normal ERC-20 range"
     ],
     "error": null,
-    "latency_s": 19.36
+    "latency_s": 17.85
   },
   {
     "symbol": "RICHGUY",
@@ -7659,7 +7633,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.82
+    "latency_s": 5.56
   },
   {
     "symbol": "JANNY",
@@ -7685,7 +7659,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.09
+    "latency_s": 5.53
   },
   {
     "symbol": "BTCWIZ",
@@ -7699,19 +7673,19 @@
     "http_status": 200,
     "ok": true,
     "label": "DANGER",
-    "rug_score": 89,
-    "risk_percent": 89,
+    "rug_score": 100,
+    "risk_percent": 100,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Bytecode backdoor risk score 0/100",
       "Owner/admin control functions detected: transferOwnership(address)",
       "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
       "Bot-like transaction entropy",
-      "Bot farm holder cluster",
-      "Near-zero deployer balance (0.0000 AVAX)"
+      "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 6.01
+    "latency_s": 5.59
   },
   {
     "symbol": "NOCHILL",
@@ -7733,11 +7707,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $49,693",
+      "Shallow live liquidity at $50,150",
       "Liquidity to FDV ratio is healthy"
     ],
     "error": null,
-    "latency_s": 18.36
+    "latency_s": 17.9
   },
   {
     "symbol": "PLUTO",
@@ -7763,7 +7737,7 @@
       "Bot farm holder cluster"
     ],
     "error": null,
-    "latency_s": 5.75
+    "latency_s": 7.29
   },
   {
     "symbol": "WAVAX",
@@ -7785,11 +7759,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $8,505,291",
+      "Deep live liquidity at $8,482,598",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 15.79
+    "latency_s": 15.96
   },
   {
     "symbol": "USDC",
@@ -7815,7 +7789,7 @@
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 19.15
+    "latency_s": 21.92
   },
   {
     "symbol": "USDC.e",
@@ -7837,11 +7811,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $480,664",
+      "Meaningful live liquidity at $480,662",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 16.68
+    "latency_s": 24.57
   },
   {
     "symbol": "USDt",
@@ -7863,11 +7837,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $5,221,133",
+      "Deep live liquidity at $5,220,985",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 20.45
+    "latency_s": 22.68
   },
   {
     "symbol": "WETH.e",
@@ -7889,11 +7863,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $3,604,046",
+      "Deep live liquidity at $3,617,758",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 19.22
+    "latency_s": 16.34
   },
   {
     "symbol": "BTC.b",
@@ -7915,11 +7889,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Deep live liquidity at $1,777,542",
+      "Deep live liquidity at $1,778,333",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 24.22
+    "latency_s": 23.29
   },
   {
     "symbol": "DAI.e",
@@ -7941,11 +7915,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Shallow live liquidity at $30,462",
+      "Shallow live liquidity at $30,465",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 14.97
+    "latency_s": 14.35
   },
   {
     "symbol": "WBTC.e",
@@ -7967,11 +7941,11 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $226,785",
+      "Meaningful live liquidity at $228,149",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 16.75
+    "latency_s": 15.69
   },
   {
     "symbol": "MIM",
@@ -7986,18 +7960,18 @@
     "ok": true,
     "label": "GOOD",
     "rug_score": 26,
-    "risk_percent": 28,
+    "risk_percent": 26,
     "source": "private_scoring_engine",
     "risk_flags": [
       "Known asset still exposes mint/admin supply controls",
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $129,608",
+      "Meaningful live liquidity at $130,149",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 23.38
+    "latency_s": 23.72
   },
   {
     "symbol": "FRAX",
@@ -8019,10 +7993,36 @@
       "Token name readable on-chain",
       "Token symbol readable on-chain",
       "Decimals value is within normal ERC-20 range",
-      "Meaningful live liquidity at $186,810",
+      "Meaningful live liquidity at $186,708",
       "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
     ],
     "error": null,
-    "latency_s": 25.51
+    "latency_s": 27.56
+  },
+  {
+    "symbol": "EURC",
+    "address": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+    "tier": "A_bluechip",
+    "expectation": "must_be_GOOD",
+    "discovery": "bluechip_control",
+    "reserve_usd": null,
+    "age_hours": null,
+    "goplus": null,
+    "http_status": 200,
+    "ok": true,
+    "label": "GOOD",
+    "rug_score": 18,
+    "risk_percent": 18,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Known asset uses upgradeable proxy pattern",
+      "Token name readable on-chain",
+      "Token symbol readable on-chain",
+      "Decimals value is within normal ERC-20 range",
+      "Meaningful live liquidity at $200,237",
+      "Known Avalanche asset; FDV/liquidity ratio not used as risk signal"
+    ],
+    "error": null,
+    "latency_s": 21.48
   }
 ]

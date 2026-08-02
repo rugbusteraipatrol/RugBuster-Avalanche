@@ -1,0 +1,760 @@
+[
+  {
+    "symbol": "SPCM",
+    "name": "SPACEM WORLD",
+    "address": "0x7cc9c624efa62c2decf0a2a028f7885ecea95a17",
+    "reserve_usd": 151.5291,
+    "age_hours": 25.3,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [],
+      "holder_count": 8335,
+      "top_holder_pct": 0.37364024505770904,
+      "is_open_source": "1",
+      "token_symbol": "SPCM"
+    },
+    "label": "DANGER",
+    "rug_score": 40,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "High rug velocity score 0.6",
+      "Token name readable on-chain",
+      "Token symbol readable on-chain",
+      "Decimals value is within normal ERC-20 range",
+      "Very thin live liquidity at $151"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "MPUP",
+    "name": "MoonPup",
+    "address": "0xf449918574ce1a53bbeccc9e65890f597204223e",
+    "reserve_usd": 0.1234,
+    "age_hours": 63.9,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "MPUP"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "CRISP",
+    "name": "CRISPR",
+    "address": "0xf8578deab08e9e9b83e65eeed489c6374b9a8fa9",
+    "reserve_usd": 0.1234,
+    "age_hours": 63.9,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "CRISP"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "ALGOAI",
+    "name": "Algoritha A.I",
+    "address": "0xe284049238eecc699fbba0d36dcb6782d0fc1144",
+    "reserve_usd": 0.1234,
+    "age_hours": 63.9,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "ALGOAI"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "IF",
+    "name": "What if",
+    "address": "0x2ef3590063774b7ec8c5e0168a8a5f2d1160b728",
+    "reserve_usd": 0.1234,
+    "age_hours": 63.9,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "IF"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "SNAPCAT",
+    "name": "Snapcat",
+    "address": "0x89059985a3a1f21dd870e373be7d9db801bad39f",
+    "reserve_usd": 0.1234,
+    "age_hours": 63.9,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "SNAPCAT"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "IMPERFECT",
+    "name": "the imperfect coin",
+    "address": "0xc2f69d0f8fc6c0deb09248b403a8a4ab1fdf6fe4",
+    "reserve_usd": 0.1234,
+    "age_hours": 63.9,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "IMPERFECT"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "DAVIDO",
+    "name": "Timeless Davido",
+    "address": "0xfdb462dcc803cb8189dbc16b816b78b8664f042d",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "DAVIDO"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "BBB",
+    "name": "Based Baby",
+    "address": "0xa88db61e307cb4c8d2251fbea9ca3752616054f5",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": null,
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "UWU",
+    "name": "Unlimited Wealth Utility",
+    "address": "0x99af7a6343a99c1bfb3a37c32bc14630dcf345fa",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": null,
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "IONX",
+    "name": "Charged Particles",
+    "address": "0x4384ed6f6a4c812c5c5f1469f18424399b656280",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "IONX"
+    },
+    "label": "DANGER",
+    "rug_score": 89,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster",
+      "Near-zero deployer balance (0.0000 AVAX)"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "GRAM",
+    "name": "Blockgram",
+    "address": "0xd0b4b228446721d291b6b3f80999ccb1d9042c12",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "GRAM"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "BNTY",
+    "name": "Bounty",
+    "address": "0x09350341ad779d0cda6f31da1fd2cf2f29f9de23",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "BNTY"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "UNW",
+    "name": "Uniwhale",
+    "address": "0x3a00205d4e3c5a5bb4f7ebfcc45696118bb519c0",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "UNW"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "BRUV",
+    "name": "bruv",
+    "address": "0x094d3e03b93be6000591842a1248e8c499f407c2",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "BRUV"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "WUKONG",
+    "name": "Wukong",
+    "address": "0x9ba4d4eb34f2acc467ad8f6eaffc6f90c5b9b0f9",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "WUKONG"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "TEST",
+    "name": "test token please ignore",
+    "address": "0x9ba5dce2d8bcf92ca674eaf468e58d0b09e5fa7f",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "TEST"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "ROSSCOIN",
+    "name": "Rosscoin",
+    "address": "0x56bf2ff0195813de8524b9cc018eb77935c16bfd",
+    "reserve_usd": 0.1217,
+    "age_hours": 64.0,
+    "discovery": "new_pool",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "holder_count=1",
+        "top_holder=1.00"
+      ],
+      "holder_count": 1,
+      "top_holder_pct": 1.0,
+      "is_open_source": "0",
+      "token_symbol": "ROSSCOIN"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 0/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Admin controls present before supported live liquidity is found",
+      "Critical holder concentration top5=100.0%",
+      "Bot-like transaction entropy",
+      "Bot farm holder cluster"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "WOLF",
+    "name": "Landwolf",
+    "address": "0x4f94b8aef08c92fefe416af073f1df1e284438ec",
+    "reserve_usd": 26554.67,
+    "age_hours": null,
+    "discovery": "dexscreener_fresh",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [],
+      "holder_count": 11541,
+      "top_holder_pct": 0.20290409846115393,
+      "is_open_source": "1",
+      "token_symbol": "WOLF"
+    },
+    "label": "GOOD",
+    "rug_score": 12,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Token name readable on-chain",
+      "Token symbol readable on-chain",
+      "Decimals value is within normal ERC-20 range",
+      "Total supply readable on-chain",
+      "Shallow live liquidity at $26,555",
+      "Capability risk discounted: 11,541 holders over 966d without an observed drain (track record 0.91)"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "KING",
+    "name": "KingdomDAO",
+    "address": "0xc792fff305914106eba41e3c418fa4f0387c881e",
+    "reserve_usd": 0.2,
+    "age_hours": null,
+    "discovery": "dexscreener_fresh",
+    "goplus": {
+      "hard_scam": [
+        "hidden_owner"
+      ],
+      "soft_risk": [
+        "top_holder=1.00",
+        "mintable"
+      ],
+      "holder_count": 6,
+      "top_holder_pct": 0.9999737083871727,
+      "is_open_source": "1",
+      "token_symbol": "KING"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 20/100",
+      "Mint function detected in bytecode",
+      "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
+      "Operator/authorization controls can gate trading or privileges",
+      "Critical holder concentration top5=100.0%",
+      "Very few holders (6)"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "EagleToken",
+    "name": "Eagle",
+    "address": "0x94fb1c30cf254c817d8427093b7af591f3a7e300",
+    "reserve_usd": 2.02,
+    "age_hours": null,
+    "discovery": "dexscreener_fresh",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "unverified_source",
+        "top_holder=1.00"
+      ],
+      "holder_count": 10,
+      "top_holder_pct": 0.9999997999,
+      "is_open_source": "0",
+      "token_symbol": "EagleToken"
+    },
+    "label": "DANGER",
+    "rug_score": 68,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 20/100",
+      "Owner/admin control functions detected: transferOwnership(address)",
+      "Critical holder concentration top5=100.0%",
+      "Token name readable on-chain",
+      "Token symbol readable on-chain",
+      "Decimals value is within normal ERC-20 range"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "EAGLE",
+    "name": "AvaEagle Token",
+    "address": "0xa0818b489f85579d9c29d75b95b239418c9d8687",
+    "reserve_usd": 265.76,
+    "age_hours": null,
+    "discovery": "dexscreener_fresh",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [
+        "mintable"
+      ],
+      "holder_count": 125,
+      "top_holder_pct": 0.47694925154242507,
+      "is_open_source": "1",
+      "token_symbol": "EAGLE"
+    },
+    "label": "DANGER",
+    "rug_score": 100,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 20/100",
+      "Mint function detected in bytecode",
+      "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
+      "Operator/authorization controls can gate trading or privileges",
+      "Critical holder concentration top5=97.6%",
+      "Near-zero deployer balance (0.0002 AVAX)"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "WITCH",
+    "name": "WITCH",
+    "address": "0x810e539d32b428a2bc30dc62713c04c0a2e01373",
+    "reserve_usd": 1.55,
+    "age_hours": null,
+    "discovery": "dexscreener_fresh",
+    "goplus": {
+      "hard_scam": [
+        "owner_change_balance"
+      ],
+      "soft_risk": [],
+      "holder_count": 96,
+      "top_holder_pct": 0.2201216486794863,
+      "is_open_source": "1",
+      "token_symbol": "WITCH"
+    },
+    "label": "DANGER",
+    "rug_score": 82,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 20/100",
+      "Mint function detected in bytecode",
+      "Owner/admin control functions detected: burn(address,uint256), mint(address,uint256), transferOwnership(address)",
+      "Operator/authorization controls can gate trading or privileges",
+      "Near-zero deployer balance (0.0632 AVAX)",
+      "Token name readable on-chain"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "PRIME",
+    "name": "DeltaPrime",
+    "address": "0x33c8036e99082b0c395374832fecf70c42c7f298",
+    "reserve_usd": 96474.97,
+    "age_hours": null,
+    "discovery": "dexscreener_fresh",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [],
+      "holder_count": 6238,
+      "top_holder_pct": 0.3745246271059411,
+      "is_open_source": "1",
+      "token_symbol": "PRIME"
+    },
+    "label": "GOOD",
+    "rug_score": 12,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Token name readable on-chain",
+      "Token symbol readable on-chain",
+      "Decimals value is within normal ERC-20 range",
+      "Total supply readable on-chain",
+      "Shallow live liquidity at $96,475",
+      "Capability risk discounted: 6,238 holders over 765d without an observed drain (track record 0.79)"
+    ],
+    "error": null
+  },
+  {
+    "symbol": "APEX",
+    "name": "APEX",
+    "address": "0x98b172a09102869add73116fc92a0a60bff4778f",
+    "reserve_usd": 0.07,
+    "age_hours": null,
+    "discovery": "dexscreener_fresh",
+    "goplus": {
+      "hard_scam": [],
+      "soft_risk": [],
+      "holder_count": 673,
+      "top_holder_pct": 0.37714064672996,
+      "is_open_source": "1",
+      "token_symbol": "APEX"
+    },
+    "label": "DANGER",
+    "rug_score": 76,
+    "source": "private_scoring_engine",
+    "risk_flags": [
+      "Bytecode backdoor risk score 20/100",
+      "Mint function detected in bytecode",
+      "Owner/admin control functions detected: mint(address,uint256), transferOwnership(address)",
+      "Operator/authorization controls can gate trading or privileges",
+      "Token name readable on-chain",
+      "Token symbol readable on-chain"
+    ],
+    "error": null
+  }
+]
