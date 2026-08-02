@@ -7,6 +7,9 @@ gates:
   - GOOD
   reference_case_all_must_pass: true
   required_source_for_all: private_scoring_engine
+  rug_factory_forbidden_labels:
+  - GOOD
+  rug_factory_all_must_pass: true
 entries:
 - symbol: WAVAX
   address: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7'
@@ -381,6 +384,573 @@ entries:
   expected_labels:
   - WARN
   - DANGER
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: MAXI
+  address: '0x9e7338d762d7a82273a3e4dc6994e586dc97cab9'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: AQUA
+  address: '0x1fd45370de3f17e3370051cddfdbaa0923f29ca0'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: GIF
+  address: '0x3bf17677188e5bd7ad95a03358d9aef39414fa57'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BUMPER
+  address: '0x72d19236c246b5922de8dfb4cf3235732e80554f'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: KNIGHT
+  address: '0xc0a3279f4ad8efede88087974d270cc896a7571e'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: FELICETTE
+  address: '0x4788308b547fc3f00b3b50baa6901add7d3d0ad7'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: DOV
+  address: '0xf0bdf1abef249e34808ae2e65c1e116bf18c7f76'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SMRT
+  address: '0xd1288f30ffacd3cecf27bac6ebe8cf53fe71002d'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: PEPEWIFHAT
+  address: '0xdcbf95969ab0c7d79ce5abf48d7134bb243bc2bd'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: PEMDAS
+  address: '0x5a144ebd5e6b1de616f875c17ca3299176744089'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: FOREHEAD
+  address: '0xfbddf6e15052d02aa9ee690ba036e45dc7e5e365'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: MANYU
+  address: '0x1ce807bd2ef2ae63b365155d858aa332ba79cd27'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SCRIBBLI
+  address: '0x2fdafc0df893d7aa5bb17604b74e045d14fb6cb7'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: ADION
+  address: '0x7320ecbccfb8f21e0f6301f8eda69fbe33f31e7f'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: NICK
+  address: '0xdd5acab9db2bf7cfddaf69a218665522aabf8340'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: CHIBI
+  address: '0xa94b0de2c7d25bfe5c011d9d37bb6af18e2a356d'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: METAL
+  address: '0xb98fc1a02950472af998ed8143667b3375cc89a3'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: JOJO
+  address: '0x8dcc64388b71356cb40162ca476e748e38d6a5f7'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: UNBAGGED
+  address: '0x5e1419c1c5f449de83665e78907f0c488a656777'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: LSD
+  address: '0x7ec6c1e9ff69af074779ae33868cc8595748fa4c'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: $INTERN
+  address: '0xc9d9ffbb797793027c5a388781a2f8735c58cd45'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: JANRO
+  address: '0x62df71832e7517f5b7b96d916110f93d15d25f26'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SHIB
+  address: '0x58018c9c55ee6b417a0f7e6428b02a7e858a9ee8'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BCAT
+  address: '0x09586e964409d3d76084e4f62d6cc4746ec4ba1b'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SOLANA
+  address: '0x8853c229032e8b039b80eff929ea2846e9736884'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: WESLEY
+  address: '0xc9d6e36aa19be43e217f4bbb494fd668f211bc15'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: USTREAM
+  address: '0xa4127a6d6b22f5f7b83bbf2f2a9d34c396b5701a'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: VAULT
+  address: '0xcadb1314ae8495296a4148a8fe4e66ee5b41f9b9'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: USH
+  address: '0x431cbc137c11e8a851f2ab7b36a1027b2c0baae9'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: MEOW
+  address: '0xea3a03a7c5dee7d72eeb6f444be4e12bef8ae380'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: PAPERCLIPS
+  address: '0x5370c0887fb1fb9548a6dba0935e3fcb58f99550'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: FUR
+  address: '0x985667069fda0a2630ef23512a39363bbfbdda45'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: $PRIME
+  address: '0xd958115c13bb781605640e4dbfa3ae95c943da86'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: FARTHER
+  address: '0xb2549db6de79484342ce3e152055946861b3d95d'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: $HUSKY
+  address: '0x421c009899a6d63204a1ac698aad91dbbc4fa1e2'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: PRINT
+  address: '0xf370c2b74b28a246c3d1489d904a05b775c0fdd6'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: TIAI
+  address: '0x94e3a3dcaf2fc5dc8df4d1ce0a92025e2636f01d'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: CRAB
+  address: '0x05fad44c212e89f8c572cdf7349ca3b4844d8058'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: +
+  address: '0xc481c49c9a14c5b2c26dd3cf15e8d7c83981df85'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: T8008
+  address: '0xfa90e9c32d9a8352a49555c25d503d39eea6b58d'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: ASTA
+  address: '0x6f3e1b1334bf558bae44f7421413997ff3edd0ec'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: YAKA
+  address: '0x6e54903395c982b31be7b571f526b7ffc2d795bf'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: REMILIA
+  address: '0x6fed791a210c9e703292bdcc6aed3b0e4460441f'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: INVITE
+  address: '0x47fa9cff209b064ec63e1a865c36d1b7fee4a9fe'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: KEVIN
+  address: '0x0d10c9c4e8f4e91cb7349869d25dafd03795ad0e'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: UFO
+  address: '0x4e4ba5b7ffcb2228ad6e565f1cfa3990da3cc7c7'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: NFTBS
+  address: '0xbf11c43b2b68587617e477359d4f98a43f67e549'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: LOS
+  address: '0xc65504f93cf14c32168e86210df330e9ba98a391'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: L
+  address: '0x26fdbfc71f2e0fb0b223d48b2d62ee5b268ee316'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: STELAI
+  address: '0xf0086558e5278afad3ca065c1bfa2942a546d1a5'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: WSB
+  address: '0x53fb0478884b55c5b4d636dad23ae25af9378f0e'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: CAP
+  address: '0xa7e5d6d199229a0d8f60eabaa955a7dfc45a5b0a'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SHIKA-YAN
+  address: '0x477870ce0033ece4f0df0b7fc22937c44fb56b84'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: AISCII
+  address: '0xea87544397ff98593a197fe49d9c674db51754e5'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: LTD
+  address: '0xad75d375d21bf8dd3bd7405f378725c999d31609'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BOOBS
+  address: '0x87f292678604bd5b6e10a9276382f9cd04ded70c'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: LAMBOW
+  address: '0x1a830a654fafa51090a3f763cd286a6c303ab62f'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: MAFIA
+  address: '0x9f9a0683ae9d77576b1ee62a30ce9b265679a064'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: RAGE
+  address: '0xc9a383e620b0ea6b46377ba3b16e27bbe18c9ab8'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BSOP
+  address: '0x643509cd4f345777c655d4a7f3404d3295580ad8'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: AINL
+  address: '0xb6d9989606a7838da8271e931fe5f3290d3b860c'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: HOPPY
+  address: '0xcf7705df763e79de1ecb2644662fec7371f4e2d5'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: ICC
+  address: '0x484a0755078edd8e558bab6bc59cc9d0348e9e8b'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: KIGU
+  address: '0xd443e5fd8a71f8c732ed8fe656e48fc7fa226a96'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: OLIVIA
+  address: '0x9653a4a6f2020a2ffe31bdf378f033cdec6f36de'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: LEIA
+  address: '0x0d9e637c455bf07bd750e2fc40c07acfafdfc281'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: CUR
+  address: '0x55e369a6ba65bb5c8a22a8d5431325a28476f528'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BDOGE
+  address: '0x37b974455d95a168d2caaae3cf262a32f9084c5c'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: GLMPS
+  address: '0x83ed170bf9689f929e463347054fee16f84ee122'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: WIZ
+  address: '0x5d70a80e8447dcb49c960e4db0f7ca72cb87a701'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: F
+  address: '0x303c26209baa0b3d5ceef8251a4a299c62759ff9'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: T7
+  address: '0xa6adcdcc52c679c252a782e075fdc0edc61d78c1'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SAMBA
+  address: '0xc5e1e3c8d845d5e054f76905e45adb70a83245b0'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: ZERO
+  address: '0x9f2ba33a70d100e7741ba9b4d56014082dc838d7'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: $KEK
+  address: '0x018ca70bfe740b98159dabe7b6d2eb20fa796c7e'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: MC
+  address: '0xd6c25e68425f1195c05517fe6a0c01e0156eb62d'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SUGAR
+  address: '0x82a8c849241b18b52c4ba1dd8fb5bd3639b90fd1'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: BUTTCOIN
+  address: '0x9aeb371c51f6b9eab52a7d640f111b99e9da1891'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: PEGECOIN
+  address: '0xc247bb0d8f9abdde333cc5226e61fa8de385c92f'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: MUSK
+  address: '0x183aef8cd6bf91672f6f3477d11d9d52e1c6adf6'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: CAMEL
+  address: '0x1ed679337db061fe1f582e40bb1513386bf677c3'
+  category: rug_factory
+  note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
   forbidden_labels:
   - GOOD
   gate: true

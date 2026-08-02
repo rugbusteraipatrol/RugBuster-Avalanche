@@ -141,6 +141,16 @@ def run_golden_set(golden_path: Path) -> int:
     for r in ref_fail:
         print(f"        - {r['symbol']} ({r['address']}): {'; '.join(r['problems'])}")
 
+    rugf = [r for r in results if r["category"] == "rug_factory"]
+    if rugf:
+        rugf_good = [r for r in rugf if r["label"] == "GOOD"]
+        ok = not rugf_good
+        overall_pass &= ok
+        print(f"[{'PASS' if ok else 'FAIL'}] I5 rug-factory pattern never GOOD: "
+              f"{len(rugf) - len(rugf_good)}/{len(rugf)}")
+        for r in rugf_good:
+            print(f"        - FALSE GOOD: {r['symbol']} ({r['address']})")
+
     scam = [r for r in results if r["category"] == "scam"]
     scam_ok = [r for r in scam if r["label"] in ("WARN", "DANGER")]
     scam_good = [r for r in scam if r["label"] == "GOOD"]

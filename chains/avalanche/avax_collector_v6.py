@@ -56,7 +56,7 @@ def clean_env_value(name: str, default: str = "") -> str:
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-SNOWTRACE_API_KEY = clean_env_value("SNOWTRACE_API_KEY", "rs_c563928dc3b9c46d70d8698c")
+SNOWTRACE_API_KEY = clean_env_value("SNOWTRACE_API_KEY")
 SNOWTRACE_API     = clean_env_value("SNOWTRACE_API", "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api")
 AVAX_RPC          = clean_env_value("AVAX_RPC", "https://api.avax.network/ext/bc/C/rpc")
 
@@ -545,20 +545,21 @@ def analyze_holder_concentration_avax(contract_address: str) -> dict:
 
     try:
         # Routescan vraća TokenHolderQuantity kao string
+        token_info = get_token_info_avax(contract_address)
+        total_supply = float(str(token_info.get("total_supply") or "0").replace(",", ""))
+        if total_supply <= 0:
+            return result
+
         amounts = []
-        for h in holders[:10]:
+        for h in holders[:50]:
             qty = h.get("TokenHolderQuantity", "0") or "0"
             amounts.append(float(str(qty).replace(",", "")))
-
-        total = sum(amounts)
-        if total == 0:
-            return result
 
         top5 = sum(amounts[:5])
         top1 = amounts[0]
 
-        result["top5_pct"] = round(top5 / total * 100, 1)
-        result["top1_pct"] = round(top1 / total * 100, 1)
+        result["top5_pct"] = round(top5 / total_supply * 100, 1)
+        result["top1_pct"] = round(top1 / total_supply * 100, 1)
         result["is_concentrated"] = result["top5_pct"] > 80
 
         if result["top5_pct"] > 90:
@@ -650,6 +651,9 @@ def _throttle_api():
 
 def snowtrace_get(params: dict) -> Optional[dict]:
     _throttle_api()
+    if not SNOWTRACE_API_KEY:
+        log.warning("  [API] SNOWTRACE_API_KEY nije postavljen; Routescan/Snowtrace modul nije dostupan.")
+        return None
     params["apikey"] = SNOWTRACE_API_KEY
     headers = {"User-Agent": "SyndicateCollector/6.0", "Accept": "application/json"}
     delays = [2, 4, 8]
@@ -670,13 +674,47 @@ def snowtrace_get(params: dict) -> Optional[dict]:
                 msg = data.get("message", "")
                 if "No transactions" in msg or "No records" in msg:
                     return []
-                if result is not None:
-                    return result
+                detail = str(result or msg or "unknown API error")
+                log.warning("  [API] Routescan/Snowtrace odbio zahtev: %s", detail[:160])
+                return None
             return []
         except requests.RequestException as e:
             log.warning("  [API] Greška (pokušaj %d/3): %s", attempt + 1, e)
             time.sleep(delay)
     return None
+
+
+def routescan_api_health() -> dict:
+    if not SNOWTRACE_API_KEY:
+        return {
+            "ok": False,
+            "status": "missing_key",
+            "message": "SNOWTRACE_API_KEY is not configured",
+        }
+    params = {
+        "module": "account",
+        "action": "balance",
+        "address": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+        "tag": "latest",
+        "apikey": SNOWTRACE_API_KEY,
+    }
+    try:
+        resp = requests.get(
+            SNOWTRACE_API,
+            params=params,
+            headers={"User-Agent": "SyndicateCollector/6.0", "Accept": "application/json"},
+            timeout=API_TIMEOUT,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:
+        return {"ok": False, "status": "request_error", "message": type(exc).__name__}
+    ok = isinstance(data, dict) and data.get("status") == "1"
+    return {
+        "ok": ok,
+        "status": "ok" if ok else "api_rejected",
+        "message": str((data or {}).get("result") or (data or {}).get("message") or "")[:180],
+    }
 
 
 def get_latest_block() -> int:
@@ -733,7 +771,7 @@ def get_avax_balance(address: str) -> float:
 def get_token_holders(address: str) -> list:
     params = {
         "module": "token", "action": "tokenholderlist",
-        "contractaddress": address, "page": 1, "offset": 10,
+        "contractaddress": address, "page": 1, "offset": 50,
     }
     result = snowtrace_get(params)
     return result if result else []

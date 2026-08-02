@@ -34,6 +34,7 @@ from avax_collector_v6 import (  # noqa: E402
     run_cia_analysis_avax as collector_run_cia_analysis_avax,
     run_v5_analysis_avax as collector_run_v5_analysis_avax,
     run_v6_analysis_avax as collector_run_v6_analysis_avax,
+    routescan_api_health as collector_routescan_api_health,
 )
 
 load_env()
@@ -107,7 +108,7 @@ KNOWN_TOKEN_METADATA = {
         "decimals": 18,
         "category": "canonical_bridged_asset",
     },
-    "0x37b60851c570232f6f6a2a15d8b8f692ec4e08d5": {
+    "0x37b608519f91f70f2eeb0e5ed9af4061722e4f76": {
         "name": "SushiToken",
         "symbol": "SUSHI.e",
         "decimals": 18,
@@ -253,6 +254,7 @@ app = Flask(__name__)
 SCAN_CACHE_TTL_SECONDS = 180
 SCAN_CACHE: dict[str, dict[str, Any]] = {}
 PORTFOLIO_SCAN_WORKERS = 3
+KNOWN_TOKEN_VALIDATION: dict[str, Any] = {"checked": False, "ok": False, "errors": []}
 DATABASE_URL = os.getenv("DATABASE_URL")
 RECENT_SCAN_LIMIT = int(os.getenv("RECENT_SCAN_LIMIT", "10"))
 RECENT_SCAN_INGEST_TOKEN = os.getenv("RECENT_SCAN_INGEST_TOKEN", "").strip()
@@ -289,6 +291,29 @@ def is_known_asset_address(address: str) -> bool:
     if not Web3.is_address(address):
         return False
     return Web3.to_checksum_address(address).lower() in KNOWN_TOKEN_METADATA
+
+
+def validate_known_token_metadata(web3: Web3) -> dict[str, Any]:
+    if KNOWN_TOKEN_VALIDATION["checked"]:
+        return KNOWN_TOKEN_VALIDATION
+    errors: list[str] = []
+    for raw_address, expected in KNOWN_TOKEN_METADATA.items():
+        try:
+            checksum = Web3.to_checksum_address(raw_address)
+            if not web3.eth.get_code(checksum):
+                errors.append(f"{expected.get('symbol')} {checksum}: no bytecode")
+                continue
+            token = web3.eth.contract(address=checksum, abi=ERC20_ABI)
+            symbol = call_optional(token, "symbol")
+            expected_symbol = str(expected.get("symbol") or "").lower()
+            if expected_symbol and str(symbol or "").lower() != expected_symbol:
+                errors.append(f"{expected.get('symbol')} {checksum}: symbol={symbol!r}")
+        except Exception as exc:
+            errors.append(f"{expected.get('symbol')} {raw_address}: {type(exc).__name__}")
+    KNOWN_TOKEN_VALIDATION.update({"checked": True, "ok": not errors, "errors": errors[:12]})
+    if errors:
+        app.logger.error("Known Avalanche token metadata validation failed: %s", errors[:12])
+    return KNOWN_TOKEN_VALIDATION
 
 
 def implementation_address(web3: Web3, address: str) -> str | None:
@@ -433,7 +458,23 @@ def add_cors_headers(response):
 @app.route("/health", methods=["GET"])
 def health():
     network = resolve_network()
-    return jsonify({"ok": True, "network": network, "label": NETWORKS[network]["label"]})
+    try:
+        known_tokens = validate_known_token_metadata(get_web3())
+    except Exception as exc:
+        known_tokens = {"checked": False, "ok": False, "errors": [type(exc).__name__]}
+    routescan = collector_routescan_api_health()
+    return jsonify(
+        {
+            "ok": True,
+            "degraded": not (known_tokens.get("ok") and routescan.get("ok")),
+            "network": network,
+            "label": NETWORKS[network]["label"],
+            "dependencies": {
+                "routescan": routescan,
+                "known_tokens": known_tokens,
+            },
+        }
+    )
 
 
 @app.route("/", methods=["GET"])
@@ -455,7 +496,7 @@ def root():
 
 def public_label_from_report(report: dict[str, Any]) -> str:
     explicit = str(report.get("label") or report.get("verdict") or "").upper()
-    if explicit in {"GOOD", "WARN", "DANGER", "INSUFFICIENT_DATA", "UNKNOWN"}:
+    if explicit in {"GOOD", "WARN", "DANGER", "INSUFFICIENT_DATA", "UNKNOWN", "NOT_A_TOKEN"}:
         return explicit
     rug_status = str(report.get("rug_status") or "").upper()
     speculation_status = str(report.get("speculation_status") or "").upper()
@@ -607,10 +648,61 @@ def market_fields_from_pair(pair_data: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+class NotTokenAddress(ValueError):
+    pass
+
+
+def flatten_intel_for_scoring(cia: dict[str, Any], v6: dict[str, Any], creator_stats: dict[str, Any]) -> dict[str, Any]:
+    """Flatten collector intel onto the token dict under the keys the scorer reads.
+
+    The CIA/V5/V6 analyses were already being computed and shipped as separate
+    payload keys, but the scorer reads flat `v6_*` / `cia_*` / `creator_*` fields
+    off the token object, so none of these signals reached scoring. Without them
+    the engine scores almost entirely on bytecode capabilities and liquidity
+    depth, which cannot separate an established asset from a fresh rug -- both
+    have mint() and both can look thin. That gap is what the hand-maintained
+    canonical whitelist has been compensating for.
+
+    Two fields are deliberately NOT mapped:
+
+    * holder count. `cia.cluster.total_checked` is the number of wallets
+      sampled, capped at 10 -- not the holder count. Mapping it would make every
+      token, including WAVAX, trip the "very few holders" penalty.
+    * holder concentration. The collector now computes top holders over total
+      supply, but this still depends on Routescan holder-list access. Keep it
+      unmapped until the dependency health check and regression set prove the
+      source is consistently available.
+
+    Both need fixing at the source (and a Routescan key with holder-list access)
+    before they can safely drive a verdict.
+    """
+    backdoor = (v6 or {}).get("backdoor") or {}
+    velocity = (v6 or {}).get("velocity") or {}
+    funding = (cia or {}).get("funding") or {}
+    entropy = (cia or {}).get("entropy") or {}
+    wash = (cia or {}).get("wash") or {}
+    cluster = (cia or {}).get("cluster") or {}
+
+    return {
+        "v6_has_backdoor": bool(backdoor.get("has_backdoor")),
+        "v6_backdoor_risk_score": int(backdoor.get("backdoor_risk_score") or 0),
+        "v6_rug_velocity_score": float(velocity.get("velocity_score") or 0.0),
+        "v6_is_fast_rug": bool(velocity.get("is_fast_rug")),
+        "cia_all_fresh_wallets": bool(funding.get("all_fresh")),
+        "cia_bot_pattern": bool(entropy.get("is_bot_pattern")),
+        "cia_wash_detected": bool(wash.get("wash_detected")),
+        "cia_bot_farm": bool(cluster.get("is_bot_farm")),
+        "creator_rug_rate": float((creator_stats or {}).get("rug_rate") or 0.0),
+    }
+
+
 def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str, Any]]:
     checksum = Web3.to_checksum_address(address)
     web3 = get_web3()
+    validate_known_token_metadata(web3)
     onchain = get_onchain_metadata(web3, checksum)
+    if not onchain.get("is_probable_erc20"):
+        raise NotTokenAddress("Address does not expose a readable ERC-20 token interface")
 
     try:
         token_info = collector_get_token_info_avax(checksum)
@@ -632,6 +724,8 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         "v6_has_mint": onchain.get("v6_has_mint", False),
         "v6_has_blacklist": onchain.get("v6_has_blacklist", False),
         "v6_is_proxy": onchain.get("v6_is_proxy", False),
+        "is_contract": onchain.get("is_contract", False),
+        "is_probable_erc20": onchain.get("is_probable_erc20", False),
         "contract_tx_count": onchain.get("contract_tx_count", 0),
     }
 
@@ -656,7 +750,10 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
     cia = collector_run_cia_analysis_avax(checksum, deployer, deploy_timestamp)
     tx_amounts_raw = cia.get("entropy", {}).get("dominant_amount", 0)
     tx_amounts = [tx_amounts_raw] if tx_amounts_raw else []
-    holder_count = cia.get("cluster", {}).get("total_checked", 0)
+    try:
+        holder_count = int(token_info.get("holders_count") or 0)
+    except (TypeError, ValueError):
+        holder_count = 0
     v5 = collector_run_v5_analysis_avax(
         checksum,
         deployer,
@@ -671,6 +768,7 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
     v6 = collector_run_v6_analysis_avax(checksum, deployer, deploy_timestamp)
     token_info["deployer"] = deployer
     token_info["deployer_balance_avax"] = deployer_balance
+    token_info.update(flatten_intel_for_scoring(cia, v6, creator_stats))
 
     payload = {
         "schema_version": "1",
@@ -753,6 +851,31 @@ def insufficient_data_report(address: str, reason: str) -> dict[str, Any]:
     }
 
 
+def not_a_token_report(address: str, reason: str) -> dict[str, Any]:
+    checksum = Web3.to_checksum_address(address)
+    return {
+        "address": checksum,
+        "token_name": "Not an ERC-20 token",
+        "symbol": "NOT_TOKEN",
+        "label": "NOT_A_TOKEN",
+        "risk_engine": "rugbuster_private_scoring_engine",
+        "risk_percent": None,
+        "rug_score": None,
+        "rug_status": "INSUFFICIENT_DATA",
+        "rug_reasons": [reason],
+        "speculation_score": None,
+        "speculation_status": "UNKNOWN",
+        "speculation_reasons": ["Address is not a readable ERC-20 token contract"],
+        "risk_flags": [reason],
+        "data_confidence": {
+            "level": "INSUFFICIENT_DATA",
+            "missing_modules": ["erc20_metadata"],
+        },
+        "network": NETWORKS[resolve_network()]["label"],
+        "source": "not_a_token_guard",
+    }
+
+
 def score_with_private_engine(address: str) -> dict[str, Any]:
     if not remote_engine_configured():
         return insufficient_data_report(address, "Private scoring engine is not configured")
@@ -769,6 +892,8 @@ def public_score():
 
     try:
         report = score_with_private_engine(address)
+    except NotTokenAddress as exc:
+        report = not_a_token_report(address, str(exc))
     except Exception as exc:
         report = insufficient_data_report(address, f"Private scoring engine failed: {type(exc).__name__}")
     put_cached_report(address, report)
@@ -1043,17 +1168,28 @@ def fetch_portfolio_tokens(address: str) -> list[dict[str, Any]]:
 def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
     checksum = Web3.to_checksum_address(address)
     known = KNOWN_TOKEN_METADATA.get(checksum.lower(), {})
+    try:
+        code = web3.eth.get_code(checksum)
+    except Exception:
+        code = b""
     token = web3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)
     name = call_optional(token, "name")
     symbol = call_optional(token, "symbol")
     decimals = call_optional(token, "decimals")
     total_supply = call_optional(token, "totalSupply")
     admin_controls = detect_admin_controls(web3, checksum, is_known_asset=bool(known))
+    has_readable_metadata = any(
+        value is not None and str(value).strip() != ""
+        for value in (name, symbol, decimals, total_supply)
+    )
+    is_probable_erc20 = bool(known) or (bool(code) and decimals is not None and total_supply is not None and has_readable_metadata)
     return {
         "name": name or known.get("name") or "Unknown",
         "symbol": symbol or known.get("symbol") or "Unknown",
         "decimals": decimals if decimals is not None else known.get("decimals"),
         "total_supply": total_supply,
+        "is_contract": bool(code),
+        "is_probable_erc20": is_probable_erc20,
         "is_known_chain_asset": bool(known),
         "known_asset_category": known.get("category"),
         "metadata_source": "erc20_call" if name or symbol or decimals is not None or total_supply is not None else "known_token_fallback" if known else "unavailable",
