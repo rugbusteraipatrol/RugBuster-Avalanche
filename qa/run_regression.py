@@ -151,6 +151,17 @@ def run_golden_set(golden_path: Path) -> int:
         for r in rugf_good:
             print(f"        - FALSE GOOD: {r['symbol']} ({r['address']})")
 
+    dead = [r for r in results if r["category"] == "dead_liquidity"]
+    if dead:
+        dead_good = [r for r in dead if r["label"] == "GOOD"]
+        ok = not dead_good
+        overall_pass &= ok
+        print(f"[{'PASS' if ok else 'FAIL'}] I6 thin-liquidity tokens never GOOD: "
+              f"{len(dead) - len(dead_good)}/{len(dead)}")
+        for r in dead_good:
+            print(f"        - FALSE GOOD: {r['symbol']} ({r['address']}) — a long track record "
+                  f"means the owner has not stolen, not that a holder can exit")
+
     scam = [r for r in results if r["category"] == "scam"]
     scam_ok = [r for r in scam if r["label"] in ("WARN", "DANGER")]
     scam_good = [r for r in scam if r["label"] == "GOOD"]

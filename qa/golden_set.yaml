@@ -10,6 +10,10 @@ gates:
   rug_factory_forbidden_labels:
   - GOOD
   rug_factory_all_must_pass: true
+  dead_liquidity_forbidden_labels:
+  - GOOD
+  dead_liquidity_all_must_pass: true
+  dead_liquidity_threshold_usd: 25000
 entries:
 - symbol: WAVAX
   address: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7'
@@ -951,6 +955,86 @@ entries:
   address: '0x1ed679337db061fe1f582e40bb1513386bf677c3'
   category: rug_factory
   note: unverified source + 1 holder + top-holder 1.00; abandoned-deployment pattern
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: NXPC
+  address: '0x5e0e90e268bc247cc850c789a0db0d5c7621fb59'
+  category: dead_liquidity
+  note: Established token with only $8,081 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: SYN
+  address: '0x1f1e7c893855525b303f99bdf5c3c05be09ca251'
+  category: dead_liquidity
+  note: Established token with only $3,150 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: AVAXAI
+  address: '0x8c8d2a7d8d9cf26f5ee1bbfc0ba56e93f4a4a7ac'
+  category: dead_liquidity
+  note: Established token with only $1,619 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: ORNG
+  address: '0x6c14c1898c843ff66ca51e87244690bbc28df215'
+  category: dead_liquidity
+  note: Established token with only $16,697 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: JEWEL
+  address: '0x997ddaa07d716995de90577c123db411584e5e46'
+  category: dead_liquidity
+  note: Established token with only $3,937 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: FITFI
+  address: '0x714f020c54cc9d104b6f4f6998c63ce2a31d1888'
+  category: dead_liquidity
+  note: Established token with only $493 live liquidity. A long track record means the owner has not stolen;
+    it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: CNR
+  address: '0x8d88e48465f30acfb8dac0b3e35c9d6d7d36abaf'
+  category: dead_liquidity
+  note: Established token with only $4,299 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: ALOT
+  address: '0x093783055f9047c2bff99c4e414501f8a147bc69'
+  category: dead_liquidity
+  note: Established token with only $427 live liquidity. A long track record means the owner has not stolen;
+    it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: HUSKY
+  address: '0x65378b697853568da9ff8eab60c13e1ee9f4a654'
+  category: dead_liquidity
+  note: Established token with only $14,006 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
+  forbidden_labels:
+  - GOOD
+  gate: true
+- symbol: JUICE
+  address: '0xd5d053d5b769383e860d1520da7a908e00919f36'
+  category: dead_liquidity
+  note: Established token with only $10,109 live liquidity. A long track record means the owner has not
+    stolen; it does not mean a holder can exit. Must not read GOOD.
   forbidden_labels:
   - GOOD
   gate: true
