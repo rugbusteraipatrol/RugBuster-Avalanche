@@ -833,6 +833,8 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         first_tx = txs[0]
         deployer = first_tx.get("from", "")
         deploy_timestamp = int(first_tx.get("timeStamp", deploy_timestamp))
+        if "token_age_days" not in token_info and deploy_timestamp:
+            token_info["token_age_days"] = round(max(0.0, (time.time() - deploy_timestamp) / 86400.0), 1)
 
     deployer_balance = collector_get_avax_balance(deployer) if deployer else 0.0
     creator_stats = collector_get_creator_stats(deployer)
