@@ -65,7 +65,7 @@ DATABASE_URL      = os.getenv("DATABASE_URL")
 DB_TABLE          = "avax_scans"
 POLL_INTERVAL     = 60
 RPC_TIMEOUT       = 15
-API_TIMEOUT       = 20
+API_TIMEOUT       = int(clean_env_value("AVAX_COLLECTOR_API_TIMEOUT", "6") or "6")
 RATE_LIMIT_DELAY  = 1.0
 MIN_SCAN_DELAY_MINUTES = int(os.getenv("MIN_SCAN_DELAY_MINUTES", "2"))
 MAX_SCAN_DELAY_MINUTES = int(os.getenv("MAX_SCAN_DELAY_MINUTES", "3"))
@@ -849,8 +849,8 @@ def has_usable_token_metadata(token_info: dict) -> bool:
 # CIA Analitika — iste funkcije iz stare verzije
 # ---------------------------------------------------------------------------
 
-def get_account_age_days_avax(address: str) -> float:
-    txs = get_account_transactions(address, limit=1000)
+def get_account_age_days_avax(address: str, limit: int = 50) -> float:
+    txs = get_account_transactions(address, limit=limit)
     if not txs:
         return 0.0
     oldest_ts = int(txs[0].get("timeStamp", 0))
@@ -859,7 +859,7 @@ def get_account_age_days_avax(address: str) -> float:
     return round((time.time() - oldest_ts) / 86400, 1)
 
 
-def trace_funding_origin_avax(deployer: str, depth: int = 3) -> dict:
+def trace_funding_origin_avax(deployer: str, depth: int = 2) -> dict:
     result = {
         "master_wallet": "",
         "hop_count": 0,
@@ -891,9 +891,9 @@ def trace_funding_origin_avax(deployer: str, depth: int = 3) -> dict:
 
     ages = []
     for addr in chain_trace[1:]:
-        age = get_account_age_days_avax(addr)
+        age = get_account_age_days_avax(addr, limit=50)
         ages.append(age)
-        time.sleep(0.3)
+        time.sleep(0.1)
 
     result["wallet_ages_days"] = ages
     result["all_fresh"] = all(a < 7 for a in ages) if ages else False
@@ -974,28 +974,28 @@ def detect_wash_pattern_avax(contract_address: str, deployer: str, deploy_timest
     return result
 
 
-def analyze_holder_cluster_avax(contract_address: str) -> dict:
+def analyze_holder_cluster_avax(contract_address: str, max_holders: int = 3) -> dict:
     result = {"avg_age_days": 0.0, "new_wallets_count": 0, "total_checked": 0, "is_bot_farm": False}
     holders = get_token_holders(contract_address)
     if not holders:
         transfers = get_token_transfers(contract_address, limit=20)
-        holder_addrs = list({tx.get("to", "") for tx in transfers if tx.get("to")})[:10]
+        holder_addrs = list({tx.get("to", "") for tx in transfers if tx.get("to")})[:max_holders]
     else:
-        holder_addrs = [h.get("TokenHolderAddress", "") for h in holders[:10]]
+        holder_addrs = [h.get("TokenHolderAddress", "") for h in holders[:max_holders]]
 
     if not holder_addrs:
         return result
 
     ages = []
     new_count = 0
-    for addr in holder_addrs[:10]:
+    for addr in holder_addrs[:max_holders]:
         if not addr:
             continue
-        age = get_account_age_days_avax(addr)
+        age = get_account_age_days_avax(addr, limit=25)
         ages.append(age)
         if age < 7:
             new_count += 1
-        time.sleep(0.3)
+        time.sleep(0.1)
 
     if not ages:
         return result
@@ -1015,23 +1015,23 @@ def run_cia_analysis_avax(contract_address: str, deployer: str, deploy_timestamp
     intel = {}
 
     log.info("  [CIA] Tracing funding origin...")
-    intel["funding"] = trace_funding_origin_avax(deployer, depth=3) if deployer else {}
-    time.sleep(0.5)
+    intel["funding"] = trace_funding_origin_avax(deployer, depth=2) if deployer else {}
+    time.sleep(0.1)
 
     log.info("  [CIA] Mjerim deployment latency...")
     intel["latency"] = get_deployment_latency_avax(contract_address, deploy_timestamp)
-    time.sleep(0.5)
+    time.sleep(0.1)
 
     log.info("  [CIA] Analiziram transaction entropy...")
     intel["entropy"] = analyze_transaction_entropy_avax(contract_address)
-    time.sleep(0.5)
+    time.sleep(0.1)
 
     log.info("  [CIA] Detektujem wash pattern...")
     intel["wash"] = detect_wash_pattern_avax(contract_address, deployer, deploy_timestamp)
-    time.sleep(0.5)
+    time.sleep(0.1)
 
     log.info("  [CIA] Analiziram holder cluster...")
-    intel["cluster"] = analyze_holder_cluster_avax(contract_address)
+    intel["cluster"] = analyze_holder_cluster_avax(contract_address, max_holders=3)
 
     return intel
 
