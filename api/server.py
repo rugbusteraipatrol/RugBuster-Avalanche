@@ -1140,7 +1140,7 @@ def api_scan():
     report = get_cached_report(address) if use_cached else None
     if report is None:
         try:
-            report = scan_token(address)
+            report = score_with_private_engine(address)
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
         if not report.get("ai_verdict"):
