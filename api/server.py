@@ -509,6 +509,22 @@ def public_label_from_report(report: dict[str, Any]) -> str:
     return "UNKNOWN"
 
 
+def syndicate_verdict_from_report(report: dict[str, Any]) -> str:
+    rug_status = str(report.get("rug_status") or "UNKNOWN").upper()
+    speculation_status = str(report.get("speculation_status") or "UNKNOWN").upper()
+    rug_score = report.get("rug_score")
+    speculation_score = report.get("speculation_score")
+    reasons = list(report.get("risk_flags") or report.get("rug_reasons") or report.get("speculation_reasons") or [])
+    driver = str(reasons[0]) if reasons else "No dominant hard-risk driver surfaced in the available modules"
+    return (
+        f"RugBuster verdict: rug risk {rug_status}"
+        f"{f' ({rug_score})' if rug_score is not None else ''}, "
+        f"market liquidity risk {speculation_status}"
+        f"{f' ({speculation_score})' if speculation_score is not None else ''}. "
+        f"Main driver: {driver}."
+    )[:240]
+
+
 def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any]:
     address = report.get("address") or report.get("contract_address") or ""
     if report.get("risk_flags"):
@@ -547,6 +563,7 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         "rugbuster_avax_reasons": report.get("rugbuster_avax_reasons") or report.get("rug_reasons") or [],
         "token_name": report.get("token_name"),
         "token_symbol": report.get("symbol") or report.get("token_symbol"),
+        "symbol": report.get("symbol") or report.get("token_symbol"),
         "risk_flags": risk_flags[:6],
         "classifier": "weighted_v2",
         "source": source,
@@ -554,6 +571,36 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         "rug_risk": report.get("rug_risk"),
         "market_liquidity_risk": report.get("market_liquidity_risk"),
         "data_confidence": report.get("data_confidence"),
+        "rug_reasons": report.get("rug_reasons") or [],
+        "speculation_reasons": report.get("speculation_reasons") or [],
+        "ai_verdict": report.get("ai_verdict") or report.get("syndicate_ai_verdict") or syndicate_verdict_from_report(report),
+        "syndicate_ai_verdict": report.get("syndicate_ai_verdict") or syndicate_verdict_from_report(report),
+        "has_liquidity_evidence": report.get("has_liquidity_evidence"),
+        "liquidity_usd": report.get("liquidity_usd"),
+        "fdv": report.get("fdv"),
+        "volume24h": report.get("volume24h"),
+        "price_change24h": report.get("price_change24h") or report.get("price_change_24h"),
+        "price_change_24h": report.get("price_change_24h") or report.get("price_change24h"),
+        "buys24h": report.get("buys24h"),
+        "sells24h": report.get("sells24h"),
+        "pair_address": report.get("pair_address"),
+        "pair_url": report.get("pair_url"),
+        "dex_id": report.get("dex_id"),
+        "image_url": report.get("image_url"),
+        "is_known_chain_asset": report.get("is_known_chain_asset", False),
+        "known_asset_category": report.get("known_asset_category"),
+        "admin_control_functions": report.get("admin_control_functions") or [],
+        "deployer": report.get("deployer"),
+        "deployer_balance_avax": report.get("deployer_balance_avax"),
+        "token_age_days": report.get("token_age_days"),
+        "holders_count": report.get("holders_count"),
+        "v6_top5_concentration_pct": report.get("v6_top5_concentration_pct"),
+        "v6_top1_concentration_pct": report.get("v6_top1_concentration_pct"),
+        "v6_concentration_risk": report.get("v6_concentration_risk"),
+        "cia": report.get("cia") or {},
+        "v5": report.get("v5") or {},
+        "v6": report.get("v6") or {},
+        "creator_stats": report.get("creator_stats") or {},
     }
 
 
@@ -883,7 +930,17 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         "creator_stats": creator_stats,
         "deployer_balance": deployer_balance,
     }
-    context = {"pair_data": pair_data or {}, "pair_source": pair_source, "deployer": deployer, "token": token_info}
+    context = {
+        "pair_data": pair_data or {},
+        "pair_source": pair_source,
+        "deployer": deployer,
+        "deployer_balance": deployer_balance,
+        "token": token_info,
+        "cia": cia,
+        "v5": v5,
+        "v6": v6,
+        "creator_stats": creator_stats,
+    }
     return payload, context
 
 
@@ -927,6 +984,28 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
         "is_known_chain_asset": token_info.get("is_known_chain_asset", False),
         "known_asset_category": token_info.get("known_asset_category"),
         "admin_control_functions": token_info.get("v6_admin_control_functions", []),
+        "deployer": context.get("deployer"),
+        "deployer_balance_avax": context.get("deployer_balance"),
+        "token_age_days": token_info.get("token_age_days"),
+        "holders_count": token_info.get("holders_count"),
+        "v6_top5_concentration_pct": token_info.get("v6_top5_concentration_pct"),
+        "v6_top1_concentration_pct": token_info.get("v6_top1_concentration_pct"),
+        "v6_concentration_risk": token_info.get("v6_concentration_risk"),
+        "cia": context.get("cia") or {},
+        "v5": context.get("v5") or {},
+        "v6": context.get("v6") or {},
+        "creator_stats": context.get("creator_stats") or {},
+        "syndicate_ai_verdict": syndicate_verdict_from_report(
+            {
+                "rug_status": rug_risk.get("status"),
+                "rug_score": rug_risk.get("score"),
+                "speculation_status": market_risk.get("status"),
+                "speculation_score": market_risk.get("score"),
+                "risk_flags": risk_flags,
+                "rug_reasons": rug_risk.get("reasons") or [],
+                "speculation_reasons": market_risk.get("reasons") or [],
+            }
+        ),
         "network": NETWORKS[resolve_network()]["label"],
         "source": "private_scoring_engine",
     }
