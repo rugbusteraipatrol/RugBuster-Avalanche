@@ -65,6 +65,10 @@ $Script:Brand = @{
     TextPrimary = [System.Drawing.ColorTranslator]::FromHtml('#e8f4ff')  # --text-primary
     TextMuted   = [System.Drawing.ColorTranslator]::FromHtml('#5a7a9a')  # --text-muted
     BorderLine  = [System.Drawing.Color]::FromArgb(40, 0, 245, 255)      # rgba(0,245,255,.16) borders on the site
+    # DataGridView.GridColor throws "cannot be set to a transparent color" for any
+    # alpha != 255, so pre-blend the same rgba(0,245,255,.16) border color over
+    # --dark-bg (#050811) into an opaque equivalent for use as GridColor.
+    GridLine    = [System.Drawing.Color]::FromArgb(4, 45, 54)
 }
 
 # Fonts on the live site are Google Fonts (Orbitron / Rajdhani / Share Tech
@@ -208,15 +212,31 @@ function Get-SignatureStatus {
     }
 }
 
+$Script:DnsCache = @{}
+$Script:DnsLookupTimeoutMs = 300
+
 function Resolve-RemoteHostName {
+    # Reverse DNS lookups run synchronously on the WinForms UI thread once per
+    # scan per connection, so an unbounded/uncached GetHostEntry call here can
+    # freeze the whole GUI: on a box with dozens of established connections,
+    # repeatedly re-resolving the same handful of IPs (many with no PTR record,
+    # which can take multiple seconds each to fail) was measured to blow a
+    # single scan out to 140+ seconds. Cache every result (success or fallback)
+    # per IP so it's only ever looked up once, and bound each new lookup so a
+    # slow/hanging resolver can't stall the UI for more than $DnsLookupTimeoutMs.
     param([Parameter(Mandatory)][string]$IPAddress)
+    if ($Script:DnsCache.ContainsKey($IPAddress)) { return $Script:DnsCache[$IPAddress] }
+    $result = $IPAddress
     try {
-        $entry = [System.Net.Dns]::GetHostEntry($IPAddress)
-        if ($entry -and $entry.HostName) { return $entry.HostName }
+        $task = [System.Net.Dns]::GetHostEntryAsync($IPAddress)
+        if ($task.Wait($Script:DnsLookupTimeoutMs) -and $task.Result -and $task.Result.HostName) {
+            $result = $task.Result.HostName
+        }
     } catch {
-        # No PTR record / resolution failed - fall back to the raw IP.
+        # No PTR record / resolution failed / timed out - fall back to the raw IP.
     }
-    return $IPAddress
+    $Script:DnsCache[$IPAddress] = $result
+    return $result
 }
 
 function Get-AdaptiveInterval {
@@ -453,7 +473,14 @@ function Show-RugBusterToast {
 
     Import-Module BurntToast -ErrorAction SilentlyContinue
 
-    $logo = New-BTImage -Source $Script:LogoPng -AppLogoOverride -Crop Circle
+    # BurntToast 1.1.0's -AppLogo on New-BurntToastNotification is typed
+    # [String] (a raw file path) - it builds the ToastGenericAppLogo itself
+    # internally (New-BTImage -Source $AppLogo -AppLogoOverride -Crop Circle).
+    # Passing an already-built New-BTImage object here (as older BurntToast
+    # versions required) gets silently ToString()'d to its .NET type name,
+    # which then fails path resolution and the logo silently never renders -
+    # so pass the plain path string instead.
+    $logo = $Script:LogoPng
 
     $text1 = New-BTText -Content $Alert.ProcessName
     $text2 = New-BTText -Content ("{0}  ({1})" -f $Alert.RemoteHost, $Alert.Severity)
@@ -468,19 +495,22 @@ function Show-RugBusterToast {
         $buttons += New-BTButton -Content 'Istrazeno - OK' `
             -Arguments "rugbuster-shield:investigated?id=$($Alert.Id)" -ActivationType Protocol
     }
-    $btnAction = New-BTAction -Buttons $buttons
-
+    # New-BurntToastNotification takes buttons directly via -Button (an array of
+    # New-BTButton objects) - it has no -Action parameter in BurntToast 1.1.0
+    # (New-BTAction/New-BTInput exist for a different, richer scenario).
     $params = @{
         AppLogo   = $logo
         Text      = @($text1, $text2)
-        Action    = $btnAction
+        Button    = $buttons
         UniqueIdentifier = "RugBusterShield-$($Alert.Id)"
     }
 
     switch ($Alert.Severity) {
         'HIGH' {
-            # Glasna i "pinned" - ostaje dok se rucno ne potvrdi/odbaci.
-            $params.Scenario = 'Alarm'
+            # BurntToast 1.1.0 dropped -Scenario (Alarm/Reminder/IncomingCall);
+            # -Urgent (scenario "urgent") is the closest equivalent it still
+            # exposes - breaks through Focus Assist for high-severity alerts.
+            $params.Urgent = $true
         }
         'MEDIUM' {
             # Tiha notifikacija.
@@ -670,7 +700,13 @@ function Build-MainForm {
     $lblBuster.Font = New-BrandFont -Kind Display -Size 14 -Style Bold
     $lblBuster.ForeColor = $Script:Brand.Pink
     $lblBuster.AutoSize = $true
-    $lblBuster.Location = New-Object System.Drawing.Point(64 + $lblRug.PreferredWidth + 2, 20)
+    # NOTE: arithmetic must be resolved into a plain variable first - PowerShell's
+    # "New-Object Type(args)" shorthand fails with a MethodNotFound/op_Addition
+    # error when an expression (not a bare literal/variable) appears inside the
+    # parens, because the parenthesized text is parsed as a literal argument list,
+    # not a general expression.
+    $lblBusterX = 64 + $lblRug.PreferredWidth + 2
+    $lblBuster.Location = New-Object System.Drawing.Point($lblBusterX, 20)
     $lblBuster.BackColor = [System.Drawing.Color]::Transparent
     $header.Controls.Add($lblBuster)
 
@@ -786,24 +822,36 @@ function Build-MainForm {
 
     $form.Add_FormClosing({
         param($s, $e)
+        # Use the event's own $s (sender = this form), not the outer $form
+        # variable: Build-MainForm's local scope is gone by the time this
+        # handler actually fires (same issue as the scan timer below), so a
+        # closure over the local $form silently resolved to $null, meaning
+        # clicking the window's X neither closed nor hid the window.
         if (-not $Script:ForceExit) {
             $e.Cancel = $true
-            $form.Hide()
+            $s.Hide()
         }
     })
 
     # --- Scan timer (KORAK 4) ---
     $timer = New-Object System.Windows.Forms.Timer
     $timer.Interval = $Script:Config.CurrentInterval
+    # $Script:ScanTimer must be assigned BEFORE Add_Tick is registered, and the
+    # handler must reference $Script:ScanTimer rather than the local $timer:
+    # Build-MainForm's local scope is gone by the time Application.Run actually
+    # pumps a tick, so a scriptblock closing over a function-local variable
+    # (not $script:/$global:-scoped) sees $null here - which silently broke the
+    # adaptive 5s/10s backoff entirely (every $timer.Interval read/write below
+    # was a no-op against nothing, so the interval never actually changed).
+    $Script:ScanTimer = $timer
     $timer.Add_Tick({
         Invoke-RugBusterScan
-        if ($timer.Interval -ne $Script:Config.CurrentInterval) {
-            $timer.Interval = $Script:Config.CurrentInterval
+        if ($Script:ScanTimer.Interval -ne $Script:Config.CurrentInterval) {
+            $Script:ScanTimer.Interval = $Script:Config.CurrentInterval
         }
-        $Script:LblStatus.Text = "Poslednje skeniranje: $(Get-Date -Format 'HH:mm:ss')  |  interval: $($timer.Interval)ms  |  alarmi: $($Script:AlertHistory.Count)"
+        $Script:LblStatus.Text = "Poslednje skeniranje: $(Get-Date -Format 'HH:mm:ss')  |  interval: $($Script:ScanTimer.Interval)ms  |  alarmi: $($Script:AlertHistory.Count)"
     })
     $timer.Start()
-    $Script:ScanTimer = $timer
 
     # --- Pipe-queue drain timer (toast button -> bring window to front) ---
     $pipeTimer = New-Object System.Windows.Forms.Timer
@@ -818,7 +866,7 @@ function Build-MainForm {
 function Set-BrandGridStyle {
     param([System.Windows.Forms.DataGridView]$Grid)
     $Grid.BackgroundColor = $Script:Brand.BgDark
-    $Grid.GridColor = $Script:Brand.BorderLine
+    $Grid.GridColor = $Script:Brand.GridLine
     $Grid.BorderStyle = [System.Windows.Forms.BorderStyle]::None
     $Grid.RowHeadersVisible = $false
     $Grid.AllowUserToAddRows = $false

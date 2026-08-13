@@ -98,22 +98,69 @@ pravima) koja budi vec pokrenutu instancu preko named pipe-a i otvara
 glavni prozor na tom redu, ili — ako instanca nije pokrenuta — pokrece
 novu i primenjuje akciju cim se ucita.
 
-## Poznata ogranicenja / sta NIJE testirano uzivo
+## Status testiranja uzivo
 
-Ovaj kod je pisan i pregledan u Linux sandbox okruzenju bez Windows
-runtime-a — **nema pristupa PowerShell/WinForms/BurntToast/Windows 11
-toast sistemu u ovom okruzenju**, pa skripta nije mogla da bude pokrenuta
-ili klik-testirana end-to-end ovde. Pre nego sto se proglasi "gotovo":
+Skripta je prvobitno pisana i pregledana u Linux sandbox okruzenju bez
+Windows runtime-a, pa nije mogla biti pokrenuta ili klik-testirana
+end-to-end tamo. Od tada je pokrenuta i testirana uzivo na pravoj
+Windows 11 masini (`powershell.exe -ExecutionPolicy Bypass -File
+.\RugBuster-Shield-GUI.ps1`, obican korisnicki nalog, bez admin prava).
+Tom prilikom su nadjeni i ispravljeni sledeci bugovi:
 
-1. Pokreni na pravoj Windows 11 masini: `powershell.exe -File
-   .\RugBuster-Shield-GUI.ps1` (obican korisnicki nalog je dovoljan;
-   `Get-NetTCPConnection` i `Get-AuthenticodeSignature` ne traze admin).
-2. Proveri da BurntToast toast zaista iskace dole desno sa RugBuster
-   logom, i da dugme "Detalji" otvara/fokusira glavni prozor na
-   odgovarajucem redu.
-3. Proveri CPU opterecenje pri 5s intervalu (Task Manager) — ako je
-   primetno, potvrdi da adaptivni "backoff" na 10s (u `Get-AdaptiveInterval`)
-   radi kako treba.
-4. Namerno pokreni nepotpisan .exe koji otvara konekciju da potvrdis HIGH
-   putanju, i dodaj/ukloni proces iz `rugbuster_whitelist.txt` da potvrdis
-   da whitelist zaista gusi MEDIUM/HIGH.
+1. `New-Object System.Drawing.Point(64 + $lblRug.PreferredWidth + 2, 20)`
+   je bacao `MethodNotFound`/`op_Addition` gresku — PowerShell-ov
+   `New-Object Type(args)` shorthand ne podrzava izraze (samo bare
+   literale/promenljive) unutar zagrada. Popravljeno racunanjem X
+   koordinate u posebnu promenljivu pre poziva.
+2. `DataGridView.GridColor` ne prihvata providnu boju
+   (`rgba(0,245,255,.16)` sa alfa=40) — baca izuzetak. Dodat opaque
+   `$Brand.GridLine` (rucno alpha-blendovan preko `--dark-bg`) za grid
+   linije.
+3. `New-BurntToastNotification` u BurntToast 1.1.0 (verzija instalirana
+   sa PSGallery-ja) nema `-Action` parametar (samo `-Button`, direktno
+   niz dugmadi) niti `-Scenario` (koristi se `-Urgent` switch umesto
+   `-Scenario 'Alarm'` za HIGH). Stari API iz dokumentacije/primera vise
+   ne postoji u ovoj verziji modula.
+4. `-AppLogo` na `New-BurntToastNotification` u ovoj verziji ocekuje
+   **string putanju**, ne vec izgradjen `New-BTImage` objekat (modul ga
+   sam interno gradi). Slanje objekta ga je tiho pretvaralo u njegov
+   .NET tip-name string, sto je znacilo da se RugBuster logo NIKAD nije
+   stvarno prikazivao na toast-u (bez greske, samo tih fallback na
+   generalnu ikonicu).
+5. **Kriticno**: i tajmer za skeniranje i `FormClosing` handler su
+   referencirali lokalnu promenljivu (`$timer` / `$form`) iz svog
+   sopstvenog event-handler scriptblock-a. Kako `Build-MainForm` vraca
+   pre nego sto `Application.Run` uopste pokrene event loop, taj lokalni
+   scope vise ne postoji kad handler stvarno okine — `$timer`/`$form`
+   su bili `$null` iznutra. Ovo je u potpunosti onesposobilo adaptivni
+   5s->10s backoff (KORAK 4) i "minimize to tray" na X dugme (klik na X
+   ni zatvarao ni sakrivao prozor). Popravljeno referenciranjem
+   `$Script:ScanTimer` odn. event-ovog `$s` (sender) umesto lokalnih
+   promenljivih.
+6. `Resolve-RemoteHostName` je radila neogranicen, nekesiran
+   `[System.Net.Dns]::GetHostEntry()` poziv sinhrono na UI thread-u za
+   SVAKU konekciju u SVAKOM ciklusu skeniranja. Na masini sa vise
+   desetina aktivnih konekcija (mnoge bez PTR zapisa, sto ume da traje
+   vise sekundi po pokusaju) ovo je izmereno da naduva jedan scan ciklus
+   na 140+ sekundi i potpuno zamrzne GUI (`IsHungAppWindow` = true).
+   Popravljeno: keširanje po IP (svaki se resolvuje samo jednom) +
+   `GetHostEntryAsync` sa 300ms limitom po novom lookup-u.
+
+Nakon ovih ispravki: BurntToast toast se prikazuje bez upozorenja/gresaka
+(potvrdjeno logovima), "Detalji"/tray/X-dugme IPC ciklus (pipe signal ->
+`Show-MainWindow` -> prozor postaje vidljiv/sakriven) je proveren
+programatski preko named pipe-a i Win32 `IsWindowVisible`, a adaptivni
+interval je uzivo potvrdjen kako ispravno prelazi sa 5000ms na 10000ms
+kad skeniranje predugo traje (status traka: `interval: 10000ms`).
+
+**Sta jos NIJE vizuelno potvrdjeno** (nedostupan bio je computer-use
+pristup terminal-hostovanom prozoru u ovoj sesiji): da toast fizicki
+iskace u donjem desnom uglu sa ispravno renderovanim krug-isecenim
+RugBuster logom (samo je programski potvrdjeno da poziv ne baca vise
+gresku/upozorenje), i da klik na "Detalji" vizuelno selektuje tacan red
+u tabu "Istorija upozorenja" (UI Automation stablo za ovaj WinForms
+grid je previse plitko da bi se to programski procitalo). Namerno
+pokretanje nepotpisanog .exe koji odmah otvara konekciju NIJE posebno
+testirano — HIGH putanja je ipak organski potvrdjena uzivo kad je
+skener sam uhvatio stvaran nepotpisan proces (`ula.exe`,
+`C:\Program Files\Chaos\UnifiedLogin\ula.exe`) na ovoj masini.
