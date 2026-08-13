@@ -72,6 +72,34 @@ if ($Script:ConsoleHwnd -ne [IntPtr]::Zero) {
     [void][RugBusterShield.ConsoleNative]::ShowWindow($Script:ConsoleHwnd, 0) # SW_HIDE
 }
 
+# Native scrollbars (DataGridView's own vertical/horizontal ScrollBar child
+# controls) stay OS-default light grey even inside an otherwise fully dark
+# window - SetWindowTheme(..., "DarkMode_Explorer") is the standard trick to
+# get Windows' own dark-mode scrollbar visuals, but it only affects the exact
+# HWND you call it on, not children, so walk the control's child windows too.
+Add-Type -Namespace RugBusterShield -Name ScrollBarTheme -MemberDefinition @'
+[DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
+public static extern int SetWindowTheme(IntPtr hWnd, string pszSubAppName, string pszSubIdList);
+[DllImport("user32.dll")]
+public static extern bool EnumChildWindows(IntPtr hwndParent, EnumChildWindowsProc lpEnumFunc, IntPtr lParam);
+public delegate bool EnumChildWindowsProc(IntPtr hwnd, IntPtr lParam);
+// Undocumented but widely-used (ordinal export, no header/declaration exists) -
+// SetWindowTheme alone is not enough on its own to make comctl32's stock
+// ScrollBar controls (which is what DataGridView's internal scrollbars are)
+// actually paint dark; the process also has to opt in to dark mode for
+// standard controls via this ordinal, or SetWindowTheme is a no-op for them.
+[DllImport("uxtheme.dll", EntryPoint = "#135")]
+public static extern int SetPreferredAppMode(int preferredAppMode);
+public static void ApplyDark(IntPtr hwnd) {
+    SetWindowTheme(hwnd, "DarkMode_Explorer", null);
+    EnumChildWindows(hwnd, delegate(IntPtr child, IntPtr lp) {
+        SetWindowTheme(child, "DarkMode_Explorer", null);
+        return true;
+    }, IntPtr.Zero);
+}
+'@
+[void][RugBusterShield.ScrollBarTheme]::SetPreferredAppMode(2) # 2 = ForceDark
+
 function Set-BrandTitleBar {
     param([Parameter(Mandatory)][System.Windows.Forms.Form]$Form)
     $DWMWA_USE_IMMERSIVE_DARK_MODE = 20
@@ -233,7 +261,7 @@ function Import-SeenState {
             $Script:SeenDestinations[$prop.Name] = $set
         }
     } catch {
-        Write-Warning "Ne mogu da ucitam rugbuster_seen_state.json: $($_.Exception.Message)"
+        Write-Warning "Could not load rugbuster_seen_state.json: $($_.Exception.Message)"
     }
 }
 
@@ -248,7 +276,7 @@ function Import-AlertHistory {
         $data = Get-Content -Path $Script:AlertHistoryFile -Raw | ConvertFrom-Json
         foreach ($item in @($data)) { [void]$Script:AlertHistory.Add($item) }
     } catch {
-        Write-Warning "Ne mogu da ucitam rugbuster_alert_history.json: $($_.Exception.Message)"
+        Write-Warning "Could not load rugbuster_alert_history.json: $($_.Exception.Message)"
     }
 }
 
@@ -384,37 +412,37 @@ function Get-ConnectionSeverity {
 
     if ($IsNewProcess) {
         $result.Severity = 'MEDIUM'
-        $result.Reasons.Add('Nov proces - prvi put vidjen na ovom sistemu')
+        $result.Reasons.Add('New process - first seen on this system')
     }
     if ($IsNewDestination) {
         $result.Severity = 'MEDIUM'
-        $result.Reasons.Add("Poznat proces, nova destinacija: $RemoteHost")
+        $result.Reasons.Add("Known process, new destination: $RemoteHost")
     }
 
     if ($ProcessPath -and (Test-Path $ProcessPath)) {
-        # --- HIGH (a): digitalni potpis ---
+        # --- HIGH (a): digital signature ---
         $sigStatus = Get-SignatureStatus -FilePath $ProcessPath
         if ($sigStatus -in @('NotSigned', 'HashMismatch')) {
             $result.Signed = $false
             $result.Severity = 'HIGH'
-            $result.Reasons.Add("Nepotpisan/izmenjen fajl (Authenticode: $sigStatus)")
+            $result.Reasons.Add("Unsigned/tampered file (Authenticode: $sigStatus)")
         }
 
-        # --- HIGH (b): fajl nov (<24h) + odmah eksterna konekcija ---
+        # --- HIGH (b): file is new (<24h) + connects out immediately ---
         try {
             $lastWrite = (Get-Item -Path $ProcessPath -ErrorAction Stop).LastWriteTime
             $ageHours = (New-TimeSpan -Start $lastWrite -End (Get-Date)).TotalHours
             if ($ageHours -ge 0 -and $ageHours -lt $Script:Config.NewFileWindowHrs -and ($IsNewProcess -or $IsNewDestination)) {
                 $result.Severity = 'HIGH'
-                $result.Reasons.Add(('Fajl izmenjen pre {0:N1}h i odmah pravi eksternu konekciju' -f $ageHours))
+                $result.Reasons.Add(('File modified {0:N1}h ago and immediately makes an external connection' -f $ageHours))
             }
         } catch { }
     }
 
-    # --- HIGH (c): best-effort bandwidth heuristic (opciono) ---
+    # --- HIGH (c): best-effort bandwidth heuristic (optional) ---
     if (Test-BandwidthSpike -ProcessName $ProcessName) {
         $result.Severity = 'HIGH'
-        $result.Reasons.Add('Neuobicajeno velika kolicina podataka ka nepoznatoj destinaciji')
+        $result.Reasons.Add('Unusually large amount of data to an unknown destination')
     }
 
     return $result
@@ -446,7 +474,7 @@ function Register-RugBusterProtocol {
         $cmd = '"{0}" -NoProfile -WindowStyle Hidden -File "{1}" -Signal "%1"' -f $hostExe, $MyInvocation.MyCommand.Path
         Set-Item -Path $cmdKey -Value $cmd
     } catch {
-        Write-Warning "Registracija rugbuster-shield: protokola nije uspela (nastavljam bez klika-iz-toasta): $($_.Exception.Message)"
+        Write-Warning "Failed to register the rugbuster-shield: protocol (continuing without click-from-toast): $($_.Exception.Message)"
     }
 }
 
@@ -509,11 +537,11 @@ function Send-RugBusterSignal {
 function Ensure-BurntToast {
     if (Get-Module -ListAvailable -Name BurntToast) { return $true }
     try {
-        Write-Host 'BurntToast nije instaliran - pokusavam Install-Module...'
+        Write-Host 'BurntToast is not installed - attempting Install-Module...'
         Install-Module -Name BurntToast -Scope CurrentUser -Force -ErrorAction Stop
         return $true
     } catch {
-        Write-Warning "Instalacija BurntToast modula nije uspela ($($_.Exception.Message)). Koristim NotifyIcon balon kao fallback."
+        Write-Warning "Failed to install the BurntToast module ($($_.Exception.Message)). Falling back to a NotifyIcon balloon tip."
         return $false
     }
 }
@@ -541,14 +569,14 @@ function Show-RugBusterToast {
     $text1 = New-BTText -Content $Alert.ProcessName
     $text2 = New-BTText -Content ("{0}  ({1})" -f $Alert.RemoteHost, $Alert.Severity)
 
-    $btnDetails = New-BTButton -Content 'Detalji' `
+    $btnDetails = New-BTButton -Content 'Details' `
         -Arguments "rugbuster-shield:show?id=$($Alert.Id)" -ActivationType Protocol
 
     $buttons = @($btnDetails)
     if ($Alert.Severity -ne 'LOW') {
-        $buttons += New-BTButton -Content 'Lazna uzbuna' `
+        $buttons += New-BTButton -Content 'False Alarm' `
             -Arguments "rugbuster-shield:falsealarm?id=$($Alert.Id)" -ActivationType Protocol
-        $buttons += New-BTButton -Content 'Istrazeno - OK' `
+        $buttons += New-BTButton -Content 'Investigated - OK' `
             -Arguments "rugbuster-shield:investigated?id=$($Alert.Id)" -ActivationType Protocol
     }
     # New-BurntToastNotification takes buttons directly via -Button (an array of
@@ -569,18 +597,18 @@ function Show-RugBusterToast {
             $params.Urgent = $true
         }
         'MEDIUM' {
-            # Tiha notifikacija.
+            # Silent notification.
             $params.Silent = $true
         }
         default {
-            # LOW nikad ne stize dovde (samo se loguje) - vidi Invoke-RugBusterScan.
+            # LOW never reaches here (log-only) - see Invoke-RugBusterScan.
         }
     }
 
     try {
         New-BurntToastNotification @params
     } catch {
-        Write-Warning "BurntToast notifikacija nije uspela: $($_.Exception.Message)"
+        Write-Warning "BurntToast notification failed: $($_.Exception.Message)"
         Show-FallbackBalloon -Alert $Alert
     }
 }
@@ -614,7 +642,7 @@ function Invoke-RugBusterScan {
         $connections = Get-NetTCPConnection -State Established -ErrorAction Stop |
             Where-Object { $_.RemoteAddress -notin @('127.0.0.1', '::1', '0.0.0.0') }
     } catch {
-        Write-Warning "Get-NetTCPConnection nije uspeo: $($_.Exception.Message)"
+        Write-Warning "Get-NetTCPConnection failed: $($_.Exception.Message)"
         return
     }
 
@@ -649,7 +677,14 @@ function Invoke-RugBusterScan {
 
             $row = [pscustomobject]@{
                 Id            = [guid]::NewGuid().ToString()
-                Timestamp     = Get-Date
+                # A plain formatted string, not the raw Get-Date object: PowerShell
+                # 5.1's ConvertTo-Json serializes [datetime]'s ETS members (the
+                # DisplayHint/value/DateTime note properties Get-Date's output
+                # actually carries) as a nested object instead of a date string,
+                # so alerts reloaded from rugbuster_alert_history.json on the next
+                # launch showed a literal "@{value=...; DisplayHint=...}" instead
+                # of a date in the history grid. A string round-trips as-is.
+                Timestamp     = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
                 ProcessName   = $procName
                 Pid           = $procId
                 ProcessPath   = $procPath
@@ -659,12 +694,12 @@ function Invoke-RugBusterScan {
                 Severity      = $eval.Severity
                 Reasons       = ($eval.Reasons -join '; ')
                 Signed        = $eval.Signed
-                Status        = 'Novo'
+                Status        = 'New'
             }
             [void]$rows.Add($row)
 
             if ($eval.Severity -eq 'LOW') {
-                # KORAK 3: LOW samo se loguje, bez notifikacije.
+                # LOW is log-only, no notification.
                 continue
             }
 
@@ -776,7 +811,7 @@ function Build-MainForm {
     $header.Controls.Add($lblBuster)
 
     $lblStatus = New-Object System.Windows.Forms.Label
-    $lblStatus.Text = 'Skeniranje...'
+    $lblStatus.Text = 'Scanning...'
     $lblStatus.Font = New-BrandFont -Kind Mono -Size 9
     $lblStatus.ForeColor = $Script:Brand.TextMuted
     $lblStatus.AutoSize = $true
@@ -789,6 +824,34 @@ function Build-MainForm {
     $tabs = New-Object System.Windows.Forms.TabControl
     $tabs.Dock = [System.Windows.Forms.DockStyle]::Fill
     $tabs.Font = New-BrandFont -Kind Body -Size 9.5
+    $tabs.BackColor = $Script:Brand.Panel
+    # TabControl's tab strip is OS-chrome-drawn (light grey) by default, same
+    # "classic Windows program" clash as the old title bar - OwnerDrawFixed +
+    # a DrawItem handler is the only way to actually recolor the tab headers
+    # themselves instead of just the pages behind them.
+    $tabs.DrawMode = [System.Windows.Forms.TabDrawMode]::OwnerDrawFixed
+    $tabs.Add_DrawItem({
+        param($s, $e)
+        $tabPage = $s.TabPages[$e.Index]
+        $isSelected = ($e.Index -eq $s.SelectedIndex)
+        $bg = if ($isSelected) { $Script:Brand.Card } else { $Script:Brand.Panel }
+        $fg = if ($isSelected) { $Script:Brand.Cyan } else { $Script:Brand.TextMuted }
+        $brush = New-Object System.Drawing.SolidBrush($bg)
+        $e.Graphics.FillRectangle($brush, $e.Bounds)
+        $brush.Dispose()
+        $sf = New-Object System.Drawing.StringFormat
+        $sf.Alignment = [System.Drawing.StringAlignment]::Center
+        $sf.LineAlignment = [System.Drawing.StringAlignment]::Center
+        $textBrush = New-Object System.Drawing.SolidBrush($fg)
+        # Graphics.DrawString is overloaded for both (RectangleF, StringFormat) and
+        # (PointF, StringFormat) - PowerShell's method-overload resolution picked
+        # the PointF one for a bare Rectangle argument and then failed trying to
+        # convert it, crashing with "Cannot convert argument 'point'...to
+        # System.Drawing.PointF". Cast explicitly to force the RectangleF overload.
+        $e.Graphics.DrawString($tabPage.Text, $s.Font, $textBrush, [System.Drawing.RectangleF]$e.Bounds, $sf)
+        $textBrush.Dispose()
+        $sf.Dispose()
+    })
     $form.Controls.Add($tabs)
     $tabs.BringToFront()
 
@@ -799,20 +862,24 @@ function Build-MainForm {
     $tabs.TabPages.Add($tabLive)
 
     $tabHistory = New-Object System.Windows.Forms.TabPage
-    $tabHistory.Name = 'IstorijaUpozorenja'
-    $tabHistory.Text = 'Istorija upozorenja'
+    $tabHistory.Name = 'AlertHistory'
+    $tabHistory.Text = 'Alert History'
     $tabHistory.BackColor = $Script:Brand.BgDark
     $tabs.TabPages.Add($tabHistory)
 
     # --- Live grid ---
     $gridLive = New-Object System.Windows.Forms.DataGridView
     $gridLive.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $gridLive.ScrollBars = [System.Windows.Forms.ScrollBars]::None
     Set-BrandGridStyle -Grid $gridLive
     foreach ($col in 'ProcessName', 'Pid', 'RemoteHost', 'RemoteAddress', 'RemotePort', 'Signed', 'Severity', 'Timestamp') {
         [void]$gridLive.Columns.Add($col, $col)
     }
+    $Script:VScrollLive = New-DarkScrollBar
+    $tabLive.Controls.Add($Script:VScrollLive)
     $tabLive.Controls.Add($gridLive)
     $Script:GridLive = $gridLive
+    Register-GridScrollSync -Grid $Script:GridLive -ScrollBar $Script:VScrollLive
 
     # --- History grid + actions ---
     $historyPanel = New-Object System.Windows.Forms.Panel
@@ -825,33 +892,37 @@ function Build-MainForm {
     $actionBar.BackColor = $Script:Brand.Panel
     $historyPanel.Controls.Add($actionBar)
 
-    $btnFalseAlarm = New-BrandButton -Text 'Lazna uzbuna' -Accent $Script:Brand.Green
+    $btnFalseAlarm = New-BrandButton -Text 'False Alarm' -Accent $Script:Brand.Green
     $btnFalseAlarm.Location = New-Object System.Drawing.Point(12, 7)
     $btnFalseAlarm.Width = 150
     $actionBar.Controls.Add($btnFalseAlarm)
 
-    $btnInvestigated = New-BrandButton -Text 'Istrazeno - OK' -Accent $Script:Brand.Cyan
+    $btnInvestigated = New-BrandButton -Text 'Investigated - OK' -Accent $Script:Brand.Cyan
     $btnInvestigated.Location = New-Object System.Drawing.Point(172, 7)
     $btnInvestigated.Width = 150
     $actionBar.Controls.Add($btnInvestigated)
 
     $gridHistory = New-Object System.Windows.Forms.DataGridView
     $gridHistory.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $gridHistory.ScrollBars = [System.Windows.Forms.ScrollBars]::None
     Set-BrandGridStyle -Grid $gridHistory
     foreach ($col in 'Timestamp', 'ProcessName', 'RemoteHost', 'Severity', 'Reasons', 'Signed', 'Status', 'Id') {
         [void]$gridHistory.Columns.Add($col, $col)
     }
     $gridHistory.Columns['Id'].Visible = $false
+    $Script:VScrollHistory = New-DarkScrollBar
+    $historyPanel.Controls.Add($Script:VScrollHistory)
     $historyPanel.Controls.Add($gridHistory)
     $gridHistory.BringToFront()
     $Script:GridHistory = $gridHistory
+    Register-GridScrollSync -Grid $Script:GridHistory -ScrollBar $Script:VScrollHistory
 
     $btnFalseAlarm.Add_Click({
         foreach ($r in $Script:GridHistory.SelectedRows) {
             $procName = $r.Cells['ProcessName'].Value
             $id = $r.Cells['Id'].Value
             if ($procName) { Add-ToWhitelist -ProcessName $procName }
-            Set-AlertStatus -Id $id -Status 'Lazna uzbuna'
+            Set-AlertStatus -Id $id -Status 'False Alarm'
         }
         Refresh-HistoryGrid
     })
@@ -859,7 +930,7 @@ function Build-MainForm {
     $btnInvestigated.Add_Click({
         foreach ($r in $Script:GridHistory.SelectedRows) {
             $id = $r.Cells['Id'].Value
-            Set-AlertStatus -Id $id -Status 'Istrazeno - OK'
+            Set-AlertStatus -Id $id -Status 'Investigated - OK'
         }
         Refresh-HistoryGrid
     })
@@ -873,10 +944,10 @@ function Build-MainForm {
     $tray.Visible = $true
 
     $menu = New-Object System.Windows.Forms.ContextMenuStrip
-    [void]$menu.Items.Add('Otvori', $null, { Show-MainWindow })
-    [void]$menu.Items.Add('Skeniraj sada', $null, { Invoke-RugBusterScan })
+    [void]$menu.Items.Add('Open', $null, { Show-MainWindow })
+    [void]$menu.Items.Add('Scan Now', $null, { Invoke-RugBusterScan })
     [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
-    [void]$menu.Items.Add('Izadji', $null, {
+    [void]$menu.Items.Add('Exit', $null, {
         $Script:ForceExit = $true
         $Script:TrayIcon.Visible = $false
         [System.Windows.Forms.Application]::Exit()
@@ -914,7 +985,7 @@ function Build-MainForm {
         if ($Script:ScanTimer.Interval -ne $Script:Config.CurrentInterval) {
             $Script:ScanTimer.Interval = $Script:Config.CurrentInterval
         }
-        $Script:LblStatus.Text = "Poslednje skeniranje: $(Get-Date -Format 'HH:mm:ss')  |  interval: $($Script:ScanTimer.Interval)ms  |  alarmi: $($Script:AlertHistory.Count)"
+        $Script:LblStatus.Text = "Last scan: $(Get-Date -Format 'HH:mm:ss')  |  interval: $($Script:ScanTimer.Interval)ms  |  alerts: $($Script:AlertHistory.Count)"
     })
     $timer.Start()
 
@@ -926,6 +997,72 @@ function Build-MainForm {
     $Script:PipeTimer = $pipeTimer
 
     return $form
+}
+
+# DataGridView doesn't create a real native scrollbar child window - it paints
+# its own scroll thumb/track directly via GDI+ inside its single HWND (verified
+# via EnumChildWindows returning nothing), so SetWindowTheme has nothing to
+# theme and the bar stays OS-default light grey no matter what. A plain
+# VScrollBar, by contrast, *is* a real native "ScrollBar"-class window, so it
+# can be dark-themed - disable the grid's own scrollbar and drive the grid's
+# scroll position from a themed VScrollBar sitting next to it instead.
+function New-DarkScrollBar {
+    $sb = New-Object System.Windows.Forms.VScrollBar
+    $sb.Dock = [System.Windows.Forms.DockStyle]::Right
+    $sb.Width = 16
+    [void][RugBusterShield.ScrollBarTheme]::ApplyDark($sb.Handle)
+    return $sb
+}
+
+function Sync-GridScrollBar {
+    param(
+        [Parameter(Mandatory)][System.Windows.Forms.DataGridView]$Grid,
+        [Parameter(Mandatory)][System.Windows.Forms.VScrollBar]$ScrollBar
+    )
+    $displayed = [Math]::Max(1, $Grid.DisplayedRowCount($false))
+    if ($Grid.RowCount -le $displayed) {
+        $ScrollBar.Visible = $false
+        return
+    }
+    $ScrollBar.Visible = $true
+    $ScrollBar.Minimum = 0
+    $ScrollBar.Maximum = $Grid.RowCount - 1
+    $ScrollBar.LargeChange = $displayed
+    $ScrollBar.SmallChange = 1
+    $maxFirstRow = $ScrollBar.Maximum - $ScrollBar.LargeChange + 1
+    if ($ScrollBar.Value -gt $maxFirstRow) { $ScrollBar.Value = [Math]::Max(0, $maxFirstRow) }
+}
+
+# Keeps the DataGridView's actual scroll position and the standalone
+# VScrollBar next to it in sync in both directions (dragging the bar moves the
+# grid; wheel/keyboard-scrolling the grid moves the bar) without either side
+# re-triggering the other via $Script:SyncingScroll.
+function Register-GridScrollSync {
+    param(
+        [Parameter(Mandatory)][System.Windows.Forms.DataGridView]$Grid,
+        [Parameter(Mandatory)][System.Windows.Forms.VScrollBar]$ScrollBar
+    )
+    $ScrollBar.Add_ValueChanged({
+        if ($Script:SyncingScroll) { return }
+        $Script:SyncingScroll = $true
+        try {
+            if ($Grid.RowCount -gt 0) {
+                $maxRow = $Grid.RowCount - 1
+                $Grid.FirstDisplayedScrollingRowIndex = [Math]::Min($ScrollBar.Value, $maxRow)
+            }
+        } catch { } finally { $Script:SyncingScroll = $false }
+    }.GetNewClosure())
+    $Grid.Add_Scroll({
+        param($s, $e)
+        if ($e.ScrollOrientation -ne [System.Windows.Forms.ScrollOrientation]::VerticalScroll) { return }
+        if ($Script:SyncingScroll) { return }
+        $Script:SyncingScroll = $true
+        try {
+            $maxFirstRow = [Math]::Max(0, $ScrollBar.Maximum - $ScrollBar.LargeChange + 1)
+            $ScrollBar.Value = [Math]::Min([Math]::Max($e.NewValue, 0), $maxFirstRow)
+        } catch { } finally { $Script:SyncingScroll = $false }
+    }.GetNewClosure())
+    $Grid.Add_Resize({ Sync-GridScrollBar -Grid $Grid -ScrollBar $ScrollBar }.GetNewClosure())
 }
 
 function Set-BrandGridStyle {
@@ -958,6 +1095,7 @@ function Update-LiveGrid {
         $idx = $Script:GridLive.Rows.Add($r.ProcessName, $r.Pid, $r.RemoteHost, $r.RemoteAddress, $r.RemotePort, $r.Signed, $r.Severity, $r.Timestamp)
         $Script:GridLive.Rows[$idx].DefaultCellStyle.ForeColor = Get-SeverityColor -Severity $r.Severity
     }
+    if ($Script:VScrollLive) { Sync-GridScrollBar -Grid $Script:GridLive -ScrollBar $Script:VScrollLive }
 }
 
 function Refresh-HistoryGrid {
@@ -967,6 +1105,7 @@ function Refresh-HistoryGrid {
         $idx = $Script:GridHistory.Rows.Add($r.Timestamp, $r.ProcessName, $r.RemoteHost, $r.Severity, $r.Reasons, $r.Signed, $r.Status, $r.Id)
         $Script:GridHistory.Rows[$idx].DefaultCellStyle.ForeColor = Get-SeverityColor -Severity $r.Severity
     }
+    if ($Script:VScrollHistory) { Sync-GridScrollBar -Grid $Script:GridHistory -ScrollBar $Script:VScrollHistory }
 }
 
 function Set-AlertStatus {
@@ -989,7 +1128,7 @@ function Select-HistoryRowById {
     Refresh-HistoryGrid
     foreach ($row in $Script:GridHistory.Rows) {
         if ($row.Cells['Id'].Value -eq $Id) {
-            $Script:MainTabs.SelectedTab = $Script:MainTabs.TabPages['IstorijaUpozorenja']
+            $Script:MainTabs.SelectedTab = $Script:MainTabs.TabPages['AlertHistory']
             $row.Selected = $true
             $Script:GridHistory.FirstDisplayedScrollingRowIndex = $row.Index
             break
@@ -1025,12 +1164,12 @@ function Handle-RugBusterUri {
             if ($id) {
                 $a = $Script:AlertHistory | Where-Object { $_.Id -eq $id } | Select-Object -First 1
                 if ($a) { Add-ToWhitelist -ProcessName $a.ProcessName }
-                Set-AlertStatus -Id $id -Status 'Lazna uzbuna'
+                Set-AlertStatus -Id $id -Status 'False Alarm'
             }
             Select-HistoryRowById -Id $id
         }
         'investigated' {
-            if ($id) { Set-AlertStatus -Id $id -Status 'Istrazeno - OK' }
+            if ($id) { Set-AlertStatus -Id $id -Status 'Investigated - OK' }
             Select-HistoryRowById -Id $id
         }
     }
