@@ -286,14 +286,27 @@ function Import-AlertHistory {
 #region UTILITY - signature check, reverse DNS, adaptive interval
 # ============================================================================
 
+$Script:SignatureCache = @{}
+
 function Get-SignatureStatus {
+    # Same class of bug as the DNS one below: Get-AuthenticodeSignature does
+    # real certificate-chain/revocation validation and was measured taking
+    # up to ~1 second for a single file (Dropbox.exe) - and this runs
+    # unconditionally, uncached, per CONNECTION per SCAN, on the UI thread.
+    # A process with a few open sockets pays that ~1s cost that many times
+    # every single scan cycle forever, which is what was actually causing
+    # the residual multi-second "Not Responding" freezes reported after the
+    # DNS fix. A running process's on-disk file signature can't meaningfully
+    # change while it's running, so cache per path for the life of the app.
     param([Parameter(Mandatory)][string]$FilePath)
+    if ($Script:SignatureCache.ContainsKey($FilePath)) { return $Script:SignatureCache[$FilePath] }
+    $status = 'NotSigned'
     try {
         $sig = Get-AuthenticodeSignature -FilePath $FilePath -ErrorAction Stop
-        return $sig.Status.ToString()
-    } catch {
-        return 'NotSigned'
-    }
+        $status = $sig.Status.ToString()
+    } catch { }
+    $Script:SignatureCache[$FilePath] = $status
+    return $status
 }
 
 $Script:DnsCache = @{}
