@@ -512,20 +512,30 @@ function Start-RugBusterPipeServer {
 }
 
 function Send-RugBusterSignal {
-    param([Parameter(Mandatory)][string]$Payload)
-    try {
-        $client = New-Object System.IO.Pipes.NamedPipeClientStream(
-            '.', $Script:PipeName, [System.IO.Pipes.PipeDirection]::Out)
-        $client.Connect(300)
-        $writer = New-Object System.IO.StreamWriter($client)
-        $writer.WriteLine($Payload)
-        $writer.Flush()
-        $writer.Dispose()
-        $client.Dispose()
-        return $true
-    } catch {
-        return $false
+    # A toast "Details" click launches a brand-new relay process that has to
+    # connect to the already-running instance's pipe server within its own
+    # short lifetime - a 300ms Connect() timeout with no retry turned out to
+    # be too tight under real load (e.g. the main instance mid-scan), and a
+    # failed send here used to fall through to building a second full GUI
+    # (see the single-instance mutex guard in MAIN) instead of just reaching
+    # the existing window. Retry a few times before giving up.
+    param([Parameter(Mandatory)][string]$Payload, [int]$MaxAttempts = 5)
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            $client = New-Object System.IO.Pipes.NamedPipeClientStream(
+                '.', $Script:PipeName, [System.IO.Pipes.PipeDirection]::Out)
+            $client.Connect(1000)
+            $writer = New-Object System.IO.StreamWriter($client)
+            $writer.WriteLine($Payload)
+            $writer.Flush()
+            $writer.Dispose()
+            $client.Dispose()
+            return $true
+        } catch {
+            Start-Sleep -Milliseconds 200
+        }
     }
+    return $false
 }
 
 #endregion
@@ -1185,16 +1195,35 @@ Import-Whitelist
 Import-SeenState
 Import-AlertHistory
 
-# If we were launched purely to relay a toast-button click to an already
-# running instance, forward it over the pipe and exit without opening a
-# second GUI. If no instance is listening, fall through and start normally,
-# then act on the signal once the window is up.
+# --- Single-instance guard --------------------------------------------
+# A toast "Details"/"False Alarm"/"Investigated - OK" click launches a
+# brand-new process (via the registered rugbuster-shield: protocol command)
+# whose only job is to relay the click to the already-running instance over
+# the named pipe and exit. The old code inferred "is an instance already
+# running?" purely from whether Send-RugBusterSignal's pipe-connect
+# succeeded within its timeout - on a loaded machine that raced and lost
+# often enough that a failed send fell through into building an entire
+# SECOND GUI window, which is exactly the "a window flashes up and vanishes"
+# behavior this was reported as: two overlapping "RugBuster Shield" windows
+# both centered on screen, one hiding behind the other. A named Mutex is a
+# reliable, non-racy "is an instance already running" check.
+$Script:SingleInstanceMutex = New-Object System.Threading.Mutex($false, 'Local\RugBusterShieldSingleInstance')
+$Script:IsFirstInstance = $Script:SingleInstanceMutex.WaitOne(0)
+
+if (-not $Script:IsFirstInstance) {
+    # Another instance owns the mutex - relay the click (or just ask it to
+    # come forward) over the pipe and exit. Never build a second GUI here.
+    $payload = if ($Signal) { $Signal } else { 'rugbuster-shield:show' }
+    [void](Send-RugBusterSignal -Payload $payload)
+    exit 0
+}
+
+# We're the sole instance. If we were still launched with a signal (e.g. a
+# toast click racing an instance that was in the middle of shutting down, so
+# the mutex was free by the time we checked), just remember it and act on it
+# once our own window is up - Process-PipeQueue picks up $PendingSignal.
 if ($Signal) {
-    if (Send-RugBusterSignal -Payload $Signal) {
-        exit 0
-    } else {
-        $Script:PendingSignal = $Signal
-    }
+    $Script:PendingSignal = $Signal
 }
 
 Register-RugBusterProtocol
