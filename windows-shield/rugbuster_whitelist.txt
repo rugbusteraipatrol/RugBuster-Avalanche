@@ -1,0 +1,66 @@
+# RugBuster Shield - whitelist fajl
+#
+# Jedan naziv procesa po liniji (npr. chrome.exe). Nije osetljivo na
+# velika/mala slova. Linije koje pocinju sa '#' su komentari i
+# preskacu se, prazne linije se ignorisu.
+#
+# Procesi sa ove liste NIKAD ne generisu MEDIUM ("WORM") ili HIGH
+# ("DANGER") upozorenja/notifikacije - svaka njihova konekcija se
+# tretira kao LOW i samo se loguje (vidi Get-ConnectionSeverity u
+# RugBuster-Shield-GUI.ps1).
+#
+# Rucno dopuni ovu listu za svoje poznate/bezbedne aplikacije. Iz
+# istorije upozorenja mozes oznaciti "Lazna uzbuna" da se proces
+# automatski doda ovde.
+
+# --- Browseri ---
+chrome.exe
+msedge.exe
+firefox.exe
+brave.exe
+opera.exe
+opera_gx.exe
+iexplore.exe
+vivaldi.exe
+
+# --- Windows / sistem ---
+svchost.exe
+explorer.exe
+dwm.exe
+searchapp.exe
+searchhost.exe
+searchindexer.exe
+wuauclt.exe
+usoclient.exe
+microsoftedgeupdate.exe
+onedrive.exe
+sihost.exe
+runtimebroker.exe
+backgroundtaskhost.exe
+
+# --- Komunikacija / kolaboracija ---
+discord.exe
+update.exe
+teams.exe
+slack.exe
+zoom.exe
+skype.exe
+
+# --- Igre / gaming platforme ---
+steam.exe
+steamwebhelper.exe
+steamservice.exe
+epicgameslauncher.exe
+battle.net.exe
+riotclientservices.exe
+
+# --- Muzika / mediji ---
+spotify.exe
+
+# --- Developer alati ---
+code.exe
+git.exe
+powershell.exe
+pwsh.exe
+windowsterminal.exe
+node.exe

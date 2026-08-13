@@ -1,0 +1,960 @@
+<#
+.SYNOPSIS
+    RugBuster Shield - live process/network monitor with WinForms GUI,
+    system tray icon and Windows 11 toast notifications.
+
+.DESCRIPTION
+    Watches active outbound TCP connections, correlates them to the owning
+    process, and flags anything suspicious using a 3-tier severity model
+    (LOW / MEDIUM ("WORM") / HIGH ("DANGER")). See Get-ConnectionSeverity
+    for the exact rules and thresholds.
+
+    Branding (colors / fonts / visual language) was extracted verbatim from
+    rugbusteraipatrol/rugbuster-website (index.html :root custom
+    properties + logo markup) - see $Script:Brand below for the source
+    values. No image logo existed on the site (the site logo is styled
+    text), so windows-shield/assets/rugbuster-shield-logo.(png|ico) is a
+    small vector-style shield+checkmark generated from those exact brand
+    hex codes for use as the header/tray/toast icon.
+
+.NOTES
+    Windows 11 + PowerShell 5.1/7 with .NET WinForms only. This script was
+    authored and reviewed in a Linux sandbox that has no Windows runtime,
+    so it could NOT be launched or click-tested end to end here - review
+    the code and run it on a real Windows 11 box before relying on it.
+    Requires the BurntToast module for toast notifications (auto-installed
+    on first run if missing; falls back to a tray balloon tip if BurntToast
+    cannot be installed, e.g. no internet / no PSGallery access).
+#>
+
+[CmdletBinding()]
+param(
+    # Populated automatically when Windows activates our custom
+    # "rugbuster-shield:" protocol (e.g. from a toast button click).
+    # Format: rugbuster-shield:<action>?id=<alert-guid>
+    [string]$Signal
+)
+
+# ============================================================================
+#region CONFIG - brand tokens, paths, severity thresholds
+# ============================================================================
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$Script:RootDir    = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Script:AssetsDir  = Join-Path $Script:RootDir 'assets'
+$Script:LogoPng    = Join-Path $Script:AssetsDir 'rugbuster-shield-logo.png'
+$Script:LogoIco    = Join-Path $Script:AssetsDir 'rugbuster-shield-logo.ico'
+$Script:WhitelistFile      = Join-Path $Script:RootDir 'rugbuster_whitelist.txt'
+$Script:AlertHistoryFile   = Join-Path $Script:RootDir 'rugbuster_alert_history.json'
+$Script:SeenStateFile      = Join-Path $Script:RootDir 'rugbuster_seen_state.json'
+
+# --- Brand tokens - extracted from rugbusteraipatrol/rugbuster-website ---
+# (index.html, :root custom properties + severity color usage in the
+# scan feed / portfolio risk badges: .r-danger / .r-warn / .r-good).
+$Script:Brand = @{
+    BgDark      = [System.Drawing.ColorTranslator]::FromHtml('#050811')  # --dark-bg
+    Panel       = [System.Drawing.ColorTranslator]::FromHtml('#0a0f1e')  # --dark-panel
+    Card        = [System.Drawing.ColorTranslator]::FromHtml('#0d1527')  # --dark-card
+    Cyan        = [System.Drawing.ColorTranslator]::FromHtml('#00f5ff')  # --neon-cyan (primary accent)
+    Pink        = [System.Drawing.ColorTranslator]::FromHtml('#ff00c8')  # --neon-pink (secondary accent)
+    Green       = [System.Drawing.ColorTranslator]::FromHtml('#00ff88')  # --neon-green  -> LOW
+    Orange      = [System.Drawing.ColorTranslator]::FromHtml('#ff6b00')  # --neon-orange -> MEDIUM
+    Danger      = [System.Drawing.ColorTranslator]::FromHtml('#ff3d3d')  # site's dedicated danger red -> HIGH
+    TextPrimary = [System.Drawing.ColorTranslator]::FromHtml('#e8f4ff')  # --text-primary
+    TextMuted   = [System.Drawing.ColorTranslator]::FromHtml('#5a7a9a')  # --text-muted
+    BorderLine  = [System.Drawing.Color]::FromArgb(40, 0, 245, 255)      # rgba(0,245,255,.16) borders on the site
+}
+
+# Fonts on the live site are Google Fonts (Orbitron / Rajdhani / Share Tech
+# Mono) loaded over the web - they are almost never pre-installed on a
+# Windows box. System.Drawing.Font silently falls back to the nearest
+# installed font if the family name isn't found, so we just reference the
+# brand names directly; install the fonts locally for a pixel-perfect
+# match, otherwise this degrades gracefully to Consolas/Segoe UI.
+$Script:Brand.FontDisplay = 'Orbitron'        # headings / logo wordmark
+$Script:Brand.FontBody    = 'Rajdhani'        # body text / labels
+$Script:Brand.FontMono    = 'Share Tech Mono' # grid / log / terminal-style text
+
+function New-BrandFont {
+    param(
+        [ValidateSet('Display', 'Body', 'Mono')] [string]$Kind = 'Body',
+        [single]$Size = 9,
+        [System.Drawing.FontStyle]$Style = [System.Drawing.FontStyle]::Regular
+    )
+    $family = switch ($Kind) {
+        'Display' { $Script:Brand.FontDisplay }
+        'Mono'    { $Script:Brand.FontMono }
+        default   { $Script:Brand.FontBody }
+    }
+    try {
+        return New-Object System.Drawing.Font($family, $Size, $Style)
+    } catch {
+        # Family not installed -> let WinForms pick a safe fallback.
+        $fallback = if ($Kind -eq 'Mono') { 'Consolas' } else { 'Segoe UI' }
+        return New-Object System.Drawing.Font($fallback, $Size, $Style)
+    }
+}
+
+# --- Scan cadence (KORAK 4) ------------------------------------------------
+# Starts at 5s as requested. If a scan cycle keeps taking too long relative
+# to the interval (i.e. we'd be pegging the CPU running back-to-back scans)
+# we back off to 10s automatically - see Get-AdaptiveInterval.
+$Script:Config = @{
+    IntervalFastMs   = 5000
+    IntervalSlowMs   = 10000
+    CurrentInterval  = 5000
+    # If the last scan took more than this fraction of the interval, back off.
+    CpuBackoffRatio  = 0.5
+    ScanDurationsMs  = New-Object System.Collections.Generic.Queue[double]
+    NewFileWindowHrs = 24   # KORAK 3(b): "fajl nastao u poslednja 24h"
+    EnableBandwidthHeuristic = $false # KORAK 3(c) - see Test-BandwidthSpike
+}
+
+#endregion
+
+# ============================================================================
+#region STATE - whitelist, seen-connections memory, alert history (persisted)
+# ============================================================================
+
+# $Script:KnownProcesses : HashSet<string> of process names ever seen
+#                          (lower-case) -> used to flag brand-new processes.
+# $Script:SeenDestinations : Hashtable "<procname>" -> HashSet<string> of
+#                          "<remoteHost or IP>" ever seen for that process
+#                          -> used to flag a known process on a new domain.
+$Script:KnownProcesses   = New-Object 'System.Collections.Generic.HashSet[string]'
+$Script:SeenDestinations = @{}
+$Script:AlertHistory     = New-Object System.Collections.ArrayList
+$Script:Whitelist        = New-Object 'System.Collections.Generic.HashSet[string]'
+
+function Import-Whitelist {
+    $Script:Whitelist.Clear()
+    if (-not (Test-Path $Script:WhitelistFile)) { return }
+    foreach ($line in Get-Content -Path $Script:WhitelistFile) {
+        $t = $line.Trim()
+        if ([string]::IsNullOrWhiteSpace($t) -or $t.StartsWith('#')) { continue }
+        [void]$Script:Whitelist.Add($t.ToLowerInvariant())
+    }
+}
+
+function Add-ToWhitelist {
+    param([Parameter(Mandatory)][string]$ProcessName)
+    $name = $ProcessName.ToLowerInvariant()
+    if ($Script:Whitelist.Contains($name)) { return }
+    [void]$Script:Whitelist.Add($name)
+    Add-Content -Path $Script:WhitelistFile -Value $ProcessName
+}
+
+function Test-IsWhitelisted {
+    param([Parameter(Mandatory)][string]$ProcessName)
+    return $Script:Whitelist.Contains($ProcessName.ToLowerInvariant())
+}
+
+function Save-SeenState {
+    $payload = @{
+        KnownProcesses   = @($Script:KnownProcesses)
+        SeenDestinations = @{}
+    }
+    foreach ($k in $Script:SeenDestinations.Keys) {
+        $payload.SeenDestinations[$k] = @($Script:SeenDestinations[$k])
+    }
+    $payload | ConvertTo-Json -Depth 5 | Set-Content -Path $Script:SeenStateFile -Encoding UTF8
+}
+
+function Import-SeenState {
+    if (-not (Test-Path $Script:SeenStateFile)) { return }
+    try {
+        $data = Get-Content -Path $Script:SeenStateFile -Raw | ConvertFrom-Json
+        foreach ($p in $data.KnownProcesses) { [void]$Script:KnownProcesses.Add($p) }
+        foreach ($prop in $data.SeenDestinations.PSObject.Properties) {
+            $set = New-Object 'System.Collections.Generic.HashSet[string]'
+            foreach ($d in $prop.Value) { [void]$set.Add($d) }
+            $Script:SeenDestinations[$prop.Name] = $set
+        }
+    } catch {
+        Write-Warning "Ne mogu da ucitam rugbuster_seen_state.json: $($_.Exception.Message)"
+    }
+}
+
+function Save-AlertHistory {
+    ($Script:AlertHistory | ConvertTo-Json -Depth 5) | Set-Content -Path $Script:AlertHistoryFile -Encoding UTF8
+}
+
+function Import-AlertHistory {
+    $Script:AlertHistory.Clear()
+    if (-not (Test-Path $Script:AlertHistoryFile)) { return }
+    try {
+        $data = Get-Content -Path $Script:AlertHistoryFile -Raw | ConvertFrom-Json
+        foreach ($item in @($data)) { [void]$Script:AlertHistory.Add($item) }
+    } catch {
+        Write-Warning "Ne mogu da ucitam rugbuster_alert_history.json: $($_.Exception.Message)"
+    }
+}
+
+#endregion
+
+# ============================================================================
+#region UTILITY - signature check, reverse DNS, adaptive interval
+# ============================================================================
+
+function Get-SignatureStatus {
+    param([Parameter(Mandatory)][string]$FilePath)
+    try {
+        $sig = Get-AuthenticodeSignature -FilePath $FilePath -ErrorAction Stop
+        return $sig.Status.ToString()
+    } catch {
+        return 'NotSigned'
+    }
+}
+
+function Resolve-RemoteHostName {
+    param([Parameter(Mandatory)][string]$IPAddress)
+    try {
+        $entry = [System.Net.Dns]::GetHostEntry($IPAddress)
+        if ($entry -and $entry.HostName) { return $entry.HostName }
+    } catch {
+        # No PTR record / resolution failed - fall back to the raw IP.
+    }
+    return $IPAddress
+}
+
+function Get-AdaptiveInterval {
+    # KORAK 4: start at 5s; back off to 10s if scans are eating too much
+    # of the interval (rolling average over the last 5 cycles).
+    $q = $Script:Config.ScanDurationsMs
+    if ($q.Count -eq 0) { return $Script:Config.IntervalFastMs }
+    $avg = ($q | Measure-Object -Average).Average
+    if ($avg -gt ($Script:Config.IntervalFastMs * $Script:Config.CpuBackoffRatio)) {
+        return $Script:Config.IntervalSlowMs
+    }
+    return $Script:Config.IntervalFastMs
+}
+
+function Test-BandwidthSpike {
+    # KORAK 3(c), best-effort/optional per the spec: flag a large burst of
+    # data to the same unknown destination in a short window. Disabled by
+    # default ($Config.EnableBandwidthHeuristic = $false) because sampling
+    # per-process byte counters (Get-Counter '\Process(*)\IO Data Bytes/sec')
+    # every 5s adds real overhead and per-connection (not just per-process)
+    # attribution isn't reliably available without a packet-capture driver.
+    # Flip the flag on to enable a coarse per-process approximation.
+    param([Parameter(Mandatory)][string]$ProcessName)
+    if (-not $Script:Config.EnableBandwidthHeuristic) { return $false }
+    try {
+        $counterPath = "\Process($ProcessName)\IO Data Bytes/sec"
+        $sample = (Get-Counter -Counter $counterPath -ErrorAction Stop).CounterSamples |
+            Select-Object -First 1
+        # Arbitrary "spike" threshold: >5 MB/s sustained from one process.
+        return ($sample.CookedValue -gt 5MB)
+    } catch {
+        return $false
+    }
+}
+
+#endregion
+
+# ============================================================================
+#region SEVERITY ENGINE (KORAK 3)
+# ============================================================================
+<#
+    Severity pragovi (documented per the task's KORAK 3):
+
+    LOW    (zeleno, $Brand.Green)   - poznat proces NA poznatoj destinaciji
+                                       (ukljucujuci sve na whitelisti).
+                                       Samo se loguje - BEZ notifikacije.
+
+    MEDIUM ("WORM", $Brand.Orange)  - bilo koji od:
+                                         a) proces koji NIKAD ranije nije
+                                            vidjen (novi proces), ili
+                                         b) poznat proces koji se prvi put
+                                            povezuje na ovu destinaciju.
+                                       -> tiha notifikacija (BurntToast -Silent).
+
+    HIGH   ("DANGER", $Brand.Danger) - bilo koji od:
+                                         a) Get-AuthenticodeSignature vraca
+                                            'NotSigned' ili 'HashMismatch'
+                                         b) fajl procesa je izmenjen u
+                                            poslednjih $NewFileWindowHrs (24h)
+                                            I ovo je nova eksterna konekcija
+                                         c) (opciono/best-effort) bandwidth
+                                            spike ka nepoznatoj destinaciji -
+                                            vidi Test-BandwidthSpike
+                                       -> glasna, "pinned" notifikacija
+                                          (Scenario Alarm) dok se rucno ne
+                                          potvrdi/odbaci u Istoriji upozorenja.
+
+    Whitelisted procesi (rugbuster_whitelist.txt) su UVEK LOW, bez obzira
+    na gornje uslove (KORAK 5).
+#>
+function Get-ConnectionSeverity {
+    param(
+        [Parameter(Mandatory)] [string]$ProcessName,
+        [Parameter(Mandatory)] [string]$RemoteHost,
+        [string]$ProcessPath,
+        [bool]$IsNewProcess,
+        [bool]$IsNewDestination
+    )
+
+    $result = [ordered]@{
+        Severity = 'LOW'
+        Reasons  = New-Object System.Collections.Generic.List[string]
+        Signed   = $true
+    }
+
+    if (Test-IsWhitelisted -ProcessName $ProcessName) {
+        return $result
+    }
+
+    if ($IsNewProcess) {
+        $result.Severity = 'MEDIUM'
+        $result.Reasons.Add('Nov proces - prvi put vidjen na ovom sistemu')
+    }
+    if ($IsNewDestination) {
+        $result.Severity = 'MEDIUM'
+        $result.Reasons.Add("Poznat proces, nova destinacija: $RemoteHost")
+    }
+
+    if ($ProcessPath -and (Test-Path $ProcessPath)) {
+        # --- HIGH (a): digitalni potpis ---
+        $sigStatus = Get-SignatureStatus -FilePath $ProcessPath
+        if ($sigStatus -in @('NotSigned', 'HashMismatch')) {
+            $result.Signed = $false
+            $result.Severity = 'HIGH'
+            $result.Reasons.Add("Nepotpisan/izmenjen fajl (Authenticode: $sigStatus)")
+        }
+
+        # --- HIGH (b): fajl nov (<24h) + odmah eksterna konekcija ---
+        try {
+            $lastWrite = (Get-Item -Path $ProcessPath -ErrorAction Stop).LastWriteTime
+            $ageHours = (New-TimeSpan -Start $lastWrite -End (Get-Date)).TotalHours
+            if ($ageHours -ge 0 -and $ageHours -lt $Script:Config.NewFileWindowHrs -and ($IsNewProcess -or $IsNewDestination)) {
+                $result.Severity = 'HIGH'
+                $result.Reasons.Add(('Fajl izmenjen pre {0:N1}h i odmah pravi eksternu konekciju' -f $ageHours))
+            }
+        } catch { }
+    }
+
+    # --- HIGH (c): best-effort bandwidth heuristic (opciono) ---
+    if (Test-BandwidthSpike -ProcessName $ProcessName) {
+        $result.Severity = 'HIGH'
+        $result.Reasons.Add('Neuobicajeno velika kolicina podataka ka nepoznatoj destinaciji')
+    }
+
+    return $result
+}
+
+#endregion
+
+# ============================================================================
+#region IPC - "rugbuster-shield:" protocol + named pipe (toast button -> GUI)
+# ============================================================================
+
+$Script:PipeName  = 'RugBusterShieldPipe'
+$Script:PipeQueue = New-Object 'System.Collections.Concurrent.ConcurrentQueue[string]'
+$Script:PendingSignal = $null
+
+function Register-RugBusterProtocol {
+    # HKCU (no admin needed) registration of a custom URI scheme so a toast
+    # button ("Detalji") can launch/wake this script with an alert id.
+    # rugbuster-shield:show?id=<guid>
+    try {
+        $root = 'HKCU:\Software\Classes\rugbuster-shield'
+        if (-not (Test-Path $root)) { New-Item -Path $root -Force | Out-Null }
+        Set-Item -Path $root -Value 'URL:RugBuster Shield Protocol'
+        New-ItemProperty -Path $root -Name 'URL Protocol' -Value '' -PropertyType String -Force | Out-Null
+
+        $cmdKey = "$root\shell\open\command"
+        if (-not (Test-Path $cmdKey)) { New-Item -Path $cmdKey -Force | Out-Null }
+        $hostExe = (Get-Process -Id $PID).Path
+        $cmd = '"{0}" -NoProfile -WindowStyle Hidden -File "{1}" -Signal "%1"' -f $hostExe, $MyInvocation.MyCommand.Path
+        Set-Item -Path $cmdKey -Value $cmd
+    } catch {
+        Write-Warning "Registracija rugbuster-shield: protokola nije uspela (nastavljam bez klika-iz-toasta): $($_.Exception.Message)"
+    }
+}
+
+function Start-RugBusterPipeServer {
+    # Background runspace that blocks on NamedPipeServerStream.WaitForConnection()
+    # and forwards each received line into $Script:PipeQueue, drained by a
+    # WinForms timer on the UI thread (cross-thread WinForms calls are unsafe
+    # otherwise).
+    $rs = [runspacefactory]::CreateRunspace()
+    $rs.Open()
+    $rs.SessionStateProxy.SetVariable('Queue', $Script:PipeQueue)
+    $rs.SessionStateProxy.SetVariable('PipeName', $Script:PipeName)
+
+    $ps = [PowerShell]::Create()
+    $ps.Runspace = $rs
+    [void]$ps.AddScript({
+        while ($true) {
+            try {
+                $pipe = New-Object System.IO.Pipes.NamedPipeServerStream(
+                    $PipeName, [System.IO.Pipes.PipeDirection]::In)
+                $pipe.WaitForConnection()
+                $reader = New-Object System.IO.StreamReader($pipe)
+                $line = $reader.ReadLine()
+                if ($line) { $Queue.Enqueue($line) }
+                $reader.Dispose()
+                $pipe.Dispose()
+            } catch {
+                Start-Sleep -Milliseconds 500
+            }
+        }
+    })
+    $Script:PipeAsyncHandle = $ps.BeginInvoke()
+    $Script:PipePs = $ps
+    $Script:PipeRunspace = $rs
+}
+
+function Send-RugBusterSignal {
+    param([Parameter(Mandatory)][string]$Payload)
+    try {
+        $client = New-Object System.IO.Pipes.NamedPipeClientStream(
+            '.', $Script:PipeName, [System.IO.Pipes.PipeDirection]::Out)
+        $client.Connect(300)
+        $writer = New-Object System.IO.StreamWriter($client)
+        $writer.WriteLine($Payload)
+        $writer.Flush()
+        $writer.Dispose()
+        $client.Dispose()
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+#endregion
+
+# ============================================================================
+#region TOAST - BurntToast notifications (Viber/Telegram-style, bottom-right)
+# ============================================================================
+
+function Ensure-BurntToast {
+    if (Get-Module -ListAvailable -Name BurntToast) { return $true }
+    try {
+        Write-Host 'BurntToast nije instaliran - pokusavam Install-Module...'
+        Install-Module -Name BurntToast -Scope CurrentUser -Force -ErrorAction Stop
+        return $true
+    } catch {
+        Write-Warning "Instalacija BurntToast modula nije uspela ($($_.Exception.Message)). Koristim NotifyIcon balon kao fallback."
+        return $false
+    }
+}
+
+function Show-RugBusterToast {
+    param([Parameter(Mandatory)][pscustomobject]$Alert)
+
+    $haveBurntToast = Ensure-BurntToast
+    if (-not $haveBurntToast) {
+        Show-FallbackBalloon -Alert $Alert
+        return
+    }
+
+    Import-Module BurntToast -ErrorAction SilentlyContinue
+
+    $logo = New-BTImage -Source $Script:LogoPng -AppLogoOverride -Crop Circle
+
+    $text1 = New-BTText -Content $Alert.ProcessName
+    $text2 = New-BTText -Content ("{0}  ({1})" -f $Alert.RemoteHost, $Alert.Severity)
+
+    $btnDetails = New-BTButton -Content 'Detalji' `
+        -Arguments "rugbuster-shield:show?id=$($Alert.Id)" -ActivationType Protocol
+
+    $buttons = @($btnDetails)
+    if ($Alert.Severity -ne 'LOW') {
+        $buttons += New-BTButton -Content 'Lazna uzbuna' `
+            -Arguments "rugbuster-shield:falsealarm?id=$($Alert.Id)" -ActivationType Protocol
+        $buttons += New-BTButton -Content 'Istrazeno - OK' `
+            -Arguments "rugbuster-shield:investigated?id=$($Alert.Id)" -ActivationType Protocol
+    }
+    $btnAction = New-BTAction -Buttons $buttons
+
+    $params = @{
+        AppLogo   = $logo
+        Text      = @($text1, $text2)
+        Action    = $btnAction
+        UniqueIdentifier = "RugBusterShield-$($Alert.Id)"
+    }
+
+    switch ($Alert.Severity) {
+        'HIGH' {
+            # Glasna i "pinned" - ostaje dok se rucno ne potvrdi/odbaci.
+            $params.Scenario = 'Alarm'
+        }
+        'MEDIUM' {
+            # Tiha notifikacija.
+            $params.Silent = $true
+        }
+        default {
+            # LOW nikad ne stize dovde (samo se loguje) - vidi Invoke-RugBusterScan.
+        }
+    }
+
+    try {
+        New-BurntToastNotification @params
+    } catch {
+        Write-Warning "BurntToast notifikacija nije uspela: $($_.Exception.Message)"
+        Show-FallbackBalloon -Alert $Alert
+    }
+}
+
+function Show-FallbackBalloon {
+    param([Parameter(Mandatory)][pscustomobject]$Alert)
+    if (-not $Script:TrayIcon) { return }
+    $icon = switch ($Alert.Severity) {
+        'HIGH'   { [System.Windows.Forms.ToolTipIcon]::Error }
+        'MEDIUM' { [System.Windows.Forms.ToolTipIcon]::Warning }
+        default  { [System.Windows.Forms.ToolTipIcon]::Info }
+    }
+    $Script:TrayIcon.BalloonTipIcon = $icon
+    $Script:TrayIcon.BalloonTipTitle = "RugBuster Shield - $($Alert.Severity)"
+    $Script:TrayIcon.BalloonTipText = "$($Alert.ProcessName) -> $($Alert.RemoteHost)"
+    $Script:TrayIcon.ShowBalloonTip(8000)
+}
+
+#endregion
+
+# ============================================================================
+#region SCAN - enumerate connections, score severity, raise alerts
+# ============================================================================
+
+function Invoke-RugBusterScan {
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $rows = New-Object System.Collections.ArrayList
+
+    try {
+        $connections = Get-NetTCPConnection -State Established -ErrorAction Stop |
+            Where-Object { $_.RemoteAddress -notin @('127.0.0.1', '::1', '0.0.0.0') }
+    } catch {
+        Write-Warning "Get-NetTCPConnection nije uspeo: $($_.Exception.Message)"
+        return
+    }
+
+    # Group by owning process so one process with many sockets to the same
+    # host doesn't spam separate alerts.
+    $byProcess = $connections | Group-Object -Property OwningProcess
+
+    foreach ($group in $byProcess) {
+        $procId = $group.Name
+        $proc = $null
+        try { $proc = Get-Process -Id $procId -ErrorAction Stop } catch { continue }
+
+        $procName = $proc.ProcessName + '.exe'
+        $procPath = $null
+        try { $procPath = $proc.Path } catch { $procPath = $null }
+
+        $isNewProcess = -not $Script:KnownProcesses.Contains($procName.ToLowerInvariant())
+        [void]$Script:KnownProcesses.Add($procName.ToLowerInvariant())
+
+        if (-not $Script:SeenDestinations.ContainsKey($procName)) {
+            $Script:SeenDestinations[$procName] = New-Object 'System.Collections.Generic.HashSet[string]'
+        }
+
+        foreach ($conn in $group.Group) {
+            $remoteHost = Resolve-RemoteHostName -IPAddress $conn.RemoteAddress
+            $destKey = "$($conn.RemoteAddress)"
+            $isNewDestination = -not $Script:SeenDestinations[$procName].Contains($destKey)
+            [void]$Script:SeenDestinations[$procName].Add($destKey)
+
+            $eval = Get-ConnectionSeverity -ProcessName $procName -RemoteHost $remoteHost `
+                -ProcessPath $procPath -IsNewProcess $isNewProcess -IsNewDestination $isNewDestination
+
+            $row = [pscustomobject]@{
+                Id            = [guid]::NewGuid().ToString()
+                Timestamp     = Get-Date
+                ProcessName   = $procName
+                Pid           = $procId
+                ProcessPath   = $procPath
+                RemoteAddress = $conn.RemoteAddress
+                RemoteHost    = $remoteHost
+                RemotePort    = $conn.RemotePort
+                Severity      = $eval.Severity
+                Reasons       = ($eval.Reasons -join '; ')
+                Signed        = $eval.Signed
+                Status        = 'Novo'
+            }
+            [void]$rows.Add($row)
+
+            if ($eval.Severity -eq 'LOW') {
+                # KORAK 3: LOW samo se loguje, bez notifikacije.
+                continue
+            }
+
+            [void]$Script:AlertHistory.Add($row)
+            Show-RugBusterToast -Alert $row
+        }
+    }
+
+    Save-SeenState
+    if ($rows.Count -gt 0 -or $Script:AlertHistory.Count -gt 0) { Save-AlertHistory }
+
+    $sw.Stop()
+    $Script:Config.ScanDurationsMs.Enqueue($sw.Elapsed.TotalMilliseconds)
+    while ($Script:Config.ScanDurationsMs.Count -gt 5) { [void]$Script:Config.ScanDurationsMs.Dequeue() }
+    $Script:Config.CurrentInterval = Get-AdaptiveInterval
+
+    Update-LiveGrid -Rows $rows
+}
+
+#endregion
+
+# ============================================================================
+#region GUI
+# ============================================================================
+
+function Get-SeverityColor {
+    param([string]$Severity)
+    switch ($Severity) {
+        'HIGH'   { return $Script:Brand.Danger }
+        'MEDIUM' { return $Script:Brand.Orange }
+        default  { return $Script:Brand.Green }
+    }
+}
+
+function New-BrandButton {
+    param([string]$Text, [System.Drawing.Color]$Accent)
+    $btn = New-Object System.Windows.Forms.Button
+    $btn.Text = $Text
+    $btn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btn.FlatAppearance.BorderColor = $Accent
+    $btn.FlatAppearance.BorderSize = 1
+    $btn.BackColor = $Script:Brand.Card
+    $btn.ForeColor = $Accent
+    $btn.Font = New-BrandFont -Kind Body -Size 9.5 -Style Bold
+    $btn.Height = 30
+    $btn.Cursor = [System.Windows.Forms.Cursors]::Hand
+    return $btn
+}
+
+function Build-MainForm {
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = 'RugBuster Shield'
+    $form.Size = New-Object System.Drawing.Size(1120, 720)
+    $form.MinimumSize = New-Object System.Drawing.Size(900, 560)
+    $form.StartPosition = 'CenterScreen'
+    $form.BackColor = $Script:Brand.BgDark
+    $form.ForeColor = $Script:Brand.TextPrimary
+    $form.Font = New-BrandFont -Kind Body -Size 9.5
+    if (Test-Path $Script:LogoIco) {
+        $form.Icon = New-Object System.Drawing.Icon($Script:LogoIco)
+    }
+
+    # --- Header panel (KORAK 1: logo top-left) ---
+    $header = New-Object System.Windows.Forms.Panel
+    $header.Dock = [System.Windows.Forms.DockStyle]::Top
+    $header.Height = 64
+    $header.BackColor = $Script:Brand.Panel
+    $form.Controls.Add($header)
+
+    $logoBox = New-Object System.Windows.Forms.PictureBox
+    $logoBox.Size = New-Object System.Drawing.Size(40, 40)
+    $logoBox.Location = New-Object System.Drawing.Point(14, 12)
+    $logoBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::Zoom
+    if (Test-Path $Script:LogoPng) {
+        $logoBox.Image = [System.Drawing.Image]::FromFile($Script:LogoPng)
+    }
+    $header.Controls.Add($logoBox)
+
+    $lblRug = New-Object System.Windows.Forms.Label
+    $lblRug.Text = 'RUG'
+    $lblRug.Font = New-BrandFont -Kind Display -Size 14 -Style Bold
+    $lblRug.ForeColor = $Script:Brand.Cyan
+    $lblRug.AutoSize = $true
+    $lblRug.Location = New-Object System.Drawing.Point(64, 20)
+    $lblRug.BackColor = [System.Drawing.Color]::Transparent
+    $header.Controls.Add($lblRug)
+
+    $lblBuster = New-Object System.Windows.Forms.Label
+    $lblBuster.Text = 'BUSTER SHIELD'
+    $lblBuster.Font = New-BrandFont -Kind Display -Size 14 -Style Bold
+    $lblBuster.ForeColor = $Script:Brand.Pink
+    $lblBuster.AutoSize = $true
+    $lblBuster.Location = New-Object System.Drawing.Point(64 + $lblRug.PreferredWidth + 2, 20)
+    $lblBuster.BackColor = [System.Drawing.Color]::Transparent
+    $header.Controls.Add($lblBuster)
+
+    $lblStatus = New-Object System.Windows.Forms.Label
+    $lblStatus.Text = 'Skeniranje...'
+    $lblStatus.Font = New-BrandFont -Kind Mono -Size 9
+    $lblStatus.ForeColor = $Script:Brand.TextMuted
+    $lblStatus.AutoSize = $true
+    $lblStatus.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
+    $lblStatus.Location = New-Object System.Drawing.Point(($form.ClientSize.Width - 320), 24)
+    $header.Controls.Add($lblStatus)
+    $Script:LblStatus = $lblStatus
+
+    # --- Tabs ---
+    $tabs = New-Object System.Windows.Forms.TabControl
+    $tabs.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $tabs.Font = New-BrandFont -Kind Body -Size 9.5
+    $form.Controls.Add($tabs)
+    $tabs.BringToFront()
+
+    $tabLive = New-Object System.Windows.Forms.TabPage
+    $tabLive.Name = 'LiveMonitor'
+    $tabLive.Text = 'Live Monitor'
+    $tabLive.BackColor = $Script:Brand.BgDark
+    $tabs.TabPages.Add($tabLive)
+
+    $tabHistory = New-Object System.Windows.Forms.TabPage
+    $tabHistory.Name = 'IstorijaUpozorenja'
+    $tabHistory.Text = 'Istorija upozorenja'
+    $tabHistory.BackColor = $Script:Brand.BgDark
+    $tabs.TabPages.Add($tabHistory)
+
+    # --- Live grid ---
+    $gridLive = New-Object System.Windows.Forms.DataGridView
+    $gridLive.Dock = [System.Windows.Forms.DockStyle]::Fill
+    Set-BrandGridStyle -Grid $gridLive
+    foreach ($col in 'ProcessName', 'Pid', 'RemoteHost', 'RemoteAddress', 'RemotePort', 'Signed', 'Severity', 'Timestamp') {
+        [void]$gridLive.Columns.Add($col, $col)
+    }
+    $tabLive.Controls.Add($gridLive)
+    $Script:GridLive = $gridLive
+
+    # --- History grid + actions ---
+    $historyPanel = New-Object System.Windows.Forms.Panel
+    $historyPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $tabHistory.Controls.Add($historyPanel)
+
+    $actionBar = New-Object System.Windows.Forms.Panel
+    $actionBar.Dock = [System.Windows.Forms.DockStyle]::Bottom
+    $actionBar.Height = 44
+    $actionBar.BackColor = $Script:Brand.Panel
+    $historyPanel.Controls.Add($actionBar)
+
+    $btnFalseAlarm = New-BrandButton -Text 'Lazna uzbuna' -Accent $Script:Brand.Green
+    $btnFalseAlarm.Location = New-Object System.Drawing.Point(12, 7)
+    $btnFalseAlarm.Width = 150
+    $actionBar.Controls.Add($btnFalseAlarm)
+
+    $btnInvestigated = New-BrandButton -Text 'Istrazeno - OK' -Accent $Script:Brand.Cyan
+    $btnInvestigated.Location = New-Object System.Drawing.Point(172, 7)
+    $btnInvestigated.Width = 150
+    $actionBar.Controls.Add($btnInvestigated)
+
+    $gridHistory = New-Object System.Windows.Forms.DataGridView
+    $gridHistory.Dock = [System.Windows.Forms.DockStyle]::Fill
+    Set-BrandGridStyle -Grid $gridHistory
+    foreach ($col in 'Timestamp', 'ProcessName', 'RemoteHost', 'Severity', 'Reasons', 'Signed', 'Status', 'Id') {
+        [void]$gridHistory.Columns.Add($col, $col)
+    }
+    $gridHistory.Columns['Id'].Visible = $false
+    $historyPanel.Controls.Add($gridHistory)
+    $gridHistory.BringToFront()
+    $Script:GridHistory = $gridHistory
+
+    $btnFalseAlarm.Add_Click({
+        foreach ($r in $Script:GridHistory.SelectedRows) {
+            $procName = $r.Cells['ProcessName'].Value
+            $id = $r.Cells['Id'].Value
+            if ($procName) { Add-ToWhitelist -ProcessName $procName }
+            Set-AlertStatus -Id $id -Status 'Lazna uzbuna'
+        }
+        Refresh-HistoryGrid
+    })
+
+    $btnInvestigated.Add_Click({
+        foreach ($r in $Script:GridHistory.SelectedRows) {
+            $id = $r.Cells['Id'].Value
+            Set-AlertStatus -Id $id -Status 'Istrazeno - OK'
+        }
+        Refresh-HistoryGrid
+    })
+
+    # --- Tray icon (KORAK 1) ---
+    $tray = New-Object System.Windows.Forms.NotifyIcon
+    if (Test-Path $Script:LogoIco) {
+        $tray.Icon = New-Object System.Drawing.Icon($Script:LogoIco)
+    }
+    $tray.Text = 'RugBuster Shield'
+    $tray.Visible = $true
+
+    $menu = New-Object System.Windows.Forms.ContextMenuStrip
+    [void]$menu.Items.Add('Otvori', $null, { Show-MainWindow })
+    [void]$menu.Items.Add('Skeniraj sada', $null, { Invoke-RugBusterScan })
+    [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+    [void]$menu.Items.Add('Izadji', $null, {
+        $Script:ForceExit = $true
+        $Script:TrayIcon.Visible = $false
+        [System.Windows.Forms.Application]::Exit()
+    })
+    $tray.ContextMenuStrip = $menu
+    $tray.Add_DoubleClick({ Show-MainWindow })
+    $Script:TrayIcon = $tray
+
+    $form.Add_FormClosing({
+        param($s, $e)
+        if (-not $Script:ForceExit) {
+            $e.Cancel = $true
+            $form.Hide()
+        }
+    })
+
+    # --- Scan timer (KORAK 4) ---
+    $timer = New-Object System.Windows.Forms.Timer
+    $timer.Interval = $Script:Config.CurrentInterval
+    $timer.Add_Tick({
+        Invoke-RugBusterScan
+        if ($timer.Interval -ne $Script:Config.CurrentInterval) {
+            $timer.Interval = $Script:Config.CurrentInterval
+        }
+        $Script:LblStatus.Text = "Poslednje skeniranje: $(Get-Date -Format 'HH:mm:ss')  |  interval: $($timer.Interval)ms  |  alarmi: $($Script:AlertHistory.Count)"
+    })
+    $timer.Start()
+    $Script:ScanTimer = $timer
+
+    # --- Pipe-queue drain timer (toast button -> bring window to front) ---
+    $pipeTimer = New-Object System.Windows.Forms.Timer
+    $pipeTimer.Interval = 500
+    $pipeTimer.Add_Tick({ Process-PipeQueue })
+    $pipeTimer.Start()
+    $Script:PipeTimer = $pipeTimer
+
+    return $form
+}
+
+function Set-BrandGridStyle {
+    param([System.Windows.Forms.DataGridView]$Grid)
+    $Grid.BackgroundColor = $Script:Brand.BgDark
+    $Grid.GridColor = $Script:Brand.BorderLine
+    $Grid.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+    $Grid.RowHeadersVisible = $false
+    $Grid.AllowUserToAddRows = $false
+    $Grid.AllowUserToDeleteRows = $false
+    $Grid.ReadOnly = $true
+    $Grid.SelectionMode = [System.Windows.Forms.DataGridViewSelectionMode]::FullRowSelect
+    $Grid.AutoSizeColumnsMode = [System.Windows.Forms.DataGridViewAutoSizeColumnsMode]::Fill
+    $Grid.Font = New-BrandFont -Kind Mono -Size 9
+    $Grid.ColumnHeadersDefaultCellStyle.BackColor = $Script:Brand.Panel
+    $Grid.ColumnHeadersDefaultCellStyle.ForeColor = $Script:Brand.Cyan
+    $Grid.ColumnHeadersDefaultCellStyle.Font = New-BrandFont -Kind Body -Size 9 -Style Bold
+    $Grid.DefaultCellStyle.BackColor = $Script:Brand.Card
+    $Grid.DefaultCellStyle.ForeColor = $Script:Brand.TextPrimary
+    $Grid.DefaultCellStyle.SelectionBackColor = $Script:Brand.Panel
+    $Grid.DefaultCellStyle.SelectionForeColor = $Script:Brand.Cyan
+    $Grid.EnableHeadersVisualStyles = $false
+}
+
+function Update-LiveGrid {
+    param($Rows)
+    if (-not $Script:GridLive) { return }
+    $Script:GridLive.Rows.Clear()
+    foreach ($r in $Rows) {
+        $idx = $Script:GridLive.Rows.Add($r.ProcessName, $r.Pid, $r.RemoteHost, $r.RemoteAddress, $r.RemotePort, $r.Signed, $r.Severity, $r.Timestamp)
+        $Script:GridLive.Rows[$idx].DefaultCellStyle.ForeColor = Get-SeverityColor -Severity $r.Severity
+    }
+}
+
+function Refresh-HistoryGrid {
+    if (-not $Script:GridHistory) { return }
+    $Script:GridHistory.Rows.Clear()
+    foreach ($r in $Script:AlertHistory) {
+        $idx = $Script:GridHistory.Rows.Add($r.Timestamp, $r.ProcessName, $r.RemoteHost, $r.Severity, $r.Reasons, $r.Signed, $r.Status, $r.Id)
+        $Script:GridHistory.Rows[$idx].DefaultCellStyle.ForeColor = Get-SeverityColor -Severity $r.Severity
+    }
+}
+
+function Set-AlertStatus {
+    param([string]$Id, [string]$Status)
+    foreach ($a in $Script:AlertHistory) {
+        if ($a.Id -eq $Id) { $a.Status = $Status }
+    }
+    Save-AlertHistory
+}
+
+function Show-MainWindow {
+    $Script:MainForm.Show()
+    $Script:MainForm.WindowState = [System.Windows.Forms.FormWindowState]::Normal
+    $Script:MainForm.Activate()
+    $Script:MainForm.BringToFront()
+}
+
+function Select-HistoryRowById {
+    param([string]$Id)
+    Refresh-HistoryGrid
+    foreach ($row in $Script:GridHistory.Rows) {
+        if ($row.Cells['Id'].Value -eq $Id) {
+            $Script:MainTabs.SelectedTab = $Script:MainTabs.TabPages['IstorijaUpozorenja']
+            $row.Selected = $true
+            $Script:GridHistory.FirstDisplayedScrollingRowIndex = $row.Index
+            break
+        }
+    }
+}
+
+function Process-PipeQueue {
+    $line = $null
+    while ($Script:PipeQueue.TryDequeue([ref]$line)) {
+        Handle-RugBusterUri -Uri $line
+    }
+    if ($Script:PendingSignal) {
+        $sig = $Script:PendingSignal
+        $Script:PendingSignal = $null
+        Handle-RugBusterUri -Uri $sig
+    }
+}
+
+function Handle-RugBusterUri {
+    param([string]$Uri)
+    if (-not $Uri) { return }
+    # Format: rugbuster-shield:<action>?id=<guid>
+    $body = $Uri -replace '^rugbuster-shield:', ''
+    $parts = $body -split '\?id=', 2
+    $action = $parts[0]
+    $id = if ($parts.Count -gt 1) { $parts[1] } else { $null }
+
+    Show-MainWindow
+    switch ($action) {
+        'show' { if ($id) { Select-HistoryRowById -Id $id } }
+        'falsealarm' {
+            if ($id) {
+                $a = $Script:AlertHistory | Where-Object { $_.Id -eq $id } | Select-Object -First 1
+                if ($a) { Add-ToWhitelist -ProcessName $a.ProcessName }
+                Set-AlertStatus -Id $id -Status 'Lazna uzbuna'
+            }
+            Select-HistoryRowById -Id $id
+        }
+        'investigated' {
+            if ($id) { Set-AlertStatus -Id $id -Status 'Istrazeno - OK' }
+            Select-HistoryRowById -Id $id
+        }
+    }
+}
+
+#endregion
+
+# ============================================================================
+#region MAIN
+# ============================================================================
+
+Import-Whitelist
+Import-SeenState
+Import-AlertHistory
+
+# If we were launched purely to relay a toast-button click to an already
+# running instance, forward it over the pipe and exit without opening a
+# second GUI. If no instance is listening, fall through and start normally,
+# then act on the signal once the window is up.
+if ($Signal) {
+    if (Send-RugBusterSignal -Payload $Signal) {
+        exit 0
+    } else {
+        $Script:PendingSignal = $Signal
+    }
+}
+
+Register-RugBusterProtocol
+Start-RugBusterPipeServer
+
+$Script:ForceExit = $false
+$Script:MainForm = Build-MainForm
+$Script:MainTabs = $Script:MainForm.Controls | Where-Object { $_ -is [System.Windows.Forms.TabControl] } | Select-Object -First 1
+
+Refresh-HistoryGrid
+Invoke-RugBusterScan
+
+[System.Windows.Forms.Application]::Run($Script:MainForm)
+
+#endregion
