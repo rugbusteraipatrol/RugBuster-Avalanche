@@ -55,6 +55,23 @@ Add-Type -Name DwmNative -Namespace RugBusterShield -MemberDefinition @'
 public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 '@
 
+# This is a GUI app - a plain `powershell.exe -File ...` launch (anything
+# other than the toast-relay path, which already passes -WindowStyle Hidden)
+# leaves the interpreter's own console host window sitting there in the OS
+# default white/light theme, visually clashing right next to the themed
+# WinForms window. Hide it outright rather than trying to theme it - it
+# serves no purpose once the GUI takes over.
+Add-Type -Name ConsoleNative -Namespace RugBusterShield -MemberDefinition @'
+[DllImport("kernel32.dll")]
+public static extern IntPtr GetConsoleWindow();
+[DllImport("user32.dll")]
+public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+'@
+$Script:ConsoleHwnd = [RugBusterShield.ConsoleNative]::GetConsoleWindow()
+if ($Script:ConsoleHwnd -ne [IntPtr]::Zero) {
+    [void][RugBusterShield.ConsoleNative]::ShowWindow($Script:ConsoleHwnd, 0) # SW_HIDE
+}
+
 function Set-BrandTitleBar {
     param([Parameter(Mandatory)][System.Windows.Forms.Form]$Form)
     $DWMWA_USE_IMMERSIVE_DARK_MODE = 20
