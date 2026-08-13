@@ -1,0 +1,47 @@
+# rugbuster_whitelist.txt
+# One process name per line (with or without .exe), case-insensitive.
+# Lines starting with # are comments and are ignored.
+# Processes on this list are always treated as LOW severity (log-only)
+# and will never raise a MEDIUM/HIGH ("worm"/"danger") alert, per KORAK 5.
+# Add an entry from the "Istorija upozorenja" tab with "Lazna uzbuna",
+# or edit this file by hand and restart the app / wait for the next reload.
+
+# Browsers
+chrome
+msedge
+firefox
+brave
+opera
+msedgewebview2
+
+# OS / update / shell
+svchost
+wuauclt
+usoclient
+explorer
+searchapp
+searchhost
+onedrive
+dllhost
+taskhostw
+
+# Chat / collaboration
+discord
+discordptb
+discordcanary
+teams
+ms-teams
+slack
+skype
+zoom
+whatsapp
+
+# Gaming / media
+steam
+steamwebhelper
+steamservice
+spotify
+
+# Dev tools
+code
+git

@@ -388,6 +388,15 @@ Later phases replace or augment this with a fine-tuned RugBusterAI model trained
 - [ ] Evaluation harness for AI scoring
 - [ ] Wallet and dashboard API integrations
 
+## Windows Shield GUI (desktop companion)
+
+`windows/RugBuster-Shield-GUI.ps1` is a separate PowerShell + WinForms
+desktop app: a host-based network/process monitor with severity-scored
+toast notifications, unrelated to the Avalanche scanner/registry code
+above but sharing the RugBuster brand. See
+[`windows/README.md`](windows/README.md) for setup, the branding source,
+and the severity model.
+
 ## Positioning
 
 RugBusterAI brings Avalanche-native fraud-detection infrastructure to builders as an AI-assisted security certification layer. The near-term goal is to give Avalanche L1 teams a reliable scanner, evidence corpus, API, alerting surface, and on-chain registry they can integrate before users interact with risky contracts.
