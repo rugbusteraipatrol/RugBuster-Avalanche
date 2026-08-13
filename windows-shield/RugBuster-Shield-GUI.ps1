@@ -11,11 +11,11 @@
 
     Branding (colors / fonts / visual language) was extracted verbatim from
     rugbusteraipatrol/rugbuster-website (index.html :root custom
-    properties + logo markup) - see $Script:Brand below for the source
-    values. No image logo existed on the site (the site logo is styled
-    text), so windows-shield/assets/rugbuster-shield-logo.(png|ico) is a
-    small vector-style shield+checkmark generated from those exact brand
-    hex codes for use as the header/tray/toast icon.
+    properties) - see $Script:Brand below for the source values. The logo
+    itself (windows-shield/assets/rugbuster-shield-logo.png / .ico) is the
+    org's real illustrated shield logo, copied from
+    rugbusteraipatrol/rugbuster-multichain's docs/favicon.png (same file
+    also ships in RugBuster-CIA-Lab) - used as the header/tray/toast icon.
 
 .NOTES
     Windows 11 + PowerShell 5.1/7 with .NET WinForms only. This script was

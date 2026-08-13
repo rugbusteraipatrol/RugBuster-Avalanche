@@ -49,13 +49,18 @@ izgled instaliraj ova tri fonta lokalno (besplatni Google Fonts).
 
 Vizuelni stil sajta: ostri/zaseceni uglovi (`clip-path` poligoni, skoro
 bez `border-radius`), tanke cyan ivice niske providnosti, neon
-"glow" senke, tamna pozadina. Nema postojeceg image logo fajla na sajtu —
-logo je stilizovan tekst ("RUG" + "BUSTER"). Zato je
-`assets/rugbuster-shield-logo.(png|ico)` generisan (cist Python,
-`zlib`/`struct`, bez eksternih zavisnosti — nije bilo ImageMagick/Pillow u
-sandboxu) kao mali stit + kvacica u tacno istim hex bojama, pola cyan/pola
-pink ivica (isto kao dvobojni "RUG"/"BUSTER" tekst), zelena kvacica u
-sredini.
+"glow" senke, tamna pozadina. `rugbuster-website/index.html` samog sajta
+nema image logo fajl (logo tamo je stilizovan tekst "RUG"+"BUSTER"), ali
+pravi ilustrovani logo (metalik stit sa cyber-sovom/robotom, crveno oko,
+cyan "circuit" linije) postoji kao `docs/favicon.png` (512x512) u vise
+drugih repoa u `rugbusteraipatrol` orgu (isti fajl, isti MD5, u
+`rugbuster-multichain` i `RugBuster-CIA-Lab`), zajedno sa zvanicnim
+16px/32px favikonima u `rugbuster-multichain/docs/assets/`. To je pravi
+brand logo i to je ono sto je kopirano u `assets/rugbuster-shield-logo.png`
+(256px, za header) i `assets/rugbuster-shield-logo.ico` (16/32px su
+byte-za-byte zvanicni fajlovi; 48/256px su generisani box-resample iz
+zvanicnog 512px izvora, cist Python `zlib`/`struct` dekoder+enkoder — nije
+bilo ImageMagick/Pillow u sandboxu).
 
 ## Severity pragovi (KORAK 3)
 
