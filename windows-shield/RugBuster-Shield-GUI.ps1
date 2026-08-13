@@ -42,6 +42,45 @@ param(
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# DWM P/Invoke for a branded (dark, cyan-accented) native title bar - by
+# default WinForms leaves the OS-drawn caption/border white/light even when
+# the window content is fully dark-themed, which reads as a generic "classic
+# Windows program" frame bolted onto a themed app. DWMWA_CAPTION_COLOR /
+# DWMWA_TEXT_COLOR / DWMWA_BORDER_COLOR (Windows 11 22000+) let the native
+# non-client area itself be recolored to match the rest of the ecosystem
+# (rugbuster.io, this same GUI's own header) instead of custom-drawing a
+# borderless window (drag/hit-testing/snap-layout handling) for the same result.
+Add-Type -Name DwmNative -Namespace RugBusterShield -MemberDefinition @'
+[DllImport("dwmapi.dll")]
+public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+'@
+
+function Set-BrandTitleBar {
+    param([Parameter(Mandatory)][System.Windows.Forms.Form]$Form)
+    $DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+    $DWMWA_BORDER_COLOR = 34
+    $DWMWA_CAPTION_COLOR = 35
+    $DWMWA_TEXT_COLOR = 36
+    # DWM colors are 0x00BBGGRR, the reverse byte order of System.Drawing.Color.
+    # R/G/B are [byte] - PowerShell's -shl keeps byte-typed operands in 8-bit
+    # arithmetic (245 -shl 8 silently overflows to 0 instead of widening), so
+    # cast to [int] first or every channel above R collapses to 0.
+    $toColorRef = { param($c) [int]$c.R -bor ([int]$c.G -shl 8) -bor ([int]$c.B -shl 16) }
+    $hwnd = $Form.Handle
+    $darkMode = 1
+    [void][RugBusterShield.DwmNative]::DwmSetWindowAttribute($hwnd, $DWMWA_USE_IMMERSIVE_DARK_MODE, [ref]$darkMode, 4)
+    $captionRef = & $toColorRef $Script:Brand.Panel
+    [void][RugBusterShield.DwmNative]::DwmSetWindowAttribute($hwnd, $DWMWA_CAPTION_COLOR, [ref]$captionRef, 4)
+    $textRef = & $toColorRef $Script:Brand.Cyan
+    [void][RugBusterShield.DwmNative]::DwmSetWindowAttribute($hwnd, $DWMWA_TEXT_COLOR, [ref]$textRef, 4)
+    $borderRef = & $toColorRef $Script:Brand.Cyan
+    [void][RugBusterShield.DwmNative]::DwmSetWindowAttribute($hwnd, $DWMWA_BORDER_COLOR, [ref]$borderRef, 4)
+    # Older Windows 10 builds (pre-22H2/11) only support the dark-mode flag,
+    # not custom caption/text/border colors - DwmSetWindowAttribute simply
+    # returns a non-zero HRESULT for the unsupported attributes there, so
+    # this degrades gracefully to a plain dark title bar instead of erroring.
+}
+
 $Script:RootDir    = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Script:AssetsDir  = Join-Path $Script:RootDir 'assets'
 $Script:LogoPng    = Join-Path $Script:AssetsDir 'rugbuster-shield-logo.png'
@@ -552,6 +591,7 @@ function Show-FallbackBalloon {
 function Invoke-RugBusterScan {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $rows = New-Object System.Collections.ArrayList
+    $newAlertCount = 0
 
     try {
         $connections = Get-NetTCPConnection -State Established -ErrorAction Stop |
@@ -612,6 +652,7 @@ function Invoke-RugBusterScan {
             }
 
             [void]$Script:AlertHistory.Add($row)
+            $newAlertCount++
             Show-RugBusterToast -Alert $row
         }
     }
@@ -625,6 +666,12 @@ function Invoke-RugBusterScan {
     $Script:Config.CurrentInterval = Get-AdaptiveInterval
 
     Update-LiveGrid -Rows $rows
+    # Refresh-HistoryGrid was previously only called at startup and from the
+    # history tab's own action buttons, so new MEDIUM/HIGH alerts landed in
+    # $Script:AlertHistory and the toast fired, but the "Istorija upozorenja"
+    # tab itself stayed on its startup snapshot until the user clicked
+    # something in it - it never showed newly arriving alerts on its own.
+    if ($newAlertCount -gt 0) { Refresh-HistoryGrid }
 }
 
 #endregion
@@ -669,6 +716,7 @@ function Build-MainForm {
     if (Test-Path $Script:LogoIco) {
         $form.Icon = New-Object System.Drawing.Icon($Script:LogoIco)
     }
+    Set-BrandTitleBar -Form $form
 
     # --- Header panel (KORAK 1: logo top-left) ---
     $header = New-Object System.Windows.Forms.Panel
