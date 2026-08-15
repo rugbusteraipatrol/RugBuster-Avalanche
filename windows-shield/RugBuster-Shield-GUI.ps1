@@ -215,6 +215,8 @@ $Script:KnownProcesses   = New-Object 'System.Collections.Generic.HashSet[string
 $Script:SeenDestinations = @{}
 $Script:AlertHistory     = New-Object System.Collections.ArrayList
 $Script:Whitelist        = New-Object 'System.Collections.Generic.HashSet[string]'
+# Processes already toasted at HIGH severity this run - see Invoke-RugBusterScan.
+$Script:ToastedProcesses = New-Object 'System.Collections.Generic.HashSet[string]'
 
 function Import-Whitelist {
     $Script:Whitelist.Clear()
@@ -728,7 +730,22 @@ function Invoke-RugBusterScan {
 
             [void]$Script:AlertHistory.Add($row)
             $newAlertCount++
-            Show-RugBusterToast -Alert $row
+
+            # Only HIGH ("DANGER") actually pops a toast, and only once ever
+            # per process: MEDIUM fires on every single new process/new
+            # destination combo, which on a busy machine (or right after a
+            # fresh install, when everything looks "new") was a toast storm -
+            # several stacked notifications every scan, each pushed off
+            # screen by the next before it could be read. HIGH conditions
+            # like an unsigned file also don't depend on "new" status, so
+            # without dedup a still-connected flagged process re-toasts every
+            # single scan cycle forever. MEDIUM/HIGH both still land in the
+            # Live Monitor / Alert History grids either way - only the toast
+            # itself is now HIGH-and-once-per-process.
+            if ($eval.Severity -eq 'HIGH' -and -not $Script:ToastedProcesses.Contains($procName)) {
+                [void]$Script:ToastedProcesses.Add($procName)
+                Show-RugBusterToast -Alert $row
+            }
         }
     }
 
