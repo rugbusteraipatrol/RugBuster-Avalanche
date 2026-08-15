@@ -591,8 +591,13 @@ function Show-RugBusterToast {
     # so pass the plain path string instead.
     $logo = $Script:LogoPng
 
-    $text1 = New-BTText -Content $Alert.ProcessName
-    $text2 = New-BTText -Content ("{0}  ({1})" -f $Alert.RemoteHost, $Alert.Severity)
+    # Title line leads with severity so it's legible at a glance instead of
+    # requiring the reader to cross-reference a bare process name against
+    # what's currently a HIGH-only, once-per-process toast anyway; body
+    # lines give the destination and the actual reason it was flagged.
+    $text1 = New-BTText -Content ("{0}: {1}" -f $Alert.Severity, $Alert.ProcessName)
+    $text2 = New-BTText -Content $Alert.RemoteHost
+    $text3 = New-BTText -Content $Alert.Reasons
 
     $btnDetails = New-BTButton -Content 'Details' `
         -Arguments "rugbuster-shield:show?id=$($Alert.Id)" -ActivationType Protocol
@@ -609,7 +614,7 @@ function Show-RugBusterToast {
     # (New-BTAction/New-BTInput exist for a different, richer scenario).
     $params = @{
         AppLogo   = $logo
-        Text      = @($text1, $text2)
+        Text      = @($text1, $text2, $text3)
         Button    = $buttons
         UniqueIdentifier = "RugBusterShield-$($Alert.Id)"
     }
@@ -912,14 +917,20 @@ function Build-MainForm {
     $gridLive.Dock = [System.Windows.Forms.DockStyle]::Fill
     $gridLive.ScrollBars = [System.Windows.Forms.ScrollBars]::None
     Set-BrandGridStyle -Grid $gridLive
-    foreach ($col in 'ProcessName', 'Pid', 'RemoteHost', 'RemoteAddress', 'RemotePort', 'Signed', 'Severity', 'Timestamp') {
+    foreach ($col in 'ProcessName', 'Pid', 'RemoteHost', 'RemoteAddress', 'RemotePort', 'Signed', 'Severity', 'Timestamp', 'ProcessPath') {
         [void]$gridLive.Columns.Add($col, $col)
     }
+    $gridLive.Columns['ProcessPath'].Visible = $false
     $Script:VScrollLive = New-DarkScrollBar
     $tabLive.Controls.Add($Script:VScrollLive)
     $tabLive.Controls.Add($gridLive)
     $Script:GridLive = $gridLive
     Register-GridScrollSync -Grid $Script:GridLive -ScrollBar $Script:VScrollLive
+    $gridLive.Add_CellDoubleClick({
+        param($s, $e)
+        if ($e.RowIndex -lt 0) { return }
+        Open-ProcessFileLocation -Path $s.Rows[$e.RowIndex].Cells['ProcessPath'].Value
+    })
 
     # --- History grid + actions ---
     $historyPanel = New-Object System.Windows.Forms.Panel
@@ -942,20 +953,36 @@ function Build-MainForm {
     $btnInvestigated.Width = 150
     $actionBar.Controls.Add($btnInvestigated)
 
+    $btnOpenLocation = New-BrandButton -Text 'Open File Location' -Accent $Script:Brand.Pink
+    $btnOpenLocation.Location = New-Object System.Drawing.Point(332, 7)
+    $btnOpenLocation.Width = 160
+    $actionBar.Controls.Add($btnOpenLocation)
+
     $gridHistory = New-Object System.Windows.Forms.DataGridView
     $gridHistory.Dock = [System.Windows.Forms.DockStyle]::Fill
     $gridHistory.ScrollBars = [System.Windows.Forms.ScrollBars]::None
     Set-BrandGridStyle -Grid $gridHistory
-    foreach ($col in 'Timestamp', 'ProcessName', 'RemoteHost', 'Severity', 'Reasons', 'Signed', 'Status', 'Id') {
+    foreach ($col in 'Timestamp', 'ProcessName', 'RemoteHost', 'Severity', 'Reasons', 'Signed', 'Status', 'Id', 'ProcessPath') {
         [void]$gridHistory.Columns.Add($col, $col)
     }
     $gridHistory.Columns['Id'].Visible = $false
+    $gridHistory.Columns['ProcessPath'].Visible = $false
     $Script:VScrollHistory = New-DarkScrollBar
     $historyPanel.Controls.Add($Script:VScrollHistory)
     $historyPanel.Controls.Add($gridHistory)
     $gridHistory.BringToFront()
     $Script:GridHistory = $gridHistory
     Register-GridScrollSync -Grid $Script:GridHistory -ScrollBar $Script:VScrollHistory
+    $gridHistory.Add_CellDoubleClick({
+        param($s, $e)
+        if ($e.RowIndex -lt 0) { return }
+        Open-ProcessFileLocation -Path $s.Rows[$e.RowIndex].Cells['ProcessPath'].Value
+    })
+    $btnOpenLocation.Add_Click({
+        foreach ($r in $Script:GridHistory.SelectedRows) {
+            Open-ProcessFileLocation -Path $r.Cells['ProcessPath'].Value
+        }
+    })
 
     $btnFalseAlarm.Add_Click({
         foreach ($r in $Script:GridHistory.SelectedRows) {
@@ -1122,8 +1149,13 @@ function Set-BrandGridStyle {
     $Grid.ColumnHeadersDefaultCellStyle.Font = New-BrandFont -Kind Body -Size 9 -Style Bold
     $Grid.DefaultCellStyle.BackColor = $Script:Brand.Card
     $Grid.DefaultCellStyle.ForeColor = $Script:Brand.TextPrimary
-    $Grid.DefaultCellStyle.SelectionBackColor = $Script:Brand.Panel
-    $Grid.DefaultCellStyle.SelectionForeColor = $Script:Brand.Cyan
+    # Selection colors were previously Panel-on-Card - both are dark navy
+    # tones a couple shades apart, so a selected row barely stood out among
+    # a grid full of rows, which is exactly why a toast-click "jump to and
+    # select this row" didn't actually read as marking anything: a bright
+    # fill against every other (dark) row is what makes it visually obvious.
+    $Grid.DefaultCellStyle.SelectionBackColor = $Script:Brand.Cyan
+    $Grid.DefaultCellStyle.SelectionForeColor = $Script:Brand.BgDark
     $Grid.EnableHeadersVisualStyles = $false
 }
 
@@ -1132,7 +1164,7 @@ function Update-LiveGrid {
     if (-not $Script:GridLive) { return }
     $Script:GridLive.Rows.Clear()
     foreach ($r in $Rows) {
-        $idx = $Script:GridLive.Rows.Add($r.ProcessName, $r.Pid, $r.RemoteHost, $r.RemoteAddress, $r.RemotePort, $r.Signed, $r.Severity, $r.Timestamp)
+        $idx = $Script:GridLive.Rows.Add($r.ProcessName, $r.Pid, $r.RemoteHost, $r.RemoteAddress, $r.RemotePort, $r.Signed, $r.Severity, $r.Timestamp, $r.ProcessPath)
         $Script:GridLive.Rows[$idx].DefaultCellStyle.ForeColor = Get-SeverityColor -Severity $r.Severity
     }
     if ($Script:VScrollLive) { Sync-GridScrollBar -Grid $Script:GridLive -ScrollBar $Script:VScrollLive }
@@ -1142,10 +1174,24 @@ function Refresh-HistoryGrid {
     if (-not $Script:GridHistory) { return }
     $Script:GridHistory.Rows.Clear()
     foreach ($r in $Script:AlertHistory) {
-        $idx = $Script:GridHistory.Rows.Add($r.Timestamp, $r.ProcessName, $r.RemoteHost, $r.Severity, $r.Reasons, $r.Signed, $r.Status, $r.Id)
+        $idx = $Script:GridHistory.Rows.Add($r.Timestamp, $r.ProcessName, $r.RemoteHost, $r.Severity, $r.Reasons, $r.Signed, $r.Status, $r.Id, $r.ProcessPath)
         $Script:GridHistory.Rows[$idx].DefaultCellStyle.ForeColor = Get-SeverityColor -Severity $r.Severity
     }
     if ($Script:VScrollHistory) { Sync-GridScrollBar -Grid $Script:GridHistory -ScrollBar $Script:VScrollHistory }
+}
+
+function Open-ProcessFileLocation {
+    # "ula.exe" means nothing to a user on its own - opening Explorer with
+    # the actual file highlighted is how they find out it's e.g. Chaos's
+    # UnifiedLogin under Program Files, not something to guess at secondhand.
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path $Path)) {
+        [System.Windows.Forms.MessageBox]::Show(
+            'No file path is available for this process (it may have already exited, or be a protected system process).',
+            'RugBuster Shield', 'OK', 'Warning') | Out-Null
+        return
+    }
+    Start-Process explorer.exe -ArgumentList "/select,`"$Path`""
 }
 
 function Set-AlertStatus {
@@ -1171,6 +1217,12 @@ function Select-HistoryRowById {
             $Script:MainTabs.SelectedTab = $Script:MainTabs.TabPages['AlertHistory']
             $row.Selected = $true
             $Script:GridHistory.FirstDisplayedScrollingRowIndex = $row.Index
+            # DataGridView renders selection as a duller/greyed highlight when
+            # the control itself doesn't have input focus - CurrentCell +
+            # Focus() makes the bright cyan selection actually show up
+            # instead of the washed-out "inactive selection" look.
+            $Script:GridHistory.CurrentCell = $row.Cells[1]
+            $Script:GridHistory.Focus()
             break
         }
     }
