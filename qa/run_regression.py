@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """RugBuster Avalanche shield-demo regression harness.
 
+SCOPE: Avalanche C-Chain only. This harness proves nothing about Solana, BNB,
+Base or TRON -- none of them have a golden set. A green run is evidence about
+AVAX and must never be reported as multichain accuracy.
+
 Replays golden_set.yaml against the live /score endpoint and enforces the
 gate invariants agreed with QA:
 
@@ -11,6 +15,15 @@ gate invariants agreed with QA:
       to WARN or DANGER, and none may resolve to GOOD.
   I4. Every response must report source == required_source (no silent
       fallback to a stale/local scorer without saying so).
+  I5. No address from a known rug-factory deployer may resolve to GOOD.
+  I6. No token under `dead_liquidity_threshold_usd` of live liquidity may
+      resolve to GOOD, however long its track record. A long history means the
+      owner has not stolen; it does not mean a holder can exit.
+
+Because this replays a *deployed* endpoint, it can only ever test the engine
+that is already running. To judge a calibration change before shipping it, see
+tests/test_avalanche_thin_liquidity.py in the private rugbuster-scoring-engine
+repo, which replays captured market facts straight into the scorer.
 
 Usage:
     python run_regression.py                      # live golden-set check
@@ -104,6 +117,8 @@ def run_golden_set(golden_path: Path) -> int:
     gates_cfg = doc.get("gates", {})
     entries = doc["entries"]
 
+    chain = doc.get("chain", "AVAX")
+    print(f"Chain:    {chain} only (no coverage for other chains)")
     print(f"Endpoint: {endpoint}")
     print(f"Entries:  {len(entries)}")
     print(f"Required source: {required_source}\n")
@@ -193,7 +208,7 @@ def run_golden_set(golden_path: Path) -> int:
 
     print("\n" + "=" * 70)
     if overall_pass:
-        print("RESULT: GREEN — all gates pass")
+        print(f"RESULT: GREEN — all gates pass ({chain} only; other chains untested)")
     else:
         print("RESULT: RED — one or more gates failed")
     print("=" * 70)

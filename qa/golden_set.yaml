@@ -1,3 +1,9 @@
+# SCOPE: Avalanche C-Chain only. Every address below is an AVAX address scored
+# through the AVAX endpoint. A green run here says nothing about Solana, BNB,
+# Base or TRON -- those chains have no golden set and are therefore untested.
+# Do not describe a pass as multichain accuracy. See ENGINE_V2_SPEC.md in the
+# private rugbuster-scoring-engine repo, "Scope of the accuracy gate".
+chain: AVAX
 endpoint: https://web-production-376bf.up.railway.app/score
 required_source: private_scoring_engine
 gates:
