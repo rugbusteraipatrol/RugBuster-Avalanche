@@ -20,7 +20,7 @@ import statistics
 import hashlib
 from eth_utils import keccak
 from pathlib import Path
-from collections import defaultdict, Counter
+from collections import defaultdict, Counter, OrderedDict
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -98,6 +98,9 @@ GECKOTERMINAL_POOL_PAGES = int(os.getenv("GECKOTERMINAL_POOL_PAGES", "3"))
 GECKOTERMINAL_QUEUE_LOW_WATERMARK = int(os.getenv("GECKOTERMINAL_QUEUE_LOW_WATERMARK", "10"))
 GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS = int(os.getenv("GECKOTERMINAL_TOP_POOLS_COOLDOWN_SECONDS", "900"))
 RESCAN_COOLDOWN_SECONDS = int(os.getenv("RESCAN_COOLDOWN_SECONDS", "2700"))
+MAX_CREATOR_HISTORY_ENTRIES = int(os.getenv("MAX_CREATOR_HISTORY_ENTRIES", "5000"))
+MAX_CROSS_CHAIN_PATTERN_ENTRIES = int(os.getenv("MAX_CROSS_CHAIN_PATTERN_ENTRIES", "5000"))
+MAX_SEEN_CONTRACTS = int(os.getenv("MAX_SEEN_CONTRACTS", "10000"))
 V1_PAIR_CREATED_TOPIC = "0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9"
 LB_PAIR_CREATED_TOPIC = "0x" + keccak(text="LBPairCreated(address,address,uint256,address,uint256)").hex()
 DEFAULT_V1_DEX_FACTORIES = [
@@ -264,20 +267,50 @@ def save_to_postgres(record: dict) -> None:
 # ---------------------------------------------------------------------------
 # Creator History Tracker
 # ---------------------------------------------------------------------------
-creator_history = defaultdict(lambda: {"total": 0, "danger": 0, "warn": 0, "good": 0})
-seen_contracts: dict[str, float] = {}
+creator_history: OrderedDict[str, dict] = OrderedDict()
+seen_contracts: OrderedDict[str, float] = OrderedDict()
+
+
+def trim_ordered_cache(cache: OrderedDict, max_entries: int) -> None:
+    if max_entries <= 0:
+        cache.clear()
+        return
+    while len(cache) > max_entries:
+        cache.popitem(last=False)
+
+
+def remember_seen_contract(contract: str, now: float) -> None:
+    expired_before = now - RESCAN_COOLDOWN_SECONDS
+    for address, last_seen in list(seen_contracts.items()):
+        if last_seen >= expired_before:
+            break
+        seen_contracts.pop(address, None)
+    seen_contracts[contract] = now
+    seen_contracts.move_to_end(contract)
+    trim_ordered_cache(seen_contracts, MAX_SEEN_CONTRACTS)
+
 
 def update_creator_history(creator: str, label: str):
     if not creator:
         return
-    creator_history[creator]["total"] += 1
+    stats = creator_history.get(creator)
+    if stats is None:
+        stats = {"total": 0, "danger": 0, "warn": 0, "good": 0}
+        creator_history[creator] = stats
+    else:
+        creator_history.move_to_end(creator)
+    stats["total"] += 1
     if label in ("DANGER", "WARN", "GOOD"):
-        creator_history[creator][label.lower()] += 1
+        stats[label.lower()] += 1
+    trim_ordered_cache(creator_history, MAX_CREATOR_HISTORY_ENTRIES)
 
 def get_creator_stats(creator: str) -> dict:
-    if not creator or creator not in creator_history:
+    if not creator:
         return {"total": 0, "danger": 0, "rug_rate": 0.0}
-    stats = creator_history[creator]
+    stats = creator_history.get(creator)
+    if not stats:
+        return {"total": 0, "danger": 0, "rug_rate": 0.0}
+    creator_history.move_to_end(creator)
     total = stats["total"]
     danger = stats["danger"]
     rug_rate = (danger / total * 100) if total > 0 else 0.0
@@ -286,7 +319,7 @@ def get_creator_stats(creator: str) -> dict:
 # ---------------------------------------------------------------------------
 # V5 MODULE 1: Cross-Chain Wallet Matching (shared state)
 # ---------------------------------------------------------------------------
-cross_chain_patterns = {}
+cross_chain_patterns: OrderedDict[str, dict] = OrderedDict()
 seen_token_names = []
 
 def compute_wallet_pattern_hash(deploy_ts: int, tx_amounts: list, holder_count: int) -> str:
@@ -309,6 +342,7 @@ def detect_cross_chain_match(deploy_ts: int, tx_amounts: list, holder_count: int
 
     if pattern in cross_chain_patterns:
         entry = cross_chain_patterns[pattern]
+        cross_chain_patterns.move_to_end(pattern)
         result["match_chains"] = entry["chains"]
         result["match_count"] = entry["count"]
         result["cross_chain_match"] = chain not in entry["chains"] or len(entry["chains"]) > 1
@@ -317,6 +351,7 @@ def detect_cross_chain_match(deploy_ts: int, tx_amounts: list, holder_count: int
             entry["chains"].append(chain)
     else:
         cross_chain_patterns[pattern] = {"chains": [chain], "count": 1, "first_seen": deploy_ts}
+        trim_ordered_cache(cross_chain_patterns, MAX_CROSS_CHAIN_PATTERN_ENTRIES)
 
     return result
 
@@ -1914,10 +1949,11 @@ def process_token_avax(token_data: dict, output_path: Path) -> dict | None:
     contract = token_data.get("address", "").lower()
     if not contract:
         return None
+    now = time.time()
     last_scan_at = float(seen_contracts.get(contract, 0.0))
-    if last_scan_at and time.time() - last_scan_at < RESCAN_COOLDOWN_SECONDS:
+    if last_scan_at and now - last_scan_at < RESCAN_COOLDOWN_SECONDS:
         return None
-    seen_contracts[contract] = time.time()
+    remember_seen_contract(contract, now)
 
     deployer = token_data.get("deployer", "")
     deploy_timestamp = token_data.get("timestamp", int(time.time()))
