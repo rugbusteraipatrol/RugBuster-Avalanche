@@ -1072,6 +1072,18 @@ def public_score():
     if not Web3.is_address(address):
         return jsonify({"ok": False, "error": "Invalid Avalanche token address"}), 400
 
+    # Cache-first, as the Builder API advertises. A full score is ~6s of live
+    # dexscreener, holder-intel and on-chain reads; without this every repeat
+    # lookup paid that cost again and occasionally timed out when an upstream
+    # was slow. A wallet or launchpad rendering token pages hits the same
+    # popular tokens over and over, so most reads land inside the TTL window.
+    # `fresh=1` forces a recompute for callers that need it.
+    force_fresh = str(request.args.get("fresh") or "").strip().lower() in {"1", "true", "yes"}
+    if not force_fresh:
+        cached = get_cached_report(address)
+        if cached is not None:
+            return jsonify(compact_score_response(cached, cached.get("source") or "private_scoring_engine"))
+
     try:
         report = score_with_private_engine(address)
     except NotTokenAddress as exc:
