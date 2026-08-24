@@ -513,6 +513,10 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
     result = {
         "has_backdoor": False,
         "backdoor_functions": [],
+        "detected_capabilities": [],
+        "privileged_functions": [],
+        "dangerous_combinations": [],
+        "backdoor_confidence": "LOW",
         "has_upgrade_authority": False,
         "has_pause_function": False,
         "has_mint_function": False,
@@ -534,33 +538,68 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
             bytecode_clean = bytecode.lower().replace("0x", "")
             for sig, func_name in BACKDOOR_SIGNATURES.items():
                 if sig in bytecode_clean:
-                    result["backdoor_functions"].append(func_name)
-                    if "upgradeto" in func_name.lower() or "implementation" in func_name.lower():
+                    result["detected_capabilities"].append(func_name)
+                    lower_name = func_name.lower()
+                    if "upgradeto" in lower_name or lower_name == "implementation()":
                         result["is_proxy"] = True
+                    if "upgradeto" in lower_name:
                         result["has_upgrade_authority"] = True
-                    if "pause" in func_name.lower():
+                    if func_name in {"pause()", "unpause()"}:
                         result["has_pause_function"] = True
-                    if "mint" in func_name.lower():
+                    if "mint" in lower_name:
                         result["has_mint_function"] = True
-                    if "withdraw" in func_name.lower() or "drain" in func_name.lower():
+                    if func_name in {"withdraw()", "withdrawToken(address)"}:
                         result["has_drain_function"] = True
-                    if "blacklist" in func_name.lower():
+                    if "blacklist" in lower_name:
                         result["has_blacklist"] = True
 
-            result["has_backdoor"] = len(result["backdoor_functions"]) > 0
+            privileged_markers = (
+                "owner",
+                "ownership",
+                "mint",
+                "blacklist",
+                "pause",
+                "upgrade",
+                "implementation",
+                "withdrawtoken",
+            )
+            result["privileged_functions"] = [
+                func
+                for func in result["detected_capabilities"]
+                if any(marker in func.lower() for marker in privileged_markers)
+            ]
+            result["backdoor_functions"] = list(result["detected_capabilities"])
 
     except Exception as e:
         log.debug("  [V6] Bytecode analiza greška: %s", e)
 
-    danger_count = sum([
-        result["has_upgrade_authority"],
-        result["has_mint_function"],
-        result["has_drain_function"],
-        result["has_pause_function"],
-        result["has_blacklist"],
-        result["is_proxy"],
-    ])
-    result["backdoor_risk_score"] = min(danger_count * 20, 100)
+    if result["has_drain_function"] and result["privileged_functions"]:
+        result["dangerous_combinations"].append("privileged_token_withdrawal")
+    if result["has_blacklist"] and (result["has_mint_function"] or result["has_pause_function"]):
+        result["dangerous_combinations"].append("supply_or_trading_control_with_blacklist")
+    if result["has_upgrade_authority"] and result["has_blacklist"] and result["has_mint_function"]:
+        result["dangerous_combinations"].append("upgradeable_blacklistable_mintable_token")
+
+    capability_score = 0
+    if result["has_upgrade_authority"] or result["is_proxy"]:
+        capability_score = max(capability_score, 20)
+    if result["has_mint_function"]:
+        capability_score = max(capability_score, 20)
+    if result["has_pause_function"]:
+        capability_score = max(capability_score, 10)
+    if result["has_blacklist"]:
+        capability_score = max(capability_score, 25)
+    if any(func in result["privileged_functions"] for func in ("owner()", "transferOwnership(address)")):
+        capability_score = max(capability_score, 5)
+    if result["dangerous_combinations"]:
+        capability_score = max(capability_score, 65)
+
+    result["backdoor_risk_score"] = min(capability_score, 100)
+    result["has_backdoor"] = bool(result["dangerous_combinations"]) and result["backdoor_risk_score"] >= 60
+    if result["has_backdoor"]:
+        result["backdoor_confidence"] = "HIGH"
+    elif result["backdoor_risk_score"] >= 40:
+        result["backdoor_confidence"] = "MEDIUM"
     return result
 
 # ---------------------------------------------------------------------------

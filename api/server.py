@@ -570,6 +570,7 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         "confidence": report.get("confidence") or report.get("data_confidence"),
         "rug_risk": report.get("rug_risk"),
         "market_liquidity_risk": report.get("market_liquidity_risk"),
+        "identity_risk": report.get("identity_risk"),
         "data_confidence": report.get("data_confidence"),
         "rug_reasons": report.get("rug_reasons") or [],
         "speculation_reasons": report.get("speculation_reasons") or [],
@@ -969,6 +970,7 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
         "speculation_reasons": market_risk.get("reasons") or [],
         "rug_risk": rug_risk,
         "market_liquidity_risk": market_risk,
+        "identity_risk": result.get("identity_risk"),
         "data_confidence": result.get("data_confidence") or result.get("confidence"),
         "confidence": result.get("confidence"),
         "has_liquidity_evidence": token_info.get("has_liquidity_evidence"),
@@ -1090,8 +1092,29 @@ def public_score():
         report = not_a_token_report(address, str(exc))
     except Exception as exc:
         report = insufficient_data_report(address, f"Private scoring engine failed: {type(exc).__name__}")
-    put_cached_report(address, report)
-    return jsonify(compact_score_response(report, report.get("source") or "private_scoring_engine"))
+    try:
+        put_cached_report(address, report)
+    except Exception as exc:
+        app.logger.warning("Score cache write failed for %s: %s", address, type(exc).__name__)
+    try:
+        payload = compact_score_response(report, report.get("source") or "private_scoring_engine")
+    except Exception as exc:
+        app.logger.exception("Score response formatting failed for %s", address)
+        fallback = insufficient_data_report(address, f"Score response formatting failed: {type(exc).__name__}")
+        payload = {
+            "ok": True,
+            "address": Web3.to_checksum_address(address),
+            "chain": "avalanche",
+            "label": "INSUFFICIENT_DATA",
+            "rug_status": "INSUFFICIENT_DATA",
+            "risk_engine": fallback.get("risk_engine"),
+            "risk_percent": None,
+            "rugbuster_avax_score": None,
+            "risk_flags": fallback.get("risk_flags", []),
+            "source": fallback.get("source"),
+            "data_confidence": fallback.get("data_confidence"),
+        }
+    return jsonify(payload)
 
 
 @app.route("/api/recent-scans", methods=["GET", "POST", "OPTIONS"])
