@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import logging
 import hmac
 import os
 import sys
@@ -251,6 +252,7 @@ PAIR_ABI = json.loads(
     """
 )
 
+log = logging.getLogger(__name__)
 app = Flask(__name__)
 # Bump whenever the response shape or the meaning of its fields changes, so an
 # integrator (or our own cache) can tell which rules produced a given verdict.
@@ -518,7 +520,52 @@ def public_label_from_report(report: dict[str, Any]) -> str:
     return "UNKNOWN"
 
 
+# Module names are internal identifiers; a person reading a verdict needs to
+# know what was not checked, in words they already understand.
+MODULE_PLAIN_NAMES = {
+    "contract_backdoor": "the contract's code",
+    "holder_concentration": "who holds the supply",
+    "funding_origin": "where the deployer's funds came from",
+    "deployment_latency": "how the token launched",
+    "tx_entropy": "the trading pattern",
+    "wash_pattern": "signs of wash trading",
+    "holder_cluster": "the age of top holder wallets",
+    "holder_cluster_age": "the age of top holder wallets",
+    "rug_velocity": "how fast the token is being sold off",
+}
+
+
+def plain_module_name(module: str) -> str:
+    return MODULE_PLAIN_NAMES.get(module, module.replace("_", " "))
+
+
+def unreadable_checks(report: dict[str, Any]) -> list[str]:
+    """Checks we tried to run and could not, in plain words.
+
+    Only FETCH_FAILED. A NOT_FOUND is a fact about the token (no pool, no
+    holders) and belongs in the verdict as a finding, not as an apology for
+    missing evidence.
+    """
+    return [
+        plain_module_name(str(item.get("module") or ""))
+        for item in (report.get("missing_inputs") or [])
+        if item.get("status") == "FETCH_FAILED"
+    ]
+
+
 def syndicate_verdict_from_report(report: dict[str, Any]) -> str:
+    # When load-bearing checks did not run, say so first and plainly. Leading
+    # with a score here would be stating a confidence the scan does not have.
+    blocked = unreadable_checks(report)
+    if blocked:
+        checked = report.get("completeness_pct")
+        return (
+            "Not enough data to judge this token. Could not check "
+            + ", ".join(blocked)
+            + (f" (only {checked}% of checks completed)" if checked is not None else "")
+            + ". This is not a pass and not a warning -- the checks did not complete. Try again shortly."
+        )[:240]
+
     rug_status = str(report.get("rug_status") or "UNKNOWN").upper()
     speculation_status = str(report.get("speculation_status") or "UNKNOWN").upper()
     rug_score = report.get("rug_score")
@@ -1309,6 +1356,13 @@ def build_ai_scan_context(report: dict[str, Any]) -> dict[str, Any]:
         "sells24h": report.get("sells24h"),
         "dex_id": report.get("dex_id"),
         "source": report.get("source"),
+        # Without these the model cannot tell a clean result from an
+        # unfinished one, and will confidently summarise a failed scan as a
+        # safe token -- the same false-clean bug the engine now refuses to
+        # commit, reintroduced in the one sentence the customer actually reads.
+        "checks_completed_pct": report.get("completeness_pct"),
+        "verdict_is_conclusive": report.get("verdict_is_conclusive"),
+        "checks_that_could_not_run": unreadable_checks(report),
     }
 
 
@@ -1319,7 +1373,12 @@ def fetch_deepseek_verdict(report: dict[str, Any]) -> str | None:
     prompt = (
         "Analyze this Avalanche token security scan. "
         "Return one concise RugBuster verdict in max 28 words. "
-        "Mention the main risk driver if any. Do not give financial advice.\n\n"
+        "Mention the main risk driver if any. Do not give financial advice.\n"
+        "If checks_that_could_not_run is non-empty, the scan is incomplete: say plainly "
+        "that there is not enough data to judge, name what could not be checked, and do "
+        "NOT describe the token as safe, clean, low risk or fine. An absent signal is not "
+        "a passing one. Do not call it dangerous either -- a failed check is not evidence "
+        "against the token.\n\n"
         f"{json.dumps(context, ensure_ascii=False, sort_keys=True)}"
     )
     response = requests.post(
@@ -1347,7 +1406,44 @@ def fetch_deepseek_verdict(report: dict[str, Any]) -> str | None:
         .get("content", "")
         .strip()
     )
-    return " ".join(verdict.split())[:240] if verdict else None
+    if not verdict:
+        return None
+    verdict = " ".join(verdict.split())[:240]
+
+    # A prompt instruction is not a guarantee. This sentence is the one thing
+    # most customers actually read, so an incomplete scan that comes back
+    # sounding reassuring gets replaced by the deterministic text rather than
+    # trusted. Losing some fluency is an acceptable price for not telling
+    # someone a token is fine when we could not check it.
+    if unreadable_checks(report) and _reads_as_reassuring(verdict):
+        log.warning("  [AI] Discarded a reassuring verdict for an incomplete scan; using template")
+        return syndicate_verdict_from_report(report)
+    return verdict
+
+
+REASSURING_TERMS = (
+    "safe", "clean", "low risk", "no risk", "looks fine", "looks good",
+    "appears safe", "appears clean", "healthy", "legitimate", "no red flags",
+    "no concerns", "trustworthy", "secure",
+)
+
+# Phrases that state the scan could not conclude. A sentence carrying one of
+# these is not making a reassuring claim even when it also contains a word
+# like "safe" -- "this is not a verdict that the token is safe" is the
+# honest answer, and discarding it would throw away exactly the output we
+# asked for.
+UNCERTAINTY_MARKERS = (
+    "not enough data", "insufficient", "could not check", "could not be",
+    "unable to", "cannot determine", "cannot judge", "unverified",
+    "incomplete", "not a verdict",
+)
+
+
+def _reads_as_reassuring(text: str) -> bool:
+    lowered = text.lower()
+    if any(marker in lowered for marker in UNCERTAINTY_MARKERS):
+        return False
+    return any(term in lowered for term in REASSURING_TERMS)
 
 
 def env_enabled(name: str) -> bool:
