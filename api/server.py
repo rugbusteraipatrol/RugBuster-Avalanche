@@ -846,6 +846,16 @@ def flatten_intel_for_scoring(cia: dict[str, Any], v6: dict[str, Any], creator_s
         "cia_wash_detected": bool(wash.get("wash_detected")),
         "cia_bot_farm": bool(cluster.get("is_bot_farm")),
         "creator_rug_rate": float((creator_stats or {}).get("rug_rate") or 0.0),
+        # Carry the per-module status through as well. Every boolean above
+        # reads False both when a module said "no" and when it never managed
+        # to look; the scorer needs to be able to tell those apart before it
+        # treats a False as reassurance.
+        "v6_backdoor_status": str(backdoor.get("status") or "OK"),
+        "v6_velocity_status": str(velocity.get("status") or "OK"),
+        "cia_funding_status": str(funding.get("status") or "OK"),
+        "cia_entropy_status": str(entropy.get("status") or "OK"),
+        "cia_wash_status": str(wash.get("status") or "OK"),
+        "cia_cluster_status": str(cluster.get("status") or "OK"),
     }
 
 

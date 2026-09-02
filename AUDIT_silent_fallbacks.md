@@ -220,17 +220,64 @@ the remainder of its TTL after a deploy.
 
 ## Deliberately NOT changed
 
-The `or 0` reads in `risk_engine.py` (lines 80-158) still default missing
-fields to zero. Those are now *detectable* — the status fields say when a zero
-is a placeholder — but the scoring math has not been rewired to act on it,
-because doing so moves verdicts and needs its own golden-set run. This is the
-single most important follow-up: until it lands, a `FETCH_FAILED`
-concentration is still *scored* as 0% concentration, even though the response
-now honestly reports that it is unknown.
+Nothing. The scoring rewire that this section previously deferred landed in
+the same branch pair -- see "Acting on the status" below.
+
+## Acting on the status (2026-09-02, second pass)
+
+Reporting a gap honestly is not the same as refusing to score through it. Both
+scorers now act on the status:
+
+**Remote engine** (`rugbuster-scoring-engine`, branch `feat/act-on-data-status`
+-- the path production actually uses):
+
+- `_module_produced_data()` stops counting a FETCH_FAILED module toward
+  `data_confidence`. A populated dict is no longer proof we learned anything.
+- `_blocking_data_gaps()` lists the load-bearing signals
+  (`contract_backdoor`, `holder_concentration`) that we tried to read and
+  could not. NOT_FOUND and NOT_QUERIED are deliberately excluded: the first
+  is a finding about the token, the second is a scan-tier choice.
+- `_apply_data_gap_verdict()` turns GOOD into INSUFFICIENT_DATA when such a
+  gap exists. **Asymmetric on purpose**: it never escalates to WARN/DANGER,
+  because an outage can support "we did not check" but never "we found
+  something" -- that is the same error just fixed in the collector, mirrored.
+  WARN and DANGER are never downgraded; real evidence is not erased by other
+  evidence being unavailable.
+- `blocking_data_gaps` is on the response, and each gap emits a
+  `data_gap_blocks_clean_verdict` risk factor explaining itself.
+
+**Local fallback** (`risk_engine.py`, the path used when the private engine is
+unreachable -- i.e. the path *most* likely to coincide with an outage):
+`score_rug_risk` returns INSUFFICIENT_DATA rather than a low score when
+`v6_backdoor_status` is FETCH_FAILED and nothing hard was found.
+`flatten_intel_for_scoring` now carries the module statuses through, since
+every boolean it maps reads False both for "module said no" and "module never
+looked".
+
+Canonical assets (`is_known_chain_asset`) are exempt in both. That whitelist
+is a curated, human-reviewed assertion about a fixed address list, and it does
+not lapse because Snowtrace timed out.
+
+### Why no gate can regress from this
+
+Checked against all 143 golden-set entries rather than assumed:
+
+| Category | Gate | Exposure |
+|---|---|---|
+| bluechip (10) | must be GOOD | **all 10 are on the whitelist** → exempt, cannot be downgraded by a gap |
+| reference_case (1, BITS) | must be WARN/DANGER | change never touches WARN/DANGER |
+| rug_factory (81), scam (10), dead_liquidity (10), no_pool (1) | must never be GOOD | change only ever *removes* GOOD, so it can only help |
+| midtier (15) | advisory, `gate: false` | may read INSUFFICIENT_DATA during a real outage; breaks nothing |
+
+The one intended behaviour change: a non-whitelisted token that would have
+scored GOOD now reports INSUFFICIENT_DATA **while a load-bearing fetch is
+actually failing**. That is the entire point.
 
 ## Verification
 
-- 29 local tests pass (10 pre-existing, 19 new in `tests/test_data_status.py`).
+- 37 local tests pass (10 pre-existing, 19 in `tests/test_data_status.py`, 8 in
+  `tests/test_data_gap_scoring.py`); 117 in rugbuster-scoring-engine (105
+  pre-existing, 12 in `tests/test_data_gap_verdicts.py`).
 - Verified live against MAXI (`0x9e73...cab9`), a real token with no pool:
   reports `holder_concentration: NOT_FOUND` with reason, `has_fetch_failures:
   false`. Golden-set fixture added (`category: no_pool`, gate I7) asserting

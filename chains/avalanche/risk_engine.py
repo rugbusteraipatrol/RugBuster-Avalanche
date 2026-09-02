@@ -325,6 +325,25 @@ def score_rug_risk(metadata: dict[str, Any]) -> ScoreResult:
             ][:8],
         )
 
+    # A capability scan we never managed to run is not a capability scan that
+    # came back clean. Withhold the low score rather than inflate it: an
+    # outage must not manufacture risk any more than it may manufacture
+    # safety. Canonical assets are exempt -- that whitelist is a curated
+    # assertion which does not lapse because an RPC timed out.
+    if (
+        str(metadata.get("v6_backdoor_status") or "OK") == "FETCH_FAILED"
+        and not hard_risk_reasons
+        and not is_known_chain_asset
+    ):
+        return ScoreResult(
+            score=None,
+            status="INSUFFICIENT_DATA",
+            reasons=[
+                "Contract bytecode could not be read; capability risk unverified",
+                *reasons[:5],
+            ][:8],
+        )
+
     return ScoreResult(score=clamp(score), status=risk_status(score), reasons=reasons[:8])
 
 
