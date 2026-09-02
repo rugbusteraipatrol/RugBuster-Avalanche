@@ -85,3 +85,22 @@ def test_all_markers_are_lowercase(server):
     ERC-20 range" slipped through and became a headline."""
     for marker in server.NON_FINDING_REASON_MARKERS:
         assert marker == marker.lower(), f"marker must be lowercase: {marker!r}"
+
+
+def test_a_zero_score_is_not_a_finding(server):
+    """Live on MAXI: a DANGER verdict headlined "backdoor risk score 0/100",
+    reassuring text on top of the worst verdict, while real findings sat
+    unused further down the same list."""
+    reasons = [
+        "Bytecode backdoor risk score 0/100",
+        "Owner/admin control functions detected: transferOwnership(address)",
+        "Critical holder concentration top5=100.0%",
+    ]
+    assert server.main_driver(reasons) == (
+        "Owner/admin control functions detected: transferOwnership(address)"
+    )
+
+
+def test_a_nonzero_score_is_still_a_finding(server):
+    reasons = ["Bytecode backdoor risk score 65/100", "Token name readable on-chain"]
+    assert server.main_driver(reasons) == "Bytecode backdoor risk score 65/100"
