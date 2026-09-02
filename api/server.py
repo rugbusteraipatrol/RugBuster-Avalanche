@@ -35,6 +35,7 @@ from avax_collector_v6 import (  # noqa: E402
     run_v5_analysis_avax as collector_run_v5_analysis_avax,
     run_v6_analysis_avax as collector_run_v6_analysis_avax,
     routescan_api_health as collector_routescan_api_health,
+    summarize_data_completeness as collector_summarize_data_completeness,
 )
 
 load_env()
@@ -251,6 +252,11 @@ PAIR_ABI = json.loads(
 )
 
 app = Flask(__name__)
+# Bump whenever the response shape or the meaning of its fields changes, so an
+# integrator (or our own cache) can tell which rules produced a given verdict.
+# 2026.09.1 introduced NOT_QUERIED/FETCH_FAILED/NOT_FOUND per-module status,
+# completeness_pct, missing_inputs[] and verdict_is_conclusive.
+DATA_CONTRACT_VERSION = "2026.09.1"
 SCAN_CACHE_TTL_SECONDS = 180
 SCAN_CACHE: dict[str, dict[str, Any]] = {}
 PORTFOLIO_SCAN_WORKERS = 3
@@ -270,7 +276,10 @@ SCORING_ENGINE_TIMEOUT_SECONDS = float(os.getenv("SCORING_ENGINE_TIMEOUT_SECONDS
 
 
 def cache_key(address: str) -> str:
-    return Web3.to_checksum_address(address)
+    # Version-scoped on purpose: a verdict computed under the previous rules
+    # must not be served after a contract bump, which is exactly what an
+    # address-only key would do for the whole TTL after a deploy.
+    return f"{DATA_CONTRACT_VERSION}:{Web3.to_checksum_address(address)}"
 
 
 def get_cached_report(address: str) -> dict[str, Any] | None:
@@ -931,6 +940,7 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         "deployer_balance": deployer_balance,
     }
     context = {
+        "data_completeness": collector_summarize_data_completeness(cia, v6),
         "pair_data": pair_data or {},
         "pair_source": pair_source,
         "deployer": deployer,
@@ -942,6 +952,24 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         "creator_stats": creator_stats,
     }
     return payload, context
+
+
+def _completeness_fields(context: dict[str, Any]) -> dict[str, Any]:
+    """Expose per-module data status on the response.
+
+    Three states rather than a bare present/absent: NOT_QUERIED (never asked),
+    FETCH_FAILED (asked, upstream broke), NOT_FOUND (asked, genuinely nothing
+    there -- itself a finding, e.g. a token with no pool anywhere). Only
+    FETCH_FAILED means the verdict rests on missing evidence.
+    """
+    completeness = context.get("data_completeness") or {}
+    if not completeness:
+        return {}
+    return {
+        "completeness_pct": completeness.get("completeness_pct"),
+        "missing_inputs": completeness.get("missing_inputs", []),
+        "verdict_is_conclusive": not completeness.get("has_fetch_failures", False),
+    }
 
 
 def report_from_remote_engine(address: str, result: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
@@ -957,6 +985,12 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
         "label": str(result.get("verdict") or "INSUFFICIENT_DATA").upper(),
         "risk_engine": "rugbuster_private_scoring_engine",
         "engine_version": result.get("engine_version"),
+        # Response-shape version, distinct from the scoring engine's own
+        # version: it tells an API consumer which fields to expect and which
+        # rules produced them, so a cached verdict from before this change
+        # cannot be served as though it followed them.
+        "data_contract_version": DATA_CONTRACT_VERSION,
+        **_completeness_fields(context),
         "risk_percent": score,
         "rugbuster_avax_score": score,
         "rugbuster_avax_reasons": risk_flags,

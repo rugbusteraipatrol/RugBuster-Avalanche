@@ -163,3 +163,80 @@ never being called at all (basic-tier scans, or a chain where a module
 doesn't apply), which is already visible at the `run_cia_analysis_avax` /
 `run_v6_analysis_avax` call sites (lines 1066, 1118) rather than inside the
 collector functions themselves.
+
+---
+
+# What was fixed (2026-09-02)
+
+The inventory above was the "before". This section records what changed in the
+same branch, so the two are never read apart.
+
+## The chokepoint
+
+`snowtrace_get`'s None-vs-`[]` distinction now survives. `_as_fetched()` maps
+it onto a `FetchedList` — a `list` subclass carrying `.fetch_status`, chosen so
+every existing call site (`if not txs`, `len()`, indexing, iteration) behaves
+identically and none of the ~2500 lines around it needed touching. The four
+wrappers (`get_contract_transactions`, `get_token_transfers`,
+`get_account_transactions`, `get_token_holders`) return it.
+
+`fetch_status_of()` reads the status off any value, and deliberately treats a
+plain untagged `[]` as `FETCH_FAILED` rather than `NOT_FOUND`: a caller that
+did not preserve provenance cannot prove the source was reachable, and unknown
+must never default to optimistic.
+
+## Per-module status
+
+Every module named in the audit now carries `status` + `status_reason`:
+
+| Module | Was | Now |
+|---|---|---|
+| Holder Concentration | empty → `top5_pct: 0.0, LOW` | `FETCH_FAILED` (holder list unavailable / supply unresolvable / inconsistent data) vs `NOT_FOUND` (too few holder records) |
+| Contract Backdoor | RPC failure → `has_backdoor: False` | `FETCH_FAILED` (bytecode unreadable) vs `NOT_FOUND` (no bytecode at address) |
+| Funding Origin | broken hop → `is_fresh_wallet: True` | `FETCH_FAILED` naming the hop that broke; `is_fresh_wallet` stays False |
+| Wash Pattern | failed deployer fetch → `linker_wallets_connected: True` | `FETCH_FAILED`; no longer manufactures a risk signal from an outage |
+| TX Entropy | any sample size → confident `entropy_score` | `NOT_FOUND` below `MIN_TX_FOR_ENTROPY` (5) |
+| Deployment Latency | `latency_ms: -1` for both causes | `FETCH_FAILED` vs `NOT_FOUND`, same `-1` but now with meaning attached |
+| Holder Cluster | empty → zeroed result | `FETCH_FAILED` vs `NOT_FOUND` |
+
+`NOT_QUERIED` is set where a module is deliberately skipped (no deployer known
+→ funding trace and wash analysis are not attempted).
+
+## API surface
+
+`summarize_data_completeness()` folds the module statuses into what an API
+consumer needs to decide whether to trust a verdict programmatically:
+
+- `completeness_pct` / `modules_ok` / `modules_total`
+- `missing_inputs[]` — `{module, status, reason}` per absent signal
+- `verdict_is_conclusive` — false only when something actually broke.
+  `NOT_FOUND` does **not** make a verdict inconclusive: a token with no pool
+  anywhere is a finding about that token, not a gap in our scan.
+
+`data_contract_version` (`2026.09.1`) is on every response, separate from the
+scoring engine's own `engine_version`, and is now part of the scan cache key —
+so a verdict computed under the previous rules cannot be served from cache for
+the remainder of its TTL after a deploy.
+
+## Deliberately NOT changed
+
+The `or 0` reads in `risk_engine.py` (lines 80-158) still default missing
+fields to zero. Those are now *detectable* — the status fields say when a zero
+is a placeholder — but the scoring math has not been rewired to act on it,
+because doing so moves verdicts and needs its own golden-set run. This is the
+single most important follow-up: until it lands, a `FETCH_FAILED`
+concentration is still *scored* as 0% concentration, even though the response
+now honestly reports that it is unknown.
+
+## Verification
+
+- 29 local tests pass (10 pre-existing, 19 new in `tests/test_data_status.py`).
+- Verified live against MAXI (`0x9e73...cab9`), a real token with no pool:
+  reports `holder_concentration: NOT_FOUND` with reason, `has_fetch_failures:
+  false`. Golden-set fixture added (`category: no_pool`, gate I7) asserting
+  exactly that, plus the pre-existing "never GOOD" invariant.
+- `qa/run_regression.py` gained `expected_module_status` /
+  `expect_verdict_conclusive` support and gate I7; the 142 pre-existing
+  entries are untouched and evaluate exactly as before.
+- The golden set runs against the deployed endpoint, so gate I7 can only go
+  green after this branch is deployed.

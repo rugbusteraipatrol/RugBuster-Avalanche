@@ -14,6 +14,9 @@ gates:
   - GOOD
   dead_liquidity_all_must_pass: true
   dead_liquidity_threshold_usd: 25000
+  no_pool_forbidden_labels:
+  - GOOD
+  no_pool_all_must_pass: true
 entries:
 - symbol: WAVAX
   address: '0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7'
@@ -1037,4 +1040,17 @@ entries:
     stolen; it does not mean a holder can exit. Must not read GOOD.
   forbidden_labels:
   - GOOD
+  gate: true
+- symbol: MAXI
+  address: '0x9e7338d762d7a82273a3e4dc6994e586dc97cab9'
+  category: no_pool
+  note: Real token with no pool on any supported AMM. "No liquidity anywhere" is a finding about the token,
+    not a hole in our scan, so it must be reported as NOT_FOUND with a reason -- never as FETCH_FAILED
+    (which would mean our own plumbing broke) and never as a silent clean read. Verified live 2026-09-02
+    has_liquidity_evidence=false, pair_address=null, holders_count=1.
+  forbidden_labels:
+  - GOOD
+  expected_module_status:
+    holder_concentration: NOT_FOUND
+  expect_verdict_conclusive: true
   gate: true
