@@ -569,6 +569,12 @@ NON_FINDING_REASON_MARKERS = (
     "not used as risk signal",
     "no hard avalanche rug signals detected",
     "new-token heuristics suppressed",
+    # A zero score is the absence of a finding. Live on MAXI, a DANGER verdict
+    # headlined "Bytecode backdoor risk score 0/100" -- reassuring text on top
+    # of the worst possible verdict, while "admin controls detected" and
+    # "concentration top5=100%" sat unused further down the same list.
+    "risk score 0/",
+    "score 0.0",
 )
 
 
