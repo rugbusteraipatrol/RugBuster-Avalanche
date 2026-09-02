@@ -553,6 +553,41 @@ def unreadable_checks(report: dict[str, Any]) -> list[str]:
     ]
 
 
+# Reasons that describe our own checking rather than the token. They belong in
+# the full reason list, but leading a verdict with one tells the reader about
+# our plumbing instead of their token -- WAVAX headlined with "no address was
+# supplied to verify it", which reads as a broken scanner to someone who just
+# supplied an address.
+NON_FINDING_REASON_MARKERS = (
+    "readable on-chain",
+    "unavailable on-chain",
+    "within normal erc-20 range",
+    "not counted as risk",
+    "reputation source status is unknown",
+    "no address was supplied",
+    "no dominant hard-risk driver",
+    "not used as risk signal",
+    "no hard avalanche rug signals detected",
+    "new-token heuristics suppressed",
+)
+
+
+def main_driver(reasons: list) -> str:
+    """Pick the reason worth leading with: something about the token.
+
+    Falls back to the first reason of any kind rather than inventing a
+    reassuring line, because "nothing substantive to report" must not be
+    dressed up as a finding.
+    """
+    for reason in reasons:
+        text = str(reason)
+        if not any(marker in text.lower() for marker in NON_FINDING_REASON_MARKERS):
+            return text
+    if reasons:
+        return str(reasons[0])
+    return "No dominant hard-risk driver surfaced in the available modules"
+
+
 def syndicate_verdict_from_report(report: dict[str, Any]) -> str:
     # When load-bearing checks did not run, say so first and plainly. Leading
     # with a score here would be stating a confidence the scan does not have.
@@ -571,7 +606,7 @@ def syndicate_verdict_from_report(report: dict[str, Any]) -> str:
     rug_score = report.get("rug_score")
     speculation_score = report.get("speculation_score")
     reasons = list(report.get("risk_flags") or report.get("rug_reasons") or report.get("speculation_reasons") or [])
-    driver = str(reasons[0]) if reasons else "No dominant hard-risk driver surfaced in the available modules"
+    driver = main_driver(reasons)
     return (
         f"RugBuster verdict: rug risk {rug_status}"
         f"{f' ({rug_score})' if rug_score is not None else ''}, "
@@ -931,6 +966,14 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         token_info = {}
     token_info = {
         **token_info,
+        # The engine's confusable-symbol check compares the queried address
+        # against the official address for a protected symbol. This payload
+        # never carried an address, so that check could not run at all -- it
+        # reported "no address was supplied to verify it" on every canonical
+        # asset, and that sentence surfaced to users as the headline reason on
+        # WAVAX. Flagged as the follow-up in rugbuster-scoring-engine 4fea040;
+        # supplying it here is what activates imitation detection.
+        "address": checksum,
         "name": token_info.get("name") or onchain.get("name") or "Unknown",
         "symbol": token_info.get("symbol") or onchain.get("symbol") or "Unknown",
         "decimals": token_info.get("decimals") if token_info.get("decimals") is not None else onchain.get("decimals"),
