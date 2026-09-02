@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import logging
 import hmac
 import os
 import sys
@@ -35,6 +36,7 @@ from avax_collector_v6 import (  # noqa: E402
     run_v5_analysis_avax as collector_run_v5_analysis_avax,
     run_v6_analysis_avax as collector_run_v6_analysis_avax,
     routescan_api_health as collector_routescan_api_health,
+    summarize_data_completeness as collector_summarize_data_completeness,
 )
 
 load_env()
@@ -250,7 +252,13 @@ PAIR_ABI = json.loads(
     """
 )
 
+log = logging.getLogger(__name__)
 app = Flask(__name__)
+# Bump whenever the response shape or the meaning of its fields changes, so an
+# integrator (or our own cache) can tell which rules produced a given verdict.
+# 2026.09.1 introduced NOT_QUERIED/FETCH_FAILED/NOT_FOUND per-module status,
+# completeness_pct, missing_inputs[] and verdict_is_conclusive.
+DATA_CONTRACT_VERSION = "2026.09.1"
 SCAN_CACHE_TTL_SECONDS = 180
 SCAN_CACHE: dict[str, dict[str, Any]] = {}
 PORTFOLIO_SCAN_WORKERS = 3
@@ -270,7 +278,10 @@ SCORING_ENGINE_TIMEOUT_SECONDS = float(os.getenv("SCORING_ENGINE_TIMEOUT_SECONDS
 
 
 def cache_key(address: str) -> str:
-    return Web3.to_checksum_address(address)
+    # Version-scoped on purpose: a verdict computed under the previous rules
+    # must not be served after a contract bump, which is exactly what an
+    # address-only key would do for the whole TTL after a deploy.
+    return f"{DATA_CONTRACT_VERSION}:{Web3.to_checksum_address(address)}"
 
 
 def get_cached_report(address: str) -> dict[str, Any] | None:
@@ -509,7 +520,52 @@ def public_label_from_report(report: dict[str, Any]) -> str:
     return "UNKNOWN"
 
 
+# Module names are internal identifiers; a person reading a verdict needs to
+# know what was not checked, in words they already understand.
+MODULE_PLAIN_NAMES = {
+    "contract_backdoor": "the contract's code",
+    "holder_concentration": "who holds the supply",
+    "funding_origin": "where the deployer's funds came from",
+    "deployment_latency": "how the token launched",
+    "tx_entropy": "the trading pattern",
+    "wash_pattern": "signs of wash trading",
+    "holder_cluster": "the age of top holder wallets",
+    "holder_cluster_age": "the age of top holder wallets",
+    "rug_velocity": "how fast the token is being sold off",
+}
+
+
+def plain_module_name(module: str) -> str:
+    return MODULE_PLAIN_NAMES.get(module, module.replace("_", " "))
+
+
+def unreadable_checks(report: dict[str, Any]) -> list[str]:
+    """Checks we tried to run and could not, in plain words.
+
+    Only FETCH_FAILED. A NOT_FOUND is a fact about the token (no pool, no
+    holders) and belongs in the verdict as a finding, not as an apology for
+    missing evidence.
+    """
+    return [
+        plain_module_name(str(item.get("module") or ""))
+        for item in (report.get("missing_inputs") or [])
+        if item.get("status") == "FETCH_FAILED"
+    ]
+
+
 def syndicate_verdict_from_report(report: dict[str, Any]) -> str:
+    # When load-bearing checks did not run, say so first and plainly. Leading
+    # with a score here would be stating a confidence the scan does not have.
+    blocked = unreadable_checks(report)
+    if blocked:
+        checked = report.get("completeness_pct")
+        return (
+            "Not enough data to judge this token. Could not check "
+            + ", ".join(blocked)
+            + (f" (only {checked}% of checks completed)" if checked is not None else "")
+            + ". This is not a pass and not a warning -- the checks did not complete. Try again shortly."
+        )[:240]
+
     rug_status = str(report.get("rug_status") or "UNKNOWN").upper()
     speculation_status = str(report.get("speculation_status") or "UNKNOWN").upper()
     rug_score = report.get("rug_score")
@@ -837,6 +893,16 @@ def flatten_intel_for_scoring(cia: dict[str, Any], v6: dict[str, Any], creator_s
         "cia_wash_detected": bool(wash.get("wash_detected")),
         "cia_bot_farm": bool(cluster.get("is_bot_farm")),
         "creator_rug_rate": float((creator_stats or {}).get("rug_rate") or 0.0),
+        # Carry the per-module status through as well. Every boolean above
+        # reads False both when a module said "no" and when it never managed
+        # to look; the scorer needs to be able to tell those apart before it
+        # treats a False as reassurance.
+        "v6_backdoor_status": str(backdoor.get("status") or "OK"),
+        "v6_velocity_status": str(velocity.get("status") or "OK"),
+        "cia_funding_status": str(funding.get("status") or "OK"),
+        "cia_entropy_status": str(entropy.get("status") or "OK"),
+        "cia_wash_status": str(wash.get("status") or "OK"),
+        "cia_cluster_status": str(cluster.get("status") or "OK"),
     }
 
 
@@ -931,6 +997,7 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         "deployer_balance": deployer_balance,
     }
     context = {
+        "data_completeness": collector_summarize_data_completeness(cia, v6),
         "pair_data": pair_data or {},
         "pair_source": pair_source,
         "deployer": deployer,
@@ -942,6 +1009,24 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         "creator_stats": creator_stats,
     }
     return payload, context
+
+
+def _completeness_fields(context: dict[str, Any]) -> dict[str, Any]:
+    """Expose per-module data status on the response.
+
+    Three states rather than a bare present/absent: NOT_QUERIED (never asked),
+    FETCH_FAILED (asked, upstream broke), NOT_FOUND (asked, genuinely nothing
+    there -- itself a finding, e.g. a token with no pool anywhere). Only
+    FETCH_FAILED means the verdict rests on missing evidence.
+    """
+    completeness = context.get("data_completeness") or {}
+    if not completeness:
+        return {}
+    return {
+        "completeness_pct": completeness.get("completeness_pct"),
+        "missing_inputs": completeness.get("missing_inputs", []),
+        "verdict_is_conclusive": not completeness.get("has_fetch_failures", False),
+    }
 
 
 def report_from_remote_engine(address: str, result: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
@@ -957,6 +1042,12 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
         "label": str(result.get("verdict") or "INSUFFICIENT_DATA").upper(),
         "risk_engine": "rugbuster_private_scoring_engine",
         "engine_version": result.get("engine_version"),
+        # Response-shape version, distinct from the scoring engine's own
+        # version: it tells an API consumer which fields to expect and which
+        # rules produced them, so a cached verdict from before this change
+        # cannot be served as though it followed them.
+        "data_contract_version": DATA_CONTRACT_VERSION,
+        **_completeness_fields(context),
         "risk_percent": score,
         "rugbuster_avax_score": score,
         "rugbuster_avax_reasons": risk_flags,
@@ -1265,6 +1356,13 @@ def build_ai_scan_context(report: dict[str, Any]) -> dict[str, Any]:
         "sells24h": report.get("sells24h"),
         "dex_id": report.get("dex_id"),
         "source": report.get("source"),
+        # Without these the model cannot tell a clean result from an
+        # unfinished one, and will confidently summarise a failed scan as a
+        # safe token -- the same false-clean bug the engine now refuses to
+        # commit, reintroduced in the one sentence the customer actually reads.
+        "checks_completed_pct": report.get("completeness_pct"),
+        "verdict_is_conclusive": report.get("verdict_is_conclusive"),
+        "checks_that_could_not_run": unreadable_checks(report),
     }
 
 
@@ -1275,7 +1373,12 @@ def fetch_deepseek_verdict(report: dict[str, Any]) -> str | None:
     prompt = (
         "Analyze this Avalanche token security scan. "
         "Return one concise RugBuster verdict in max 28 words. "
-        "Mention the main risk driver if any. Do not give financial advice.\n\n"
+        "Mention the main risk driver if any. Do not give financial advice.\n"
+        "If checks_that_could_not_run is non-empty, the scan is incomplete: say plainly "
+        "that there is not enough data to judge, name what could not be checked, and do "
+        "NOT describe the token as safe, clean, low risk or fine. An absent signal is not "
+        "a passing one. Do not call it dangerous either -- a failed check is not evidence "
+        "against the token.\n\n"
         f"{json.dumps(context, ensure_ascii=False, sort_keys=True)}"
     )
     response = requests.post(
@@ -1303,7 +1406,44 @@ def fetch_deepseek_verdict(report: dict[str, Any]) -> str | None:
         .get("content", "")
         .strip()
     )
-    return " ".join(verdict.split())[:240] if verdict else None
+    if not verdict:
+        return None
+    verdict = " ".join(verdict.split())[:240]
+
+    # A prompt instruction is not a guarantee. This sentence is the one thing
+    # most customers actually read, so an incomplete scan that comes back
+    # sounding reassuring gets replaced by the deterministic text rather than
+    # trusted. Losing some fluency is an acceptable price for not telling
+    # someone a token is fine when we could not check it.
+    if unreadable_checks(report) and _reads_as_reassuring(verdict):
+        log.warning("  [AI] Discarded a reassuring verdict for an incomplete scan; using template")
+        return syndicate_verdict_from_report(report)
+    return verdict
+
+
+REASSURING_TERMS = (
+    "safe", "clean", "low risk", "no risk", "looks fine", "looks good",
+    "appears safe", "appears clean", "healthy", "legitimate", "no red flags",
+    "no concerns", "trustworthy", "secure",
+)
+
+# Phrases that state the scan could not conclude. A sentence carrying one of
+# these is not making a reassuring claim even when it also contains a word
+# like "safe" -- "this is not a verdict that the token is safe" is the
+# honest answer, and discarding it would throw away exactly the output we
+# asked for.
+UNCERTAINTY_MARKERS = (
+    "not enough data", "insufficient", "could not check", "could not be",
+    "unable to", "cannot determine", "cannot judge", "unverified",
+    "incomplete", "not a verdict",
+)
+
+
+def _reads_as_reassuring(text: str) -> bool:
+    lowered = text.lower()
+    if any(marker in lowered for marker in UNCERTAINTY_MARKERS):
+        return False
+    return any(term in lowered for term in REASSURING_TERMS)
 
 
 def env_enabled(name: str) -> bool:

@@ -59,6 +59,51 @@ def call_score(endpoint: str, address: str, timeout: float = 30) -> dict:
         return {"ok": False, "http_status": None, "error": str(exc)}
 
 
+def _evaluate_module_status(entry: dict, response: dict) -> list:
+    """Check per-module data status, for entries that declare expectations.
+
+    An absent signal is only acceptable when the scan can say *why* it is
+    absent. A token with no pool anywhere must report NOT_FOUND with a reason
+    -- that is a finding about the token. Reporting FETCH_FAILED there instead
+    would mean our own plumbing broke and the verdict rests on missing
+    evidence, which is a different (and much worse) claim.
+    """
+    expectations = entry.get("expected_module_status") or {}
+    if not expectations:
+        return []
+    if not response.get("ok"):
+        return []
+
+    problems = []
+    reported = {item.get("module"): item for item in (response.get("missing_inputs") or [])}
+
+    for module, want_status in expectations.items():
+        if want_status == "OK":
+            if module in reported:
+                problems.append(
+                    f"module {module} expected OK but reported {reported[module].get('status')}"
+                )
+            continue
+        entry_status = reported.get(module)
+        if entry_status is None:
+            problems.append(f"module {module} expected {want_status} but was not listed in missing_inputs")
+            continue
+        if entry_status.get("status") != want_status:
+            problems.append(
+                f"module {module} status={entry_status.get('status')} != expected {want_status}"
+            )
+        if not str(entry_status.get("reason") or "").strip():
+            problems.append(f"module {module} reported {want_status} without a reason")
+
+    want_conclusive = entry.get("expect_verdict_conclusive")
+    if want_conclusive is not None:
+        actual = response.get("verdict_is_conclusive")
+        if actual is not want_conclusive:
+            problems.append(f"verdict_is_conclusive={actual} != expected {want_conclusive}")
+
+    return problems
+
+
 def evaluate_entry(entry: dict, response: dict, required_source: str) -> dict:
     label = response.get("label")
     source = response.get("source")
@@ -76,6 +121,7 @@ def evaluate_entry(entry: dict, response: dict, required_source: str) -> dict:
         problems.append(f"label={label} is forbidden ({forbidden})")
     if response.get("ok") and source != required_source:
         problems.append(f"source={source!r} != required {required_source!r}")
+    problems.extend(_evaluate_module_status(entry, response))
 
     if not problems:
         status = "PASS"
@@ -161,6 +207,17 @@ def run_golden_set(golden_path: Path) -> int:
         for r in dead_good:
             print(f"        - FALSE GOOD: {r['symbol']} ({r['address']}) — a long track record "
                   f"means the owner has not stolen, not that a holder can exit")
+
+    no_pool = [r for r in results if r["category"] == "no_pool"]
+    if no_pool:
+        no_pool_bad = [r for r in no_pool if r["status"] == "FAIL"]
+        ok = not no_pool_bad
+        overall_pass &= ok
+        print(f"[{'PASS' if ok else 'FAIL'}] I7 tokens with no pool report NOT_FOUND with a reason, "
+              f"never a silent clean read: {len(no_pool) - len(no_pool_bad)}/{len(no_pool)}")
+        for r in no_pool_bad:
+            for problem in r["problems"]:
+                print(f"        - {r['symbol']} ({r['address']}): {problem}")
 
     scam = [r for r in results if r["category"] == "scam"]
     scam_ok = [r for r in scam if r["label"] in ("WARN", "DANGER")]

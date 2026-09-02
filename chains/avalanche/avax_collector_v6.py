@@ -520,6 +520,10 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
         "has_blacklist": False,
         "is_proxy": False,
         "backdoor_risk_score": 0,
+        # "no backdoor found" and "never managed to read the bytecode" were the
+        # same output before this field existed. They are not the same claim.
+        "status": STATUS_OK,
+        "status_reason": "",
     }
     try:
         payload = {
@@ -529,6 +533,13 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
         }
         resp = requests.post(AVAX_RPC, json=payload, timeout=RPC_TIMEOUT)
         bytecode = resp.json().get("result", "0x")
+
+        if not bytecode or len(bytecode) <= 10:
+            # An EOA legitimately has no code; a contract that returns nothing
+            # here means the node did not give us one. Either way we did not
+            # inspect any bytecode, so we cannot claim it is clean.
+            result["status"] = STATUS_NOT_FOUND
+            result["status_reason"] = "no contract bytecode at this address"
 
         if bytecode and len(bytecode) > 10:
             bytecode_clean = bytecode.lower().replace("0x", "")
@@ -551,6 +562,8 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
 
     except Exception as e:
         log.debug("  [V6] Bytecode analiza greška: %s", e)
+        result["status"] = STATUS_FETCH_FAILED
+        result["status_reason"] = f"bytecode could not be read from RPC: {type(e).__name__}"
 
     danger_count = sum([
         result["has_upgrade_authority"],
@@ -568,14 +581,32 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def analyze_holder_concentration_avax(contract_address: str) -> dict:
+    # NOTE: concentration_risk defaults to "LOW" only for schema stability.
+    # Read `status` before trusting it -- when status is not OK, these numbers
+    # are placeholders, NOT a measurement of 0% concentration. Scoring that
+    # reads top5_pct without checking status is reading an outage as a clean
+    # distribution, which is the single worst failure mode in this file.
     result = {
         "top5_pct": 0.0,
         "top1_pct": 0.0,
         "is_concentrated": False,
         "concentration_risk": "LOW",
+        "status": STATUS_OK,
+        "status_reason": "",
     }
     holders = get_token_holders(contract_address)
-    if not holders or len(holders) < 2:
+    holders_status = fetch_status_of(holders)
+    if holders_status != STATUS_OK:
+        result["status"] = holders_status
+        result["status_reason"] = (
+            "holder list could not be retrieved"
+            if holders_status == STATUS_FETCH_FAILED
+            else "token has no holder records"
+        )
+        return result
+    if len(holders) < 2:
+        result["status"] = STATUS_NOT_FOUND
+        result["status_reason"] = f"only {len(holders)} holder record(s) returned; too few to measure distribution"
         return result
 
     try:
@@ -585,6 +616,8 @@ def analyze_holder_concentration_avax(contract_address: str) -> dict:
         token_info = get_token_info_avax(contract_address)
         total_supply = float(str(rpc_info.get("total_supply") or token_info.get("total_supply") or "0").replace(",", ""))
         if total_supply <= 0:
+            result["status"] = STATUS_FETCH_FAILED
+            result["status_reason"] = "total supply unavailable from both RPC and token info; cannot compute a percentage"
             return result
 
         amounts = []
@@ -609,6 +642,8 @@ def analyze_holder_concentration_avax(contract_address: str) -> dict:
                 top5_pct,
                 top1_pct,
             )
+            result["status"] = STATUS_FETCH_FAILED
+            result["status_reason"] = f"source data inconsistent (computed top5={top5_pct}%); discarded"
             return result
 
         result["top5_pct"] = top5_pct
@@ -625,6 +660,8 @@ def analyze_holder_concentration_avax(contract_address: str) -> dict:
             result["concentration_risk"] = "LOW"
     except Exception as e:
         log.debug("  [V6] Holder concentration greška: %s", e)
+        result["status"] = STATUS_FETCH_FAILED
+        result["status_reason"] = f"concentration computation failed: {type(e).__name__}"
 
     return result
 
@@ -689,6 +726,53 @@ def calculate_rug_velocity_avax(contract_address: str, deploy_timestamp: int) ->
         log.debug("  [V6] Rug velocity greška: %s", e)
 
     return result
+
+# ---------------------------------------------------------------------------
+# Data status vocabulary
+# ---------------------------------------------------------------------------
+# Four states, because "we have no data" was previously indistinguishable from
+# "we checked and there is nothing", and the second one is a finding while the
+# first one is a hole. Conflating them let an API outage read as a clean scan.
+STATUS_OK = "OK"                    # queried, data returned
+STATUS_NOT_FOUND = "NOT_FOUND"      # queried successfully, the thing genuinely does not exist
+STATUS_FETCH_FAILED = "FETCH_FAILED"  # tried, upstream broke: RPC/API error, timeout, rate limit, missing key
+STATUS_NOT_QUERIED = "NOT_QUERIED"  # never asked (out of scope for this tier/chain, or skipped)
+
+# Below this many transfers, entropy/wash statistics are noise rather than
+# signal, so those modules report NOT_FOUND instead of a confident-looking number.
+MIN_TX_FOR_ENTROPY = 5
+
+
+class FetchedList(list):
+    """A list that remembers *why* it may be empty.
+
+    Subclasses list on purpose: every existing call site (``if not txs``,
+    ``len(txs)``, ``txs[0]``, iteration) keeps behaving exactly as before, so
+    this carries the status through ~2500 lines of collector without touching
+    any of them. New code reads ``.fetch_status``.
+    """
+
+    def __new__(cls, items=(), status=STATUS_OK):
+        return super().__new__(cls, items)
+
+    def __init__(self, items=(), status=STATUS_OK):
+        super().__init__(items)
+        self.fetch_status = status
+
+
+def fetch_status_of(value) -> str:
+    """Status of any value a collector getter returned.
+
+    Plain lists/dicts from older paths report OK when non-empty; an empty plain
+    list is reported as FETCH_FAILED rather than NOT_FOUND, because a caller
+    that did not preserve the distinction cannot prove the source was reachable
+    and 'unknown' must never be optimistic.
+    """
+    status = getattr(value, "fetch_status", None)
+    if status:
+        return status
+    return STATUS_OK if value else STATUS_FETCH_FAILED
+
 
 # ---------------------------------------------------------------------------
 # SnowTrace API helpers (sa throttlingom)
@@ -780,34 +864,46 @@ def get_latest_block() -> int:
         return 0
 
 
-def get_contract_transactions(address: str, limit: int = 50) -> list:
+def _as_fetched(result) -> FetchedList:
+    """Preserve snowtrace_get's own distinction instead of flattening it.
+
+    ``snowtrace_get`` already returns None for a broken call and [] for an
+    API response that explicitly said 'no records'. Every wrapper here used to
+    collapse both into [], which is precisely how an outage became a clean
+    scan downstream.
+    """
+    if result is None:
+        return FetchedList([], STATUS_FETCH_FAILED)
+    if not result:
+        return FetchedList([], STATUS_NOT_FOUND)
+    return FetchedList(result, STATUS_OK)
+
+
+def get_contract_transactions(address: str, limit: int = 50) -> FetchedList:
     params = {
         "module": "account", "action": "txlist",
         "address": address, "startblock": 0, "endblock": 99999999,
         "page": 1, "offset": limit, "sort": "asc",
     }
-    result = snowtrace_get(params)
-    return result if result else []
+    return _as_fetched(snowtrace_get(params))
 
 
-def get_token_transfers(address: str, limit: int = 50) -> list:
+def get_token_transfers(address: str, limit: int = 50) -> FetchedList:
     params = {
         "module": "account", "action": "tokentx",
         "contractaddress": address, "startblock": 0, "endblock": 99999999,
         "page": 1, "offset": limit, "sort": "asc",
     }
-    result = snowtrace_get(params)
-    return result if result else []
+    return _as_fetched(snowtrace_get(params))
 
 
-def get_account_transactions(address: str, limit: int = 100) -> list:
+def get_account_transactions(address: str, limit: int = 100) -> FetchedList:
     params = {
         "module": "account", "action": "txlist",
         "address": address, "startblock": 0, "endblock": 99999999,
         "page": 1, "offset": limit, "sort": "asc",
     }
-    result = snowtrace_get(params)
-    return result if result else []
+    return _as_fetched(snowtrace_get(params))
 
 
 def get_avax_balance(address: str) -> float:
@@ -821,13 +917,12 @@ def get_avax_balance(address: str) -> float:
     return 0.0
 
 
-def get_token_holders(address: str) -> list:
+def get_token_holders(address: str) -> FetchedList:
     params = {
         "module": "token", "action": "tokenholderlist",
         "contractaddress": address, "page": 1, "offset": 50,
     }
-    result = snowtrace_get(params)
-    return result if result else []
+    return _as_fetched(snowtrace_get(params))
 
 
 def get_token_info_avax(contract_address: str) -> dict:
@@ -920,12 +1015,21 @@ def trace_funding_origin_avax(deployer: str, depth: int = 2) -> dict:
         "funding_chain": [deployer],
         "all_fresh": False,
         "wallet_ages_days": [],
+        "status": STATUS_OK,
+        "status_reason": "",
     }
     current = deployer
     chain_trace = [deployer]
 
     for hop in range(depth):
         txs = get_account_transactions(current, limit=10)
+        txs_status = fetch_status_of(txs)
+        if txs_status == STATUS_FETCH_FAILED:
+            # A broken hop must not read as "this wallet has no history",
+            # which is what is_fresh_wallet=True would have claimed.
+            result["status"] = STATUS_FETCH_FAILED
+            result["status_reason"] = f"funding trace broke at hop {hop + 1} of {depth}"
+            break
         if not txs:
             result["is_fresh_wallet"] = True
             break
@@ -954,9 +1058,27 @@ def trace_funding_origin_avax(deployer: str, depth: int = 2) -> dict:
 
 
 def get_deployment_latency_avax(contract_address: str, deploy_timestamp: int) -> dict:
-    result = {"deploy_time": deploy_timestamp, "first_buy_time": 0, "latency_ms": -1, "is_sniped": False}
+    result = {
+        "deploy_time": deploy_timestamp,
+        "first_buy_time": 0,
+        "latency_ms": -1,
+        "is_sniped": False,
+        "status": STATUS_OK,
+        "status_reason": "",
+    }
     transfers = get_token_transfers(contract_address, limit=10)
-    if not transfers or len(transfers) < 2:
+    transfers_status = fetch_status_of(transfers)
+    if transfers_status != STATUS_OK:
+        result["status"] = transfers_status
+        result["status_reason"] = (
+            "transfer history could not be retrieved"
+            if transfers_status == STATUS_FETCH_FAILED
+            else "token has no transfers yet"
+        )
+        return result
+    if len(transfers) < 2:
+        result["status"] = STATUS_NOT_FOUND
+        result["status_reason"] = f"only {len(transfers)} transfer(s); no first buy to measure against"
         return result
     for tx in transfers:
         ts = int(tx.get("timeStamp", 0))
@@ -970,13 +1092,24 @@ def get_deployment_latency_avax(contract_address: str, deploy_timestamp: int) ->
 
 
 def analyze_transaction_entropy_avax(contract_address: str) -> dict:
+    # entropy_score defaults to 1.0 (= maximally organic-looking). That default
+    # is only meaningful when status is OK; otherwise it is a placeholder, not
+    # a measurement of healthy trading.
     result = {
         "total_txs": 0, "unique_amounts": 0,
         "entropy_score": 1.0, "is_bot_pattern": False,
         "dominant_amount": 0, "dominant_amount_pct": 0.0,
+        "status": STATUS_OK, "status_reason": "",
     }
     transfers = get_token_transfers(contract_address, limit=30)
-    if not transfers:
+    transfers_status = fetch_status_of(transfers)
+    if transfers_status != STATUS_OK:
+        result["status"] = transfers_status
+        result["status_reason"] = (
+            "transfer history could not be retrieved"
+            if transfers_status == STATUS_FETCH_FAILED
+            else "token has no transfers yet"
+        )
         return result
 
     amounts = []
@@ -990,6 +1123,18 @@ def analyze_transaction_entropy_avax(contract_address: str) -> dict:
             continue
 
     if not amounts:
+        result["status"] = STATUS_NOT_FOUND
+        result["status_reason"] = "no non-zero transfer amounts to analyse"
+        return result
+
+    if len(amounts) < MIN_TX_FOR_ENTROPY:
+        # Below this, the entropy number is arithmetic noise, not a signal:
+        # 2 transfers of different sizes score identically to 30 organic ones.
+        result["status"] = STATUS_NOT_FOUND
+        result["status_reason"] = (
+            f"only {len(amounts)} transfer(s); need at least {MIN_TX_FOR_ENTROPY} for a meaningful distribution"
+        )
+        result["total_txs"] = len(amounts)
         return result
 
     result["total_txs"] = len(amounts)
@@ -1008,11 +1153,21 @@ def detect_wash_pattern_avax(contract_address: str, deployer: str, deploy_timest
     result = {
         "wash_detected": False, "dev_sold_fast": False,
         "dev_sell_latency_s": -1, "linker_wallets_connected": False,
+        "status": STATUS_OK, "status_reason": "",
     }
     if not deployer:
+        result["status"] = STATUS_NOT_QUERIED
+        result["status_reason"] = "deployer address unknown; wash analysis not attempted"
         return result
     transfers = get_token_transfers(contract_address, limit=20)
-    if not transfers:
+    transfers_status = fetch_status_of(transfers)
+    if transfers_status != STATUS_OK:
+        result["status"] = transfers_status
+        result["status_reason"] = (
+            "transfer history could not be retrieved"
+            if transfers_status == STATUS_FETCH_FAILED
+            else "token has no transfers yet"
+        )
         return result
     for tx in transfers:
         if tx.get("from", "").lower() == deployer.lower():
@@ -1022,21 +1177,40 @@ def detect_wash_pattern_avax(contract_address: str, deployer: str, deploy_timest
                 result["dev_sell_latency_s"] = latency
                 break
     deployer_txs = get_account_transactions(deployer, limit=10)
+    if fetch_status_of(deployer_txs) == STATUS_FETCH_FAILED:
+        # len([]) < 5 was True on a failed fetch, so an outage actively
+        # manufactured a risk signal here rather than merely hiding one.
+        result["status"] = STATUS_FETCH_FAILED
+        result["status_reason"] = "deployer transaction history could not be retrieved"
+        return result
     result["linker_wallets_connected"] = len(deployer_txs) < 5
     result["wash_detected"] = result["dev_sold_fast"] and result["linker_wallets_connected"]
     return result
 
 
 def analyze_holder_cluster_avax(contract_address: str, max_holders: int = 3) -> dict:
-    result = {"avg_age_days": 0.0, "new_wallets_count": 0, "total_checked": 0, "is_bot_farm": False}
+    result = {
+        "avg_age_days": 0.0, "new_wallets_count": 0, "total_checked": 0, "is_bot_farm": False,
+        "status": STATUS_OK, "status_reason": "",
+    }
     holders = get_token_holders(contract_address)
+    holders_status = fetch_status_of(holders)
+    fallback_status = STATUS_OK
     if not holders:
         transfers = get_token_transfers(contract_address, limit=20)
+        fallback_status = fetch_status_of(transfers)
         holder_addrs = list({tx.get("to", "") for tx in transfers if tx.get("to")})[:max_holders]
     else:
         holder_addrs = [h.get("TokenHolderAddress", "") for h in holders[:max_holders]]
 
     if not holder_addrs:
+        # Distinguish "nobody holds this" from "we could not find out who does".
+        if STATUS_FETCH_FAILED in (holders_status, fallback_status):
+            result["status"] = STATUS_FETCH_FAILED
+            result["status_reason"] = "neither holder list nor transfer history could be retrieved"
+        else:
+            result["status"] = STATUS_NOT_FOUND
+            result["status_reason"] = "no holder addresses found for this token"
         return result
 
     ages = []
@@ -1068,7 +1242,11 @@ def run_cia_analysis_avax(contract_address: str, deployer: str, deploy_timestamp
     intel = {}
 
     log.info("  [CIA] Tracing funding origin...")
-    intel["funding"] = trace_funding_origin_avax(deployer, depth=2) if deployer else {}
+    intel["funding"] = (
+        trace_funding_origin_avax(deployer, depth=2)
+        if deployer
+        else {"status": STATUS_NOT_QUERIED, "status_reason": "deployer address unknown; funding trace not attempted"}
+    )
     time.sleep(0.1)
 
     log.info("  [CIA] Mjerim deployment latency...")
@@ -1137,6 +1315,59 @@ def run_v6_analysis_avax(contract_address: str, deployer: str, deploy_timestamp:
         log.warning("  [V6] Fast rug detected (score=%.2f)", v6["velocity"]["velocity_score"])
 
     return v6
+
+
+def summarize_data_completeness(cia: dict, v6: dict) -> dict:
+    """Turn per-module statuses into the answer an API consumer needs.
+
+    A caller integrating this API has to decide programmatically whether a
+    verdict is trustworthy. A bare label cannot carry that; this can.
+    `completeness_pct` counts only modules that actually produced data, so a
+    scan that silently lost half its inputs can no longer present itself as a
+    full assessment.
+    """
+    modules = {
+        "funding_origin": (cia or {}).get("funding"),
+        "deployment_latency": (cia or {}).get("latency"),
+        "tx_entropy": (cia or {}).get("entropy"),
+        "wash_pattern": (cia or {}).get("wash"),
+        "holder_cluster": (cia or {}).get("cluster"),
+        "contract_backdoor": (v6 or {}).get("backdoor"),
+        "holder_concentration": (v6 or {}).get("concentration"),
+        "rug_velocity": (v6 or {}).get("velocity"),
+    }
+
+    missing_inputs = []
+    ok_count = 0
+    for name, payload in modules.items():
+        if not isinstance(payload, dict):
+            missing_inputs.append({
+                "module": name,
+                "status": STATUS_NOT_QUERIED,
+                "reason": "module did not run for this scan tier",
+            })
+            continue
+        status = payload.get("status", STATUS_OK)
+        if status == STATUS_OK:
+            ok_count += 1
+            continue
+        missing_inputs.append({
+            "module": name,
+            "status": status,
+            "reason": payload.get("status_reason", ""),
+        })
+
+    total = len(modules)
+    return {
+        "completeness_pct": round(ok_count / total * 100) if total else 0,
+        "modules_ok": ok_count,
+        "modules_total": total,
+        "missing_inputs": missing_inputs,
+        # A verdict is only safe to present as conclusive when nothing broke.
+        # NOT_FOUND is a finding and does not disqualify a verdict; a failed
+        # fetch does, because we cannot say what we did not see.
+        "has_fetch_failures": any(m["status"] == STATUS_FETCH_FAILED for m in missing_inputs),
+    }
 
 
 def v6_success_rate(v5: dict, v6: dict) -> str:
