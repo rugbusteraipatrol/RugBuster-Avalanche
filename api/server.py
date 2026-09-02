@@ -657,6 +657,15 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         "v5": report.get("v5") or {},
         "v6": report.get("v6") or {},
         "creator_stats": report.get("creator_stats") or {},
+        # This function is an allowlist, so anything not named here never
+        # reaches a caller. These four are the whole point of the data-status
+        # work: an integrator needs them to decide programmatically whether a
+        # verdict is safe to act on.
+        "engine_version": report.get("engine_version"),
+        "data_contract_version": report.get("data_contract_version") or DATA_CONTRACT_VERSION,
+        "completeness_pct": report.get("completeness_pct"),
+        "missing_inputs": report.get("missing_inputs") or [],
+        "verdict_is_conclusive": report.get("verdict_is_conclusive"),
     }
 
 

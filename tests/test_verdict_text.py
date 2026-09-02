@@ -154,3 +154,26 @@ def test_safety_net_path_does_not_crash(server, monkeypatch):
 )
 def test_reassuring_detector(server, text, expected):
     assert server._reads_as_reassuring(text) is expected
+
+
+# --- the public boundary: an allowlist silently drops anything not named ---
+
+def test_public_score_response_exposes_the_data_status_fields(server):
+    """`/score` returns an explicit allowlist. The status work is invisible to
+    every caller unless these are named in it -- which they were not, until a
+    live deploy showed the fields missing from the response."""
+    compact = server.compact_score_response(_incomplete_report(), "private_scoring_engine")
+    assert compact["completeness_pct"] == 12
+    assert compact["verdict_is_conclusive"] is False
+    assert [item["module"] for item in compact["missing_inputs"]] == [
+        "contract_backdoor",
+        "holder_concentration",
+    ]
+    assert compact["data_contract_version"] == server.DATA_CONTRACT_VERSION
+
+
+def test_public_score_response_is_sane_for_a_complete_scan(server):
+    compact = server.compact_score_response(_complete_report(), "private_scoring_engine")
+    assert compact["completeness_pct"] == 100
+    assert compact["verdict_is_conclusive"] is True
+    assert compact["missing_inputs"] == []
