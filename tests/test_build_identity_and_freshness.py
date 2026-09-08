@@ -122,33 +122,38 @@ def test_the_cache_key_changes_with_the_data_contract_version():
 
 # --- observed_at vs fetched_at ---------------------------------------------
 
-def test_a_fresh_score_reports_both_timestamps():
+def test_a_fresh_score_names_each_timestamp_for_what_it_is():
+    """Three moments, three names. A scalar timestamp must not imply that every
+    upstream provider looked at the token at that instant."""
     with mock.patch.object(server, "score_with_private_engine", return_value=_report()):
         body = _get()
     assert body["data_freshness"] == FRESH
-    assert body["observed_at"] <= body["fetched_at"]
-    assert body["age_seconds"] == 0
+    assert body["computed_at"] <= body["served_at"]
+    assert body["verdict_age_seconds"] == 0
+    assert body["observed_at"] is None, "no upstream gives us a verified observation time"
+    assert body["observation_coverage"] == "COMPUTATION_TIME_ONLY"
+    assert body["age_seconds"] is None, "age_seconds means evidence age, which we do not have"
 
 
-def test_serving_from_cache_does_not_move_the_observation_forward():
-    """The reason these two fields are separate."""
+def test_serving_from_cache_does_not_move_the_computation_time_forward():
+    """The reason these fields are separate."""
     with mock.patch.object(server, "score_with_private_engine", return_value=_report()):
         first = _get()
     time.sleep(0.01)
     with mock.patch.object(server, "score_with_private_engine") as engine:
         second = _get()
     assert engine.call_count == 0, "the second request should have been a cache hit"
-    assert second["observed_at"] == first["observed_at"]
-    assert second["fetched_at"] > first["fetched_at"]
-    assert second["age_seconds"] >= 0
+    assert second["computed_at"] == first["computed_at"]
+    assert second["served_at"] > first["served_at"]
+    assert second["verdict_age_seconds"] >= 0
 
 
-def test_fresh_equals_one_forces_a_recompute_and_a_new_observation():
+def test_fresh_equals_one_forces_a_recompute_and_a_new_computation_time():
     with mock.patch.object(server, "score_with_private_engine", return_value=_report()):
         first = _get()
         time.sleep(0.01)
         second = _get("&fresh=1")
-    assert second["observed_at"] > first["observed_at"]
+    assert second["computed_at"] > first["computed_at"]
 
 
 # --- an entry whose age cannot be established ------------------------------
@@ -159,7 +164,7 @@ def test_a_cache_entry_without_a_usable_timestamp_is_not_served_as_current():
     with mock.patch.object(server, "score_with_private_engine", return_value=_report()):
         _get()
     key = server.cache_key(WAVAX)
-    server.SCAN_CACHE[key]["observed_at"] = None
+    server.SCAN_CACHE[key]["computed_at"] = None
     with mock.patch.object(server, "score_with_private_engine") as engine:
         body = _get()
         assert engine.call_count == 0

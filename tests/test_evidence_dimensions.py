@@ -266,3 +266,40 @@ def test_the_endpoint_carries_the_evidence_block_without_moving_the_verdict():
     assert body["evidence"]["issuer_identity"]["recognised"] is False
     assert body["evidence"]["coverage"]["data_freshness"] == "FRESH"
     assert body["evidence"]["creator_history"]["confirmed_incidents"]["status"] == NOT_COLLECTED
+
+
+# --- timestamps must each name what they actually are ----------------------
+
+def test_coverage_separates_computation_from_observation():
+    """A scalar timestamp must not imply every provider observed at that
+    instant. Routescan, DexScreener, Glacier and the chain each look at their
+    own moment, and none returns a time we have verified."""
+    report = _report(
+        computed_at="2026-09-08T12:00:00+00:00",
+        served_at="2026-09-08T12:00:05+00:00",
+        observed_at=None,
+        observation_coverage="COMPUTATION_TIME_ONLY",
+        data_freshness="FRESH",
+    )
+    result = coverage(report)
+    assert result["computed_at"].startswith("2026-09-08")
+    assert result["served_at"] > result["computed_at"]
+    assert result["observed_at"] is None
+    assert result["observation_coverage"] == "COMPUTATION_TIME_ONLY"
+
+
+def test_coverage_never_substitutes_computation_time_for_observation():
+    report = _report(computed_at="2026-09-08T12:00:00+00:00", data_freshness="FRESH")
+    assert coverage(report)["observed_at"] is None, (
+        "computation time was reported as observation time"
+    )
+
+
+def test_the_danger_rate_is_read_under_either_field_name():
+    """Two independent branches touch this: one renames rug_rate to say whose
+    labels it counts. Reading a single name would empty the field depending on
+    which lands first."""
+    old = creator_history(_report(creator_stats={"total": 10, "danger": 9, "rug_rate": 90.0}))
+    new = creator_history(_report(creator_stats={"total": 10, "danger": 9, "prior_danger_rate_pct": 90.0}))
+    assert old["prior_danger_rate_pct"] == 90.0
+    assert new["prior_danger_rate_pct"] == 90.0

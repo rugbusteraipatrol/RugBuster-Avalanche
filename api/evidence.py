@@ -168,7 +168,10 @@ def creator_history(report: dict[str, Any]) -> dict[str, Any]:
         "deployer": report.get("deployer"),
         "prior_tokens_scanned_by_us": total,
         "prior_tokens_we_labelled_danger": stats.get("danger"),
-        "prior_danger_rate_pct": stats.get("rug_rate"),
+        # Both names: this branch is cut from main, while the creator-history
+        # branch renames the field to say whose labels it counts. Reading only
+        # one of them would leave this silently empty depending on merge order.
+        "prior_danger_rate_pct": stats.get("prior_danger_rate_pct", stats.get("rug_rate")),
         "reason": stats.get("status_reason") or "",
         "confirmed_incidents": {
             "count": None,
@@ -193,11 +196,20 @@ def coverage(report: dict[str, Any]) -> dict[str, Any]:
         "missing_inputs": list(report.get("missing_inputs") or []),
         "verdict_is_conclusive": report.get("verdict_is_conclusive"),
         "data_freshness": report.get("data_freshness"),
+        # Three moments under three names. `observed_at` is null because no
+        # upstream here returns a verified observation time, and a scalar
+        # timestamp must not imply that Routescan, DexScreener, Glacier and the
+        # chain all looked at the token at the same instant.
+        "computed_at": report.get("computed_at"),
+        "served_at": report.get("served_at"),
         "observed_at": report.get("observed_at"),
-        "fetched_at": report.get("fetched_at"),
+        "observation_coverage": report.get("observation_coverage"),
+        "verdict_age_seconds": report.get("verdict_age_seconds"),
         "note": (
             "Governs how far the other dimensions can be trusted. A dimension "
-            "listed in missing_inputs was not read, not read as clean."
+            "listed in missing_inputs was not read, not read as clean. "
+            "computed_at is when we produced the verdict; observed_at stays "
+            "null because no upstream gives us a verified observation time."
         ),
     }
 

@@ -314,33 +314,55 @@ def get_cached_report(address: str) -> dict[str, Any] | None:
 def put_cached_report(address: str, report: dict[str, Any]) -> None:
     SCAN_CACHE[cache_key(address)] = {
         "ts": time.time(),
-        "observed_at": now_utc().isoformat(),
+        # When *we* computed this verdict. Named for that and not for
+        # observation: the underlying reads come from Routescan, DexScreener,
+        # Glacier and the chain itself, each at its own moment, and one scalar
+        # cannot assert that all of them looked at the token now.
+        "computed_at": now_utc().isoformat(),
         "report": report,
     }
 
 
-def cached_observed_at(address: str) -> str | None:
-    """When the cached report was computed, or None if nothing is cached."""
+def cached_computed_at(address: str) -> str | None:
+    """When the cached verdict was computed, or None if nothing is cached."""
     entry = SCAN_CACHE.get(cache_key(address))
-    return entry.get("observed_at") if entry else None
+    return entry.get("computed_at") if entry else None
 
 
 def with_freshness(payload: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
-    """Attach provenance and both timestamps to a response.
+    """Attach provenance and the timestamps, each naming what it actually is.
 
-    `observed_at` is when the verdict was computed; `fetched_at` is when this
-    response was produced. Serving a cached report must never move the first
-    one forward -- otherwise a caller cannot tell a fresh verdict from one at
-    the end of its window, which is the whole reason these fields exist.
+    Three different moments were being reported under one name. They are now
+    separate, because a scalar timestamp must not imply that every independent
+    data provider looked at the token at that instant:
+
+      computed_at  when this service produced the verdict
+      served_at    when this response was built
+      observed_at  when the underlying facts were observed upstream
+
+    `observed_at` stays null. The inputs come from Routescan, DexScreener,
+    Glacier and direct chain reads, none of which returns an observation time we
+    have verified, so claiming one would be inventing it. `computed_at` is what
+    ages, and serving from cache never moves it forward.
     """
     enriched = dict(payload)
     enriched.update(identity_fields())
     enriched.update(
         {
-            "observed_at": state.get("observed_at"),
+            "computed_at": state.get("observed_at"),
+            "served_at": now_utc().isoformat(),
+            # Kept for existing integrators; computed_at is the precise name.
             "fetched_at": now_utc().isoformat(),
+            "observed_at": None,
+            "observation_coverage": "COMPUTATION_TIME_ONLY",
+            "observation_coverage_note": (
+                "We report when we computed this verdict. The upstream sources "
+                "do not give a verified observation time, so observed_at is null "
+                "rather than guessed."
+            ),
             "data_freshness": state.get("freshness"),
-            "age_seconds": state.get("age_seconds"),
+            "verdict_age_seconds": state.get("age_seconds"),
+            "age_seconds": None,
         }
     )
     # Built last, so the coverage dimension can see the freshness fields added
@@ -1300,8 +1322,8 @@ def public_score():
     if not force_fresh:
         cached = get_cached_report(address)
         if cached is not None:
-            observed_at = cached_observed_at(address)
-            state = assess(observed_at, max_age=MEMORY_CACHE_MAX_AGE)
+            computed_at = cached_computed_at(address)
+            state = assess(computed_at, max_age=MEMORY_CACHE_MAX_AGE)
             response = with_freshness(
                 compact_score_response(cached, cached.get("source") or "private_scoring_engine"),
                 state,
@@ -1324,11 +1346,11 @@ def public_score():
     # one report has one observation time, and two `now_utc()` calls
     # microseconds apart would make a cache hit look like a different
     # observation from the computation that produced it.
-    observed = cached_observed_at(address) or now_utc().isoformat()
+    computed = cached_computed_at(address) or now_utc().isoformat()
     return jsonify(
         with_freshness(
             compact_score_response(report, report.get("source") or "private_scoring_engine"),
-            {"freshness": "FRESH", "observed_at": observed, "age_seconds": 0, "reason": ""},
+            {"freshness": "FRESH", "observed_at": computed, "age_seconds": 0, "reason": ""},
         )
     )
 
