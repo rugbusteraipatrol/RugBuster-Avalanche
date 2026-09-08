@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bridge import publish_score, publish_score_modules, send_telegram_alert  # noqa: E402
 from risk_engine import LOCAL_ENGINE_VERSION, score_token  # noqa: E402
 from build_identity import build_identity  # noqa: E402
+from evidence import build_evidence  # noqa: E402
 from freshness import (  # noqa: E402
     MEMORY_CACHE_MAX_AGE,
     STORED_SCAN_MAX_AGE,
@@ -342,6 +343,9 @@ def with_freshness(payload: dict[str, Any], state: dict[str, Any]) -> dict[str, 
             "age_seconds": state.get("age_seconds"),
         }
     )
+    # Built last, so the coverage dimension can see the freshness fields added
+    # just above. Additive only: no verdict field is read or written here.
+    enriched["evidence"] = build_evidence(enriched)
     return enriched
 
 
