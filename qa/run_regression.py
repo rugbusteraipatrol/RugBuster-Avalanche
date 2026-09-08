@@ -4,7 +4,22 @@
 Replays golden_set.yaml against the live /score endpoint and enforces the
 gate invariants agreed with QA:
 
-  I1. Every blue-chip / canonical asset must resolve to GOOD.
+  I1. Every blue-chip / canonical asset must keep rug_status LOW, and must
+      never reach DANGER or INSUFFICIENT_DATA.
+
+      This gate deliberately does NOT assert on `label`. `label` combines two
+      independent readings: rug risk, which is our claim about the contract
+      and its deployer, and market liquidity risk, which is a reading of the
+      pool on the day of the scan. Only the first is ours to keep stable.
+      LINK.e is the worked example: its rug_status has stayed LOW throughout,
+      but its pool drained to ~$78k with sells running 8:1 over buys, so the
+      combined label moved to WARN. Asserting on the label made the gate
+      report a scanner regression when nothing in the scanner had changed --
+      and a gate that cries wolf on real market movement is one people learn
+      to ignore, which costs far more than it catches.
+
+      If a blue-chip's *market* reading needs watching, that belongs in a
+      separate advisory, not in a hard gate that blocks deploys.
   I2. When the private scoring engine is unreachable or unconfigured, the
       API must never return GOOD (fallback must degrade to INSUFFICIENT_DATA).
   I3. At least `scam_min_pass_fraction` of known-scam addresses must resolve
@@ -106,8 +121,10 @@ def _evaluate_module_status(entry: dict, response: dict) -> list:
 
 def evaluate_entry(entry: dict, response: dict, required_source: str) -> dict:
     label = response.get("label")
+    rug_status = response.get("rug_status")
     source = response.get("source")
     expected = entry.get("expected_labels")
+    expected_rug = entry.get("expected_rug_status")
     forbidden = entry.get("forbidden_labels") or []
     is_gate = bool(entry.get("gate"))
     is_advisory = bool(entry.get("advisory"))
@@ -117,6 +134,11 @@ def evaluate_entry(entry: dict, response: dict, required_source: str) -> dict:
         problems.append(f"request failed: {response.get('error')}")
     if expected and label not in expected:
         problems.append(f"label={label} not in expected {expected}")
+    if expected_rug:
+        if rug_status is None:
+            problems.append(f"rug_status missing from response, expected one of {expected_rug}")
+        elif rug_status not in expected_rug:
+            problems.append(f"rug_status={rug_status} not in expected {expected_rug}")
     if label in forbidden:
         problems.append(f"label={label} is forbidden ({forbidden})")
     if response.get("ok") and source != required_source:
@@ -135,6 +157,7 @@ def evaluate_entry(entry: dict, response: dict, required_source: str) -> dict:
         "address": entry["address"],
         "category": entry["category"],
         "label": label,
+        "rug_status": rug_status,
         "score": response.get("rug_score"),
         "source": source,
         "status": status,
@@ -161,7 +184,8 @@ def run_golden_set(golden_path: Path) -> int:
         results.append(result)
         marker = {"PASS": "  ", "WARN": "! ", "FAIL": "X "}[result["status"]]
         print(f"{marker}[{i:02d}/{len(entries)}] {result['category']:15s} {result['symbol']:14s} "
-              f"label={result['label']!s:18s} score={result['score']!s:6s} source={result['source']}"
+              f"label={result['label']!s:18s} rug={result['rug_status']!s:8s} "
+              f"score={result['score']!s:6s} source={result['source']}"
               + (f"  <-- {'; '.join(result['problems'])}" if result["problems"] else ""))
         time.sleep(0.4)
 
@@ -175,7 +199,8 @@ def run_golden_set(golden_path: Path) -> int:
     bc_fail = [r for r in bluechip if r["status"] == "FAIL"]
     ok = not bc_fail
     overall_pass &= ok
-    print(f"[{'PASS' if ok else 'FAIL'}] I1 blue-chip all GOOD: {len(bluechip) - len(bc_fail)}/{len(bluechip)}")
+    print(f"[{'PASS' if ok else 'FAIL'}] I1 blue-chip rug risk stays LOW (never falsely accused): "
+          f"{len(bluechip) - len(bc_fail)}/{len(bluechip)}")
     for r in bc_fail:
         print(f"        - {r['symbol']} ({r['address']}): {'; '.join(r['problems'])}")
 
