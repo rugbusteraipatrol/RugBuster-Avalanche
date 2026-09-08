@@ -32,6 +32,16 @@ class DualScoreResult:
         }
 
 
+# The local fallback scorer's own version. `DATA_CONTRACT_VERSION` describes the
+# shape of the response; this describes the rules that produce the numbers in
+# it, and the two move independently. Without it, editing the scoring here left
+# the version-scoped score cache serving verdicts from the previous rules for
+# the rest of their window, because the cache key could not tell they had
+# changed. Bump it with any change to how a score is derived;
+# `qa/test_engine_version.py` fails if the file changes and this does not.
+LOCAL_ENGINE_VERSION = "2026.09.1"
+
+
 def risk_status(score: int | None) -> str:
     if score is None:
         return "INSUFFICIENT_DATA"

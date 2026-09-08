@@ -23,9 +23,21 @@ except ImportError:  # pragma: no cover - optional when DATABASE_URL is absent
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "chains" / "avalanche"))
 sys.path.insert(0, str(ROOT / "scripts"))
+# This package's own directory, so sibling modules resolve whether the app is
+# started as a script or imported by a test from the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from bridge import publish_score, publish_score_modules, send_telegram_alert  # noqa: E402
-from risk_engine import score_token  # noqa: E402
+from risk_engine import LOCAL_ENGINE_VERSION, score_token  # noqa: E402
+from build_identity import build_identity  # noqa: E402
+from freshness import (  # noqa: E402
+    MEMORY_CACHE_MAX_AGE,
+    STORED_SCAN_MAX_AGE,
+    assess,
+    is_servable_as_current,
+    now_utc,
+    withhold_verdict,
+)
 from network_config import NETWORKS, load_env, resolve_network, resolve_rpc  # noqa: E402
 from avax_collector_v6 import (  # noqa: E402
     get_avax_balance as collector_get_avax_balance,
@@ -281,7 +293,11 @@ def cache_key(address: str) -> str:
     # Version-scoped on purpose: a verdict computed under the previous rules
     # must not be served after a contract bump, which is exactly what an
     # address-only key would do for the whole TTL after a deploy.
-    return f"{DATA_CONTRACT_VERSION}:{Web3.to_checksum_address(address)}"
+    # Both versions, because they change independently: the contract version
+    # describes the response shape, LOCAL_ENGINE_VERSION the rules that produce
+    # the numbers. Keying on the contract alone let an edited scorer keep
+    # serving the previous rules' verdicts for the rest of the window.
+    return f"{DATA_CONTRACT_VERSION}:{LOCAL_ENGINE_VERSION}:{Web3.to_checksum_address(address)}"
 
 
 def get_cached_report(address: str) -> dict[str, Any] | None:
@@ -295,7 +311,45 @@ def get_cached_report(address: str) -> dict[str, Any] | None:
 
 
 def put_cached_report(address: str, report: dict[str, Any]) -> None:
-    SCAN_CACHE[cache_key(address)] = {"ts": time.time(), "report": report}
+    SCAN_CACHE[cache_key(address)] = {
+        "ts": time.time(),
+        "observed_at": now_utc().isoformat(),
+        "report": report,
+    }
+
+
+def cached_observed_at(address: str) -> str | None:
+    """When the cached report was computed, or None if nothing is cached."""
+    entry = SCAN_CACHE.get(cache_key(address))
+    return entry.get("observed_at") if entry else None
+
+
+def with_freshness(payload: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
+    """Attach provenance and both timestamps to a response.
+
+    `observed_at` is when the verdict was computed; `fetched_at` is when this
+    response was produced. Serving a cached report must never move the first
+    one forward -- otherwise a caller cannot tell a fresh verdict from one at
+    the end of its window, which is the whole reason these fields exist.
+    """
+    enriched = dict(payload)
+    enriched.update(identity_fields())
+    enriched.update(
+        {
+            "observed_at": state.get("observed_at"),
+            "fetched_at": now_utc().isoformat(),
+            "data_freshness": state.get("freshness"),
+            "age_seconds": state.get("age_seconds"),
+        }
+    )
+    return enriched
+
+
+def identity_fields() -> dict[str, Any]:
+    return build_identity(
+        data_contract_version=DATA_CONTRACT_VERSION,
+        local_engine_version=LOCAL_ENGINE_VERSION,
+    )
 
 
 def is_known_asset_address(address: str) -> bool:
@@ -476,6 +530,7 @@ def health():
     routescan = collector_routescan_api_health()
     return jsonify(
         {
+            **identity_fields(),
             "ok": True,
             "degraded": not (known_tokens.get("ok") and routescan.get("ok")),
             "network": network,
@@ -721,7 +776,7 @@ def lookup_cached_score(address: str) -> dict[str, Any] | None:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT full_record
+                    SELECT full_record, created_at
                     FROM avax_scans
                     WHERE lower(contract_address) = lower(%s)
                     ORDER BY created_at DESC
@@ -735,7 +790,17 @@ def lookup_cached_score(address: str) -> dict[str, Any] | None:
         record = row[0]
         if isinstance(record, str):
             record = json.loads(record)
-        return compact_score_response(record, "postgres_cache")
+        # The timestamp is selected and checked even though nothing calls this
+        # function today. On the Solana service the equivalent query returned a
+        # row of any age as a current verdict, and there the query did not
+        # select created_at either -- so it could not have aged the row even if
+        # someone had wanted to. Bounded here so that wiring it up cannot
+        # recreate that.
+        state = assess(row[1], max_age=STORED_SCAN_MAX_AGE)
+        response = with_freshness(compact_score_response(record, "postgres_cache"), state)
+        if is_servable_as_current(state):
+            return response
+        return withhold_verdict(response, state)
     except Exception:
         return None
 
@@ -1219,7 +1284,7 @@ def score_with_private_engine(address: str) -> dict[str, Any]:
 def public_score():
     address = str(request.args.get("address") or "").strip()
     if not Web3.is_address(address):
-        return jsonify({"ok": False, "error": "Invalid Avalanche token address"}), 400
+        return jsonify({**identity_fields(), "ok": False, "error": "Invalid Avalanche token address"}), 400
 
     # Cache-first, as the Builder API advertises. A full score is ~6s of live
     # dexscreener, holder-intel and on-chain reads; without this every repeat
@@ -1231,7 +1296,18 @@ def public_score():
     if not force_fresh:
         cached = get_cached_report(address)
         if cached is not None:
-            return jsonify(compact_score_response(cached, cached.get("source") or "private_scoring_engine"))
+            observed_at = cached_observed_at(address)
+            state = assess(observed_at, max_age=MEMORY_CACHE_MAX_AGE)
+            response = with_freshness(
+                compact_score_response(cached, cached.get("source") or "private_scoring_engine"),
+                state,
+            )
+            # get_cached_report already drops entries past the TTL, so this is
+            # belt and braces -- but an entry with no usable timestamp must not
+            # be served as current merely because the eviction check let it by.
+            if is_servable_as_current(state):
+                return jsonify(response)
+            return jsonify(withhold_verdict(response, state))
 
     try:
         report = score_with_private_engine(address)
@@ -1240,7 +1316,17 @@ def public_score():
     except Exception as exc:
         report = insufficient_data_report(address, f"Private scoring engine failed: {type(exc).__name__}")
     put_cached_report(address, report)
-    return jsonify(compact_score_response(report, report.get("source") or "private_scoring_engine"))
+    # Read the stored value back rather than taking a second clock reading:
+    # one report has one observation time, and two `now_utc()` calls
+    # microseconds apart would make a cache hit look like a different
+    # observation from the computation that produced it.
+    observed = cached_observed_at(address) or now_utc().isoformat()
+    return jsonify(
+        with_freshness(
+            compact_score_response(report, report.get("source") or "private_scoring_engine"),
+            {"freshness": "FRESH", "observed_at": observed, "age_seconds": 0, "reason": ""},
+        )
+    )
 
 
 @app.route("/api/recent-scans", methods=["GET", "POST", "OPTIONS"])
@@ -1296,7 +1382,7 @@ def api_scan():
     use_cached = bool(payload.get("use_cached"))
 
     if not Web3.is_address(address):
-        return jsonify({"ok": False, "error": "Invalid Avalanche token address"}), 400
+        return jsonify({**identity_fields(), "ok": False, "error": "Invalid Avalanche token address"}), 400
 
     report = get_cached_report(address) if use_cached else None
     if report is None:
