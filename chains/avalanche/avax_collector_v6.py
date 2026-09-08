@@ -1582,7 +1582,15 @@ def build_training_record_v6(
     avax_risk_reasons = avax_risk_reasons or []
     risk_percent = int(risk_percent if risk_percent is not None else 0)
 
-    if creator_stats["total"] == 0:
+    # `total == 0` alone stopped being a fact about the deployer once the API
+    # started reading this history from Postgres: it now also covers "the
+    # lookup failed" and "the address is a factory we deliberately skip".
+    # Announcing "no previous tokens" in those cases states something we did
+    # not establish.
+    creator_status = str(creator_stats.get("status") or STATUS_OK).upper()
+    if creator_status in (STATUS_FETCH_FAILED, STATUS_NOT_QUERIED):
+        creator_risk = f"UNKNOWN - deployer history unavailable ({creator_status})"
+    elif creator_stats["total"] == 0:
         creator_risk = "NEW - no previous tokens"
     elif creator_stats["rug_rate"] >= 80:
         creator_risk = f"HIGH RISK - {creator_stats['rug_rate']}% rug rate ({creator_stats['danger']}/{creator_stats['total']})"
