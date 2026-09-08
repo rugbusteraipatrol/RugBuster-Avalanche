@@ -30,13 +30,16 @@ from network_config import NETWORKS, load_env, resolve_network, resolve_rpc  # n
 from avax_collector_v6 import (  # noqa: E402
     get_avax_balance as collector_get_avax_balance,
     get_contract_transactions as collector_get_contract_transactions,
-    get_creator_stats as collector_get_creator_stats,
     get_token_info_avax as collector_get_token_info_avax,
     run_cia_analysis_avax as collector_run_cia_analysis_avax,
     run_v5_analysis_avax as collector_run_v5_analysis_avax,
     run_v6_analysis_avax as collector_run_v6_analysis_avax,
     routescan_api_health as collector_routescan_api_health,
     summarize_data_completeness as collector_summarize_data_completeness,
+    STATUS_FETCH_FAILED as collector_STATUS_FETCH_FAILED,
+    STATUS_NOT_FOUND as collector_STATUS_NOT_FOUND,
+    STATUS_NOT_QUERIED as collector_STATUS_NOT_QUERIED,
+    STATUS_OK as collector_STATUS_OK,
 )
 
 load_env()
@@ -296,6 +299,127 @@ def get_cached_report(address: str) -> dict[str, Any] | None:
 
 def put_cached_report(address: str, report: dict[str, Any]) -> None:
     SCAN_CACHE[cache_key(address)] = {"ts": time.time(), "report": report}
+
+
+# --- deployer history -------------------------------------------------------
+#
+# `avax_collector_v6.get_creator_stats` reads an OrderedDict that the collector
+# fills as it crawls. The API is a different process, so that dict is always
+# empty here and every scan reported `total: 0, danger: 0, rug_rate: 0.0` --
+# for a serial rugger exactly as for a first-time deployer. The history is in
+# Postgres the whole time: 11,311 AVAX scans carry a creator across 4,631
+# distinct addresses, and the worst of them has 573 DANGER results out of 593
+# tokens. The product's central claim was reading from the wrong place.
+#
+# `total: 0` also cannot say *why* it is zero. An unreachable database and a
+# deployer with no prior tokens produced the same three numbers, and the
+# scoring engine treats a 0% rug rate as reassuring, so an outage read as a
+# clean record. Status travels with the numbers for that reason.
+
+CREATOR_HISTORY_CACHE: dict[str, dict[str, Any]] = {}
+CREATOR_HISTORY_TTL_SECONDS = 600
+
+# A factory deploys on behalf of whoever calls it, so its record describes the
+# chain's traffic rather than one actor's intent. Counting it would put the
+# same rug rate on every token launched through Trader Joe.
+KNOWN_FACTORY_ADDRESSES = {
+    "0x9ad6c38be94206ca50bb0d90783181662f0cfa10",  # Trader Joe factory
+}
+
+# Below this a rug rate is arithmetic, not a record: one DANGER out of one
+# token is 100%, and it says almost nothing about the next one.
+MIN_TOKENS_FOR_CREATOR_RATE = 3
+
+
+def _empty_creator_stats(status: str, reason: str) -> dict[str, Any]:
+    """Shape kept stable for existing callers; status says what it means."""
+    return {
+        "total": 0,
+        "danger": 0,
+        "rug_rate": 0.0,
+        "status": status,
+        "status_reason": reason,
+    }
+
+
+def lookup_creator_stats(deployer: str) -> dict[str, Any]:
+    """Prior scan results for this deployer, read from Postgres.
+
+    Returns the same keys the collector's in-memory version returned, plus a
+    status. A caller that ignores the status gets the old, conservative
+    numbers; a caller that reads it can tell "no prior tokens" from "we could
+    not look".
+    """
+    if not deployer:
+        return _empty_creator_stats(
+            collector_STATUS_NOT_QUERIED, "no deployer address resolved for this token"
+        )
+
+    key = deployer.lower()
+
+    if key in KNOWN_FACTORY_ADDRESSES:
+        return _empty_creator_stats(
+            collector_STATUS_NOT_QUERIED,
+            "deployer is a known factory contract; its history is not one actor's record",
+        )
+
+    cached = CREATOR_HISTORY_CACHE.get(key)
+    if cached and time.time() - cached["ts"] <= CREATOR_HISTORY_TTL_SECONDS:
+        return dict(cached["stats"])
+
+    if not DATABASE_URL or psycopg2 is None:
+        return _empty_creator_stats(
+            collector_STATUS_FETCH_FAILED, "scan history database is not configured"
+        )
+
+    try:
+        with psycopg2.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                      count(*) AS total,
+                      count(*) FILTER (WHERE label = 'DANGER') AS danger
+                    FROM avax_scans
+                    WHERE lower(full_record->>'creator') = %s
+                    """,
+                    (key,),
+                )
+                row = cur.fetchone()
+    except Exception as exc:  # noqa: BLE001 - any failure here must not read as clean
+        log.warning("creator history lookup failed for %s: %s", deployer, exc)
+        return _empty_creator_stats(
+            collector_STATUS_FETCH_FAILED, f"scan history query failed: {type(exc).__name__}"
+        )
+
+    total = int((row or [0, 0])[0] or 0)
+    danger = int((row or [0, 0])[1] or 0)
+
+    if total == 0:
+        return _empty_creator_stats(
+            collector_STATUS_NOT_FOUND, "no prior scans recorded for this deployer"
+        )
+
+    stats: dict[str, Any] = {
+        "total": total,
+        "danger": danger,
+        "status": collector_STATUS_OK,
+        "status_reason": "",
+    }
+    if total < MIN_TOKENS_FOR_CREATOR_RATE:
+        # Report what was seen, but do not turn it into a rate the scorer will
+        # act on -- one prior token cannot carry a percentage.
+        stats["rug_rate"] = 0.0
+        stats["status"] = collector_STATUS_NOT_FOUND
+        stats["status_reason"] = (
+            f"only {total} prior token(s); below the {MIN_TOKENS_FOR_CREATOR_RATE} "
+            "needed for a meaningful rate"
+        )
+    else:
+        stats["rug_rate"] = round(danger / total * 100, 1)
+
+    CREATOR_HISTORY_CACHE[key] = {"ts": time.time(), "stats": dict(stats)}
+    return stats
 
 
 def is_known_asset_address(address: str) -> bool:
@@ -1020,7 +1144,7 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
             token_info["token_age_days"] = round(max(0.0, (time.time() - deploy_timestamp) / 86400.0), 1)
 
     deployer_balance = collector_get_avax_balance(deployer) if deployer else 0.0
-    creator_stats = collector_get_creator_stats(deployer)
+    creator_stats = lookup_creator_stats(deployer)
     cia = collector_run_cia_analysis_avax(checksum, deployer, deploy_timestamp)
     tx_amounts_raw = cia.get("entropy", {}).get("dominant_amount", 0)
     tx_amounts = [tx_amounts_raw] if tx_amounts_raw else []
