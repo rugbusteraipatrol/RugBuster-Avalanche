@@ -229,3 +229,75 @@ def test_a_recent_stored_scan_row_would_be_served():
 
     assert result["data_freshness"] == FRESH
     assert result["label"] != "UNKNOWN"
+
+
+# --- withholding must neutralise every field that carries a verdict --------
+
+def test_withholding_blanks_every_verdict_field_not_just_the_label():
+    """Found by self-review, and it was live: this module was written for the
+    Solana response shape (`label`/`risk_score`) and reused here, where the
+    verdict also lives in `rug_score`, `rug_status` and the speculation pair.
+    Blanking only the label left a caller reading `rug_score` the stale number.
+    """
+    from freshness import withhold_verdict
+
+    stale = {
+        "label": "GOOD",
+        "rug_score": 12,
+        "rug_status": "LOW",
+        "speculation_score": 30,
+        "speculation_status": "LOW",
+        "token_name": "Example",
+    }
+    out = withhold_verdict(stale, assess(None, now=NOW))
+
+    assert out["label"] == "UNKNOWN"
+    for field in ("rug_score", "rug_status", "speculation_score", "speculation_status"):
+        assert out[field] is None, f"{field} still carries the withheld verdict"
+        assert out[f"last_known_{field}"] == stale[field]
+    assert out["token_name"] == "Example", "non-verdict fields must survive"
+
+
+def test_no_verdict_field_survives_withholding_on_a_real_response():
+    """The generic version: whatever the response shape is, nothing that could
+    be read as a current verdict may keep its value."""
+    from freshness import VERDICT_FIELDS, withhold_verdict
+
+    with mock.patch.object(server, "score_with_private_engine", return_value=_report()):
+        served = _get()
+    withheld = withhold_verdict(served, assess(None, now=NOW))
+
+    for field in VERDICT_FIELDS:
+        if field not in served or served[field] is None:
+            continue
+        assert withheld[field] in (None, "UNKNOWN"), (
+            f"{field} survived withholding with {withheld[field]!r}"
+        )
+
+
+# --- every route that returns a verdict must say which build produced it ----
+
+def test_the_scan_route_carries_identity():
+    with mock.patch.object(server, "score_with_private_engine", return_value=_report()), \
+         mock.patch.object(server, "fetch_deepseek_verdict", return_value=None):
+        body = server.app.test_client().post(
+            "/api/scan", json={"address": WAVAX}
+        ).get_json()
+    assert body.get("build_commit"), "/api/scan returned a verdict with no build identity"
+
+
+def test_the_portfolio_route_carries_identity():
+    with mock.patch.object(server, "fetch_portfolio_tokens", return_value=[]), \
+         mock.patch.object(server, "build_portfolio_reports", return_value=[]):
+        body = server.app.test_client().post(
+            "/api/portfolio", json={"address": WAVAX}
+        ).get_json()
+    assert body.get("build_commit"), "/api/portfolio returned a verdict with no build identity"
+
+
+def test_an_invalid_wallet_response_carries_identity():
+    body = server.app.test_client().post(
+        "/api/portfolio", json={"address": "nonsense"}
+    ).get_json()
+    assert body["ok"] is False
+    assert "build_commit" in body

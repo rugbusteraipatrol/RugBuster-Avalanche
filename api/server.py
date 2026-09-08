@@ -1389,7 +1389,7 @@ def api_scan():
         try:
             report = score_with_private_engine(address)
         except Exception as exc:
-            return jsonify({"ok": False, "error": str(exc)}), 400
+            return jsonify({**identity_fields(), "ok": False, "error": str(exc)}), 400
         if not report.get("ai_verdict"):
             try:
                 report["ai_verdict"] = fetch_deepseek_verdict(report)
@@ -1404,24 +1404,25 @@ def api_scan():
         try:
             publish_result = publish_report(report)
         except Exception as exc:
-            return jsonify({"ok": False, "error": f"Registry publish failed: {exc}", "report": report}), 400
+            return jsonify({**identity_fields(), "ok": False, "error": f"Registry publish failed: {exc}", "report": report}), 400
 
     module_publish_result = None
     if publish_modules:
         try:
             module_publish_result = publish_report_modules(report)
         except Exception as exc:
-            return jsonify({"ok": False, "error": f"Module registry publish failed: {exc}", "report": report}), 400
+            return jsonify({**identity_fields(), "ok": False, "error": f"Module registry publish failed: {exc}", "report": report}), 400
 
     telegram_result = None
     if notify:
         try:
             telegram_result = notify_report(report, publish_result, module_publish_result)
         except Exception as exc:
-            return jsonify({"ok": False, "error": f"Telegram alert failed: {exc}", "report": report}), 400
+            return jsonify({**identity_fields(), "ok": False, "error": f"Telegram alert failed: {exc}", "report": report}), 400
 
     return jsonify(
         {
+            **identity_fields(),
             "ok": True,
             "report": report,
             "published": publish_result,
@@ -1440,12 +1441,12 @@ def api_portfolio():
     address = str(payload.get("address") or "").strip()
 
     if not Web3.is_address(address):
-        return jsonify({"ok": False, "error": "Invalid Avalanche wallet address"}), 400
+        return jsonify({**identity_fields(), "ok": False, "error": "Invalid Avalanche wallet address"}), 400
 
     try:
         tokens = fetch_portfolio_tokens(address)
     except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 400
+        return jsonify({**identity_fields(), "ok": False, "error": str(exc)}), 400
 
     entries = build_portfolio_reports(address, tokens)
     suspicious = any(
@@ -1453,7 +1454,13 @@ def api_portfolio():
         or entry["report"]["speculation_status"] == "HIGH"
         for entry in entries
     )
-    return jsonify({"ok": True, "wallet": Web3.to_checksum_address(address), "entries": entries, "suspicious": suspicious})
+    return jsonify({
+        **identity_fields(),
+        "ok": True,
+        "wallet": Web3.to_checksum_address(address),
+        "entries": entries,
+        "suspicious": suspicious,
+    })
 
 
 @app.route("/health/telegram", methods=["GET"])
