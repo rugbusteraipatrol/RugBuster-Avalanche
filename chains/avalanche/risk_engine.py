@@ -94,7 +94,7 @@ def track_record_factor(metadata: dict[str, Any]) -> float:
         or bool(metadata.get("cia_wash_detected"))
         or bool(metadata.get("cia_bot_farm"))
         or bool(metadata.get("v6_is_fast_rug"))
-        or float(metadata.get("creator_rug_rate") or 0) >= 40
+        or float(metadata.get("creator_prior_danger_rate") or 0) >= 40
     )
     if abuse_evidence:
         return 0.0
@@ -163,7 +163,7 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
     top5 = float(metadata.get("v6_top5_concentration_pct") or metadata.get("top5_holder_pct") or 0)
     concentration = str(metadata.get("v6_concentration_risk") or "").upper()
     velocity = float(metadata.get("v6_rug_velocity_score") or metadata.get("rug_velocity_score") or 0)
-    creator_rug_rate = float(metadata.get("creator_rug_rate") or 0)
+    creator_prior_danger_rate = float(metadata.get("creator_prior_danger_rate") or 0)
     holders = int(metadata.get("holders_count") or 0)
     deployer_balance = float(metadata.get("deployer_balance_avax") or 0)
     is_known_chain_asset = bool(metadata.get("is_known_chain_asset") or metadata.get("is_known_avax_asset"))
@@ -228,12 +228,23 @@ def score_avax_security(metadata: dict[str, Any]) -> ScoreResult:
     if metadata.get("v6_is_fast_rug") or velocity >= 0.65:
         score += add_reason(reasons, 20, f"High rug velocity score {velocity}")
 
-    if creator_rug_rate >= 80:
+    # The wording matters as much as the threshold. "rug rate" told a reader
+    # these were confirmed rug events; they are this scanner's own earlier
+    # DANGER labels on the same deployer's other tokens. That is still a real
+    # signal -- it is simply a different claim, and stating the stronger one
+    # would be citing ourselves as independent evidence.
+    if creator_prior_danger_rate >= 80:
         score = max(score, 88)
-        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
-    elif creator_rug_rate >= 40:
+        reasons.append(
+            f"Deployer history: {creator_prior_danger_rate:.1f}% of this deployer's "
+            "previously scanned tokens were flagged by this scanner"
+        )
+    elif creator_prior_danger_rate >= 40:
         score = max(score, 72)
-        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
+        reasons.append(
+            f"Deployer history: {creator_prior_danger_rate:.1f}% of this deployer's "
+            "previously scanned tokens were flagged by this scanner"
+        )
 
     if holders and holders < 10:
         score += add_reason(reasons, 8, f"Very few holders ({holders})")

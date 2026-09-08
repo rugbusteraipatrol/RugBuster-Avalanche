@@ -385,7 +385,7 @@ def identity_fields() -> dict[str, Any]:
 #
 # `avax_collector_v6.get_creator_stats` reads an OrderedDict that the collector
 # fills as it crawls. The API is a different process, so that dict is always
-# empty here and every scan reported `total: 0, danger: 0, rug_rate: 0.0` --
+# empty here and every scan reported zero prior tokens for every deployer --
 # for a serial rugger exactly as for a first-time deployer. The history is in
 # Postgres the whole time: 11,311 AVAX scans carry a creator across 4,631
 # distinct addresses, and the worst of them has 573 DANGER results out of 593
@@ -416,7 +416,7 @@ def _empty_creator_stats(status: str, reason: str) -> dict[str, Any]:
     return {
         "total": 0,
         "danger": 0,
-        "rug_rate": 0.0,
+        "prior_danger_rate_pct": 0.0,
         "status": status,
         "status_reason": reason,
     }
@@ -480,6 +480,12 @@ def lookup_creator_stats(deployer: str) -> dict[str, Any]:
             collector_STATUS_NOT_FOUND, "no prior scans recorded for this deployer"
         )
 
+    # Named for what it counts. `rug_rate` implied independently confirmed rug
+    # events; these are this scanner's own earlier DANGER labels on the same
+    # deployer's tokens. Reusing our own verdicts as evidence would let one
+    # mistake harden into a record and then justify the next one, so the field
+    # says whose labels they are and `confirmed_incidents` stays a separate,
+    # uncollected thing.
     stats: dict[str, Any] = {
         "total": total,
         "danger": danger,
@@ -489,14 +495,14 @@ def lookup_creator_stats(deployer: str) -> dict[str, Any]:
     if total < MIN_TOKENS_FOR_CREATOR_RATE:
         # Report what was seen, but do not turn it into a rate the scorer will
         # act on -- one prior token cannot carry a percentage.
-        stats["rug_rate"] = 0.0
+        stats["prior_danger_rate_pct"] = 0.0
         stats["status"] = collector_STATUS_NOT_FOUND
         stats["status_reason"] = (
             f"only {total} prior token(s); below the {MIN_TOKENS_FOR_CREATOR_RATE} "
             "needed for a meaningful rate"
         )
     else:
-        stats["rug_rate"] = round(danger / total * 100, 1)
+        stats["prior_danger_rate_pct"] = round(danger / total * 100, 1)
 
     CREATOR_HISTORY_CACHE[key] = {"ts": time.time(), "stats": dict(stats)}
     return stats
@@ -1157,7 +1163,7 @@ def flatten_intel_for_scoring(cia: dict[str, Any], v6: dict[str, Any], creator_s
         "cia_bot_pattern": bool(entropy.get("is_bot_pattern")),
         "cia_wash_detected": bool(wash.get("wash_detected")),
         "cia_bot_farm": bool(cluster.get("is_bot_farm")),
-        "creator_rug_rate": float((creator_stats or {}).get("rug_rate") or 0.0),
+        "creator_prior_danger_rate": float((creator_stats or {}).get("prior_danger_rate_pct") or 0.0),
         # Carry the per-module status through as well. Every boolean above
         # reads False both when a module said "no" and when it never managed
         # to look; the scorer needs to be able to tell those apart before it
@@ -1252,7 +1258,7 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
         tx_amounts,
         holder_count,
         cia,
-        creator_stats.get("rug_rate", 0.0),
+        creator_stats.get("prior_danger_rate_pct", 0.0),
     )
     v6 = collector_run_v6_analysis_avax(checksum, deployer, deploy_timestamp)
     token_info["deployer"] = deployer

@@ -54,20 +54,20 @@ def _with_db(row):
 
 # --- the signal that was missing ---
 
-def test_a_serial_rugger_is_now_visible():
+def test_a_deployer_we_have_repeatedly_flagged_is_now_visible():
     """0x1f6908b7... in production: 573 DANGER out of 593 tokens."""
     with mock.patch.object(server, "DATABASE_URL", "postgres://x"), _with_db((593, 573)):
         stats = server.lookup_creator_stats("0x1f6908b79ae1f2c87c16f0facc9084d93601c8eb")
     assert stats["total"] == 593
     assert stats["danger"] == 573
-    assert stats["rug_rate"] == 96.6
+    assert stats["prior_danger_rate_pct"] == 96.6  # our own DANGER labels, not confirmed rugs
     assert stats["status"] == "OK"
 
 
 def test_a_clean_deployer_with_a_real_record_reads_as_clean():
     with mock.patch.object(server, "DATABASE_URL", "postgres://x"), _with_db((40, 0)):
         stats = server.lookup_creator_stats("0xabc")
-    assert stats["rug_rate"] == 0.0
+    assert stats["prior_danger_rate_pct"] == 0.0
     assert stats["status"] == "OK"
 
 
@@ -79,7 +79,7 @@ def test_database_unreachable_is_not_a_clean_history():
          mock.patch.object(server, "psycopg2", failing):
         stats = server.lookup_creator_stats("0xabc")
     assert stats["status"] == "FETCH_FAILED"
-    assert stats["rug_rate"] == 0.0        # shape unchanged...
+    assert stats["prior_danger_rate_pct"] == 0.0        # shape unchanged...
     assert stats["status_reason"]          # ...but no longer a claim
 
 
@@ -108,16 +108,16 @@ def test_a_factory_contract_is_excluded():
     stats = server.lookup_creator_stats("0x9AD6c38BE94206cA50bb0d90783181662f0Cfa10")
     assert stats["status"] == "NOT_QUERIED"
     assert "factory" in stats["status_reason"]
-    assert stats["rug_rate"] == 0.0
+    assert stats["prior_danger_rate_pct"] == 0.0
 
 
-def test_one_prior_token_does_not_become_a_100_percent_rug_rate():
+def test_one_prior_token_does_not_become_a_100_percent_danger_rate():
     """One DANGER out of one is arithmetic, not a record."""
     with mock.patch.object(server, "DATABASE_URL", "postgres://x"), _with_db((1, 1)):
         stats = server.lookup_creator_stats("0xabc")
     assert stats["total"] == 1
     assert stats["danger"] == 1
-    assert stats["rug_rate"] == 0.0
+    assert stats["prior_danger_rate_pct"] == 0.0
     assert stats["status"] == "NOT_FOUND"
     assert "below the" in stats["status_reason"]
 
@@ -125,7 +125,7 @@ def test_one_prior_token_does_not_become_a_100_percent_rug_rate():
 def test_the_rate_starts_counting_at_the_documented_threshold():
     with mock.patch.object(server, "DATABASE_URL", "postgres://x"), _with_db((3, 3)):
         stats = server.lookup_creator_stats("0xabc")
-    assert stats["rug_rate"] == 100.0
+    assert stats["prior_danger_rate_pct"] == 100.0
     assert stats["status"] == "OK"
 
 
@@ -154,4 +154,33 @@ def test_lookup_is_case_insensitive_on_the_deployer_address():
         upper = server.lookup_creator_stats("0xABCDEF")
     with mock.patch.object(server, "DATABASE_URL", "postgres://x"), _with_db((20, 4)):
         lower = server.lookup_creator_stats("0xabcdef")
-    assert upper["rug_rate"] == lower["rug_rate"] == 20.0
+    assert upper["prior_danger_rate_pct"] == lower["prior_danger_rate_pct"] == 20.0
+
+
+# --- the name must keep saying whose labels these are ----------------------
+
+def test_the_field_is_not_called_a_rug_rate():
+    """An independent review named this: counting our own earlier DANGER
+    verdicts and calling the ratio a rug rate presents the scanner's own
+    guesses as confirmed events, so one mistake can harden into a record and
+    justify the next. The name is the only thing carrying that distinction."""
+    with mock.patch.object(server, "DATABASE_URL", "postgres://x"), _with_db((100, 90)):
+        stats = server.lookup_creator_stats("0xabc")
+    assert "prior_danger_rate_pct" in stats
+    assert "rug_rate" not in stats
+
+
+def test_the_user_facing_reason_does_not_claim_confirmed_rugs():
+    import sys as _sys
+    _sys.path.insert(0, str(REPO_ROOT / "chains" / "avalanche"))
+    from risk_engine import score_rug_risk
+
+    result = score_rug_risk({
+        "name": "Example", "symbol": "EX", "decimals": 18,
+        "total_supply": 10**24, "holders_count": 5000, "token_age_days": 400,
+        "has_liquidity_evidence": True, "liquidity_usd": 2_000_000,
+        "creator_prior_danger_rate": 90.0,
+    })
+    joined = " ".join(result.reasons).lower()
+    assert "rug rate" not in joined, "the reason still claims confirmed rug events"
+    assert "flagged by this scanner" in joined
