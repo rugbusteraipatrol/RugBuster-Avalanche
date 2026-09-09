@@ -306,3 +306,85 @@ def test_an_invalid_wallet_response_carries_identity():
     ).get_json()
     assert body["ok"] is False
     assert "build_commit" in body
+
+
+# --- a read failure is not a verdict, and a withheld verdict says why -------
+
+def test_a_failed_chain_read_is_never_reported_as_not_a_token():
+    """A rate-limited RPC used to reach the caller as NOT_A_TOKEN -- a claim
+    about the contract, made on the strength of our failure to read it.
+
+    The two are opposite claims: one is about our reach, the other about the
+    address. `call_optional` returned None for both, and the caller could not
+    tell them apart."""
+    import server
+
+    class _Failing:
+        class functions:
+            @staticmethod
+            def name():
+                raise ConnectionError("rpc")
+
+    value, error = server.call_optional(_Failing, "name")
+    assert value is None
+    assert error == "ConnectionError", "the reason must survive the call"
+
+
+def test_the_read_error_names_the_field_that_failed():
+    import server
+
+    report = server.insufficient_data_report(
+        "0x0000000000000000000000000000000000000001",
+        "The chain could not be read for this address: name=ConnectionError",
+    )
+    assert report["label"] == "INSUFFICIENT_DATA"
+    assert report["rug_status"] == "INSUFFICIENT_DATA"
+    assert any("ConnectionError" in gap for gap in report["blocking_data_gaps"])
+    assert report.get("source") != "not_a_token_guard"
+
+
+def test_every_withheld_verdict_carries_its_reason():
+    """A caller seeing INSUFFICIENT_DATA had no way to tell which check was
+    missing: the engine computed blocking_data_gaps and the API dropped it."""
+    import server
+
+    report = server.insufficient_data_report(
+        "0x0000000000000000000000000000000000000001", "engine unreachable")
+    assert report["blocking_data_gaps"] == ["engine unreachable"]
+
+
+def test_a_partly_throttled_read_is_retried_before_any_claim():
+    """The first version of this fix required all four metadata calls to fail
+    before it would say "unavailable". A partly-throttled read -- two calls
+    through, two not -- slipped back into NOT_A_TOKEN, which is the claim it
+    was written to prevent.
+
+    One attempt cannot separate them: web3 raises the same error when a
+    contract has no such function and when the node returns nothing. What
+    separates them is repetition, so the read is retried once and only a second
+    failure may become a finding.
+    """
+    import server
+
+    calls = {"n": 0}
+
+    class _Recovers:
+        class functions:
+            @staticmethod
+            def decimals():
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise ConnectionError("throttled")
+                return 18
+
+    first, first_error = server.call_optional(_Recovers, "decimals")
+    assert first is None and first_error == "ConnectionError"
+    second, second_error = server.call_optional(_Recovers, "decimals")
+    assert second == 18 and second_error is None, (
+        "a retried read must be able to succeed, or the retry proves nothing"
+    )
+
+
+def test_the_retry_pause_is_short_enough_to_serve_a_caller():
+    import server
+    assert 0 < server.RETRY_PAUSE_SECONDS <= 3

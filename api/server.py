@@ -530,7 +530,7 @@ def validate_known_token_metadata(web3: Web3) -> dict[str, Any]:
                 errors.append(f"{expected.get('symbol')} {checksum}: no bytecode")
                 continue
             token = web3.eth.contract(address=checksum, abi=ERC20_ABI)
-            symbol = call_optional(token, "symbol")
+            symbol, _symbol_error = call_optional(token, "symbol")
             expected_symbol = str(expected.get("symbol") or "").lower()
             if expected_symbol and str(symbol or "").lower() != expected_symbol:
                 errors.append(f"{expected.get('symbol')} {checksum}: symbol={symbol!r}")
@@ -1187,6 +1187,12 @@ def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str
     web3 = get_web3()
     validate_known_token_metadata(web3)
     onchain = get_onchain_metadata(web3, checksum)
+    if onchain.get("read_failed"):
+        raise TokenReadUnavailable(
+            "The chain could not be read for this address: "
+            + ", ".join(f"{field}={error}" for field, error
+                        in (onchain.get("read_errors") or {}).items() if error)
+        )
     if not onchain.get("is_probable_erc20"):
         raise NotTokenAddress("Address does not expose a readable ERC-20 token interface")
 
@@ -1346,6 +1352,11 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
         "market_liquidity_risk": market_risk,
         "data_confidence": result.get("data_confidence") or result.get("confidence"),
         "confidence": result.get("confidence"),
+        # Why a clean verdict was withheld. The engine has computed this since
+        # 2026.09.1 and it stopped here: a caller saw INSUFFICIENT_DATA with no
+        # way to tell which check was missing. It is copied into the report, so
+        # it is stored with the report and survives a cache hit.
+        "blocking_data_gaps": list(result.get("blocking_data_gaps") or []),
         "has_liquidity_evidence": token_info.get("has_liquidity_evidence"),
         "liquidity_usd": token_info.get("liquidity_usd"),
         "fdv": token_info.get("fdv"),
@@ -1394,6 +1405,7 @@ def insufficient_data_report(address: str, reason: str) -> dict[str, Any]:
         "symbol": "Unknown",
         "label": "INSUFFICIENT_DATA",
         "risk_engine": "rugbuster_private_scoring_engine",
+        "blocking_data_gaps": [reason],
         "risk_percent": None,
         "rug_score": None,
         "rug_status": "INSUFFICIENT_DATA",
@@ -1472,6 +1484,9 @@ def public_score():
 
     try:
         report = score_with_private_engine(address)
+    except TokenReadUnavailable as exc:
+        # Never NOT_A_TOKEN. We did not learn anything about this address.
+        report = insufficient_data_report(address, str(exc))
     except NotTokenAddress as exc:
         report = not_a_token_report(address, str(exc))
     except Exception as exc:
@@ -1762,11 +1777,39 @@ def env_enabled(name: str) -> bool:
     return (os.getenv(name) or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def call_optional(contract, fn_name: str) -> Any | None:
+class TokenReadUnavailable(RuntimeError):
+    """The chain could not be read. Says nothing about the token."""
+
+
+# Errors that mean the node did not answer, as opposed to the contract
+# answering "no". web3 raises BadFunctionCallOutput both when a call reverts
+# and when the node returns nothing, so the two are separated by first
+# establishing whether the address has code at all.
+# Long enough for a throttle window to pass, short enough that a caller
+# waiting on a genuine non-token is not punished for it.
+RETRY_PAUSE_SECONDS = 1.5
+
+TRANSPORT_ERROR_NAMES = (
+    "ConnectionError", "ConnectTimeout", "ReadTimeout", "Timeout",
+    "HTTPError", "TooManyRedirects", "RequestsConnectionError",
+    "ProviderConnectionError", "TimeExhausted", "MaxRetryError",
+    "SSLError", "ChunkedEncodingError", "JSONDecodeError",
+)
+
+
+def call_optional(contract, fn_name: str) -> tuple[Any | None, str | None]:
+    """The value, and the name of the error if one was raised.
+
+    It used to return None for both "the contract has no such function" and
+    "the node did not answer", and the caller then concluded the address was
+    not a token. A rate-limited RPC therefore reached the user as NOT_A_TOKEN
+    -- a claim about the contract, made on the strength of our failure to read
+    it. The two are separated here and judged by the caller.
+    """
     try:
-        return getattr(contract.functions, fn_name)().call()
-    except Exception:
-        return None
+        return getattr(contract.functions, fn_name)().call(), None
+    except Exception as exc:
+        return None, type(exc).__name__
 
 
 def get_web3() -> Web3:
@@ -1814,22 +1857,79 @@ def fetch_portfolio_tokens(address: str) -> list[dict[str, Any]]:
 def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
     checksum = Web3.to_checksum_address(address)
     known = KNOWN_TOKEN_METADATA.get(checksum.lower(), {})
+    code_error = None
     try:
         code = web3.eth.get_code(checksum)
-    except Exception:
-        code = b""
+    except Exception as exc:
+        code, code_error = b"", type(exc).__name__
+
     token = web3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)
-    name = call_optional(token, "name")
-    symbol = call_optional(token, "symbol")
-    decimals = call_optional(token, "decimals")
-    total_supply = call_optional(token, "totalSupply")
+    name, name_error = call_optional(token, "name")
+    symbol, symbol_error = call_optional(token, "symbol")
+    decimals, decimals_error = call_optional(token, "decimals")
+    total_supply, supply_error = call_optional(token, "totalSupply")
     admin_controls = detect_admin_controls(web3, checksum, is_known_asset=bool(known))
     has_readable_metadata = any(
         value is not None and str(value).strip() != ""
         for value in (name, symbol, decimals, total_supply)
     )
+
+    # "The node did not answer" and "this address is not a token" were the same
+    # output. They are opposite claims: one is about our reach, the other about
+    # the contract. A rate-limited RPC used to reach the caller as NOT_A_TOKEN.
+    #
+    # The distinction that can actually be drawn here: if we could not read the
+    # code, or every metadata call failed while the address does have code,
+    # nothing was established and the caller must be told so. If the code was
+    # read and simply exposes no ERC-20 interface, that is a finding.
+    call_errors = [e for e in (name_error, symbol_error, decimals_error, supply_error) if e]
+
+    # One attempt cannot separate the two. web3 raises the same
+    # BadFunctionCallOutput when a contract has no such function and when the
+    # node returns nothing, so "not an ERC-20" and "the node did not answer"
+    # look identical -- which is how a rate-limited RPC reached the caller as
+    # NOT_A_TOKEN. A first version of this fix required *all four* calls to
+    # fail, and a partly-throttled read slipped straight back through.
+    #
+    # What separates them is repetition: a contract without the function fails
+    # the same way every time, a throttled node usually does not. So the read
+    # is retried once before any claim is made about the address, and only a
+    # second failure is allowed to become a finding.
+    if code and call_errors and not (decimals is not None and total_supply is not None):
+        time.sleep(RETRY_PAUSE_SECONDS)
+        retry_name, retry_name_error = call_optional(token, "name")
+        retry_symbol, retry_symbol_error = call_optional(token, "symbol")
+        retry_decimals, retry_decimals_error = call_optional(token, "decimals")
+        retry_supply, retry_supply_error = call_optional(token, "totalSupply")
+        recovered = any(
+            before is None and after is not None
+            for before, after in ((name, retry_name), (symbol, retry_symbol),
+                                  (decimals, retry_decimals), (total_supply, retry_supply))
+        )
+        if recovered:
+            name = name if name is not None else retry_name
+            symbol = symbol if symbol is not None else retry_symbol
+            decimals = decimals if decimals is not None else retry_decimals
+            total_supply = total_supply if total_supply is not None else retry_supply
+            name_error, symbol_error = retry_name_error, retry_symbol_error
+            decimals_error, supply_error = retry_decimals_error, retry_supply_error
+            call_errors = [e for e in (name_error, symbol_error,
+                                       decimals_error, supply_error) if e]
+            has_readable_metadata = any(
+                value is not None and str(value).strip() != ""
+                for value in (name, symbol, decimals, total_supply)
+            )
+
+    read_failed = bool(code_error) or (
+        bool(code) and bool(call_errors) and not has_readable_metadata
+    )
     is_probable_erc20 = bool(known) or (bool(code) and decimals is not None and total_supply is not None and has_readable_metadata)
     return {
+        "read_failed": read_failed,
+        "read_errors": {
+            "code": code_error, "name": name_error, "symbol": symbol_error,
+            "decimals": decimals_error, "totalSupply": supply_error,
+        },
         "name": name or known.get("name") or "Unknown",
         "symbol": symbol or known.get("symbol") or "Unknown",
         "decimals": decimals if decimals is not None else known.get("decimals"),
@@ -2007,7 +2107,7 @@ def load_factory_map() -> dict[str, str]:
 
 def get_token_decimals(web3: Web3, address: str) -> int:
     token = web3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)
-    decimals = call_optional(token, "decimals")
+    decimals, _decimals_error = call_optional(token, "decimals")
     return int(decimals) if decimals is not None else 18
 
 

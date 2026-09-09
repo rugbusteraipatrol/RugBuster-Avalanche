@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import random
+import re
 import time
 import statistics
 import hashlib
@@ -662,42 +663,107 @@ def fetch_verified_source(contract_address: str) -> dict:
             "contract_name": result.get("ContractName") or ""}
 
 
+def _find_declaration(lowered: str, signature: str) -> tuple[int, int, int]:
+    """Index of a function declaration, its body start and its body end."""
+    index = lowered.find("function " + signature.lower() + "(")
+    if index < 0:
+        return -1, -1, -1
+    body_start = lowered.find("{", index)
+    if body_start < 0:
+        return index, -1, -1
+    depth = 0
+    for i in range(body_start, len(lowered)):
+        if lowered[i] == "{":
+            depth += 1
+        elif lowered[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return index, body_start, i
+    return index, body_start, -1
+
+
+INTERNAL_CALL = re.compile(r"\b(_[a-z][a-zA-Z0-9_]*)\s*\(")
+
+
+def _spends_allowance(lowered: str, body: str, calls: list[str]) -> bool:
+    """Allowance spent in the body, or in something the body calls."""
+    if any(marker in body for marker in ALLOWANCE_MARKERS):
+        return True
+    for call in calls:
+        start = lowered.find("function " + call + "(")
+        if start < 0:
+            continue
+        _i, b_start, b_end = _find_declaration(lowered, call)
+        if b_start < 0 or b_end < 0:
+            continue
+        if any(marker in lowered[b_start:b_end + 1] for marker in ALLOWANCE_MARKERS):
+            return True
+    return False
+
+
 def confirm_powers_from_source(source: str, possible: list[str]) -> dict:
-    """Read the declarations behind the selectors we matched.
+    """Read the declarations behind the selectors, and say what stayed unread.
 
-    A selector says four bytes appear in the bytecode. It does not say what the
-    function does, who may call it, or whether it checks anything -- and the
-    whole point of this pass is that we stopped pretending otherwise.
+    A selector says four bytes appear in the bytecode. This reads the source
+    for the function those bytes name -- and finding the text is not the same
+    as understanding it. Two things are routinely hidden from a text scan:
 
-    What this establishes, and only this: the function is declared in the
-    verified source, whether its declaration carries an access modifier, and
-    for a two-argument burn whether the body spends an allowance.
+      a modifier whose body is defined elsewhere, or inherited from a base
+      contract the explorer did not flatten into this file;
 
-    What it does not: who holds the role, whether the modifier is what it says,
-    or anything about a contract whose source is not published. Text matching
-    on Solidity is not compilation, so a confirmation here is a stronger claim
-    than a selector and a weaker one than an audit.
+      a restriction inside a function that the declaration calls, rather than
+      in the declaration itself.
+
+    So a reading counts only when every access modifier on the declaration is
+    defined in this same source and every internal call in its body is too. An
+    unresolved reading does not become a power: it is reported as a possible
+    function with an unread restriction, which is a gap in what we checked
+    rather than a finding about the token.
+
+    Even a resolved reading is a text match and not compilation, and it never
+    establishes who holds a role.
     """
-    confirmed, unconfirmed = {}, {}
     lowered = source.lower()
+    readings: dict[str, dict] = {}
+    unread: dict[str, str] = {}
+
     for name in possible:
         signature = name.split("(")[0]
-        marker = f"function {signature}("
-        index = lowered.find(marker.lower())
+        index, body_start, body_end = _find_declaration(lowered, signature)
         if index < 0:
-            unconfirmed[name] = "declaration not found in the published source"
+            unread[name] = "declaration not found in the published source"
             continue
-        body_start = lowered.find("{", index)
-        header = lowered[index:body_start if body_start > 0 else index + 200]
-        body = lowered[body_start:body_start + 600] if body_start > 0 else ""
-        gated = [m for m in ACCESS_MODIFIERS if m in header]
-        spends_allowance = any(m in body for m in ALLOWANCE_MARKERS)
-        confirmed[name] = {
-            "access": "role_gated" if gated else "unrestricted",
-            "modifiers": gated,
-            "spends_allowance": spends_allowance,
+        if body_start < 0 or body_end < 0:
+            unread[name] = "declaration found but its body could not be delimited"
+            continue
+
+        header = lowered[index:body_start]
+        body = lowered[body_start:body_end + 1]
+
+        modifiers = [word for word in ACCESS_MODIFIERS if word in header]
+        unresolved_modifiers = [
+            word for word in modifiers if "modifier " + word not in lowered
+        ]
+        calls = sorted(set(INTERNAL_CALL.findall(body)))
+        unresolved_calls = [
+            call for call in calls if "function " + call + "(" not in lowered
+        ]
+        resolved = not unresolved_modifiers and not unresolved_calls
+
+        readings[name] = {
+            "access": "role_gated" if modifiers else "unrestricted",
+            "modifiers": modifiers,
+            "calls": calls,
+            "unresolved_modifiers": unresolved_modifiers,
+            "unresolved_calls": unresolved_calls,
+            "resolved": resolved,
+            "spends_allowance": _spends_allowance(lowered, body, calls),
         }
-    return {"confirmed": confirmed, "unconfirmed": unconfirmed}
+        if not resolved:
+            unread[name] = ("restriction not resolved: "
+                            + ", ".join(unresolved_modifiers + unresolved_calls))
+
+    return {"readings": readings, "unread": unread}
 
 
 def detect_contract_backdoor_avax(contract_address: str,
@@ -717,7 +783,13 @@ def detect_contract_backdoor_avax(contract_address: str,
         "possible_functions": [],   # selectors matched in the bytecode
         "possible_powers": [],      # what those functions would grant if they
                                     # are what their names say
-        "confirmed_powers": [],     # read from published source
+        # Named for what it is. It was `confirmed_powers`, and that name
+        # claimed more than a text scan can deliver: a modifier can be
+        # inherited and a restriction can sit in a called function. This is
+        # what was read in the published source with every modifier and
+        # internal call resolved in that same source.
+        "source_read_powers": [],
+        "unread_restrictions": {},  # what stayed unresolved, per function
         "control": "unknown",       # who holds the role, never established here
         "powers": [],               # == confirmed_powers, kept for readers
         "source_status": STATUS_NOT_QUERIED,
@@ -778,10 +850,10 @@ def detect_contract_backdoor_avax(contract_address: str,
         result["source_reason"] = source["reason"]
         if source["status"] == STATUS_OK:
             read = confirm_powers_from_source(source["source"], result["possible_functions"])
-            result["declarations"] = read["confirmed"]
-            result["undeclared"] = read["unconfirmed"]
+            result["declarations"] = read["readings"]
+            result["unread_restrictions"] = read["unread"]
             accesses = set()
-            for name, detail in read["confirmed"].items():
+            for name, detail in read["readings"].items():
                 power = FUNCTION_SIGNATURES_BY_NAME.get(name)
                 if not power:
                     continue
@@ -789,20 +861,25 @@ def detect_contract_backdoor_avax(contract_address: str,
                 # whatever its name suggests.
                 if power == POWER_BURN_OTHERS and detail["spends_allowance"]:
                     continue
-                result["confirmed_powers"].append(power)
+                if not detail["resolved"]:
+                    # A restriction we could not read is a gap in our check. It
+                    # does not become a power, and it does not disappear: it
+                    # stays in unread_restrictions.
+                    continue
+                result["source_read_powers"].append(power)
                 result[POWER_FIELDS[power]] = True
                 accesses.add(detail["access"])
-            result["confirmed_powers"] = sorted(set(result["confirmed_powers"]))
+            result["source_read_powers"] = sorted(set(result["source_read_powers"]))
             if accesses:
                 result["control"] = ("role_gated" if accesses == {"role_gated"}
                                      else "mixed" if len(accesses) > 1 else "unrestricted")
 
-    result["powers"] = list(result["confirmed_powers"])
-    result["has_backdoor"] = bool(result["confirmed_powers"])
+    result["powers"] = list(result["source_read_powers"])
+    result["has_backdoor"] = bool(result["source_read_powers"])
     # Scored on what was confirmed. "The bytes for a mint function are present"
     # and "the owner can mint" are different sentences, and this used to say
     # the second on the evidence of the first.
-    result["backdoor_risk_score"] = min(len(result["confirmed_powers"]) * 20, 100)
+    result["backdoor_risk_score"] = min(len(result["source_read_powers"]) * 20, 100)
     return result
 
 # ---------------------------------------------------------------------------

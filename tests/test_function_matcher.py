@@ -8,7 +8,7 @@ Three claims were being made on the evidence of one:
 
 Only the first is read from the chain. The matcher now says so: selectors give
 `possible_functions` and `possible_powers`, and nothing reaches
-`confirmed_powers` without the contract's published source being read.
+`source_read_powers` without the contract's published source being read.
 
 What the source pass establishes, and only this: the function is declared,
 whether its declaration carries an access modifier, and for a two-argument burn
@@ -95,7 +95,7 @@ def test_a_matched_selector_is_possible_and_not_confirmed():
     reading = _read("mint(address,uint256)")
     assert reading["possible_functions"] == ["mint(address,uint256)"]
     assert reading["possible_powers"] == ["mint"]
-    assert reading["confirmed_powers"] == []
+    assert reading["source_read_powers"] == []
     assert reading["has_backdoor"] is False
     assert reading["backdoor_risk_score"] == 0
     assert reading["control"] == "unknown"
@@ -105,15 +105,17 @@ def test_an_unpublished_source_leaves_the_power_possible():
     """The common case, and it is not a finding about the token."""
     reading = _read_with_source("", "mint(address,uint256)")
     assert reading["possible_powers"] == ["mint"]
-    assert reading["confirmed_powers"] == []
+    assert reading["source_read_powers"] == []
     assert reading["source_status"] == collector.STATUS_NOT_FOUND
     assert reading["control"] == "unknown"
 
 
-def test_a_published_source_confirms_the_declaration():
-    source = "function mint(address to, uint256 amount) external onlyOwner { _mint(to, amount); }"
+def test_a_published_source_with_everything_resolved_is_read():
+    source = ("modifier onlyOwner() { require(msg.sender == owner); _; } "
+              "function _mint(address to, uint256 amount) internal { } "
+              "function mint(address to, uint256 amount) external onlyOwner { _mint(to, amount); }")
     reading = _read_with_source(source, "mint(address,uint256)")
-    assert reading["confirmed_powers"] == ["mint"]
+    assert reading["source_read_powers"] == ["mint"]
     assert reading["control"] == "role_gated"
     assert reading["backdoor_risk_score"] == 20
 
@@ -122,39 +124,46 @@ def test_a_selector_whose_function_is_absent_from_the_source_stays_unconfirmed()
     """Four bytes can appear in bytecode without being a function at all."""
     source = "function transfer(address to, uint256 amount) public { }"
     reading = _read_with_source(source, "mint(address,uint256)")
-    assert reading["confirmed_powers"] == []
-    assert "mint(address,uint256)" in reading["undeclared"]
+    assert reading["source_read_powers"] == []
+    assert "mint(address,uint256)" in reading["unread_restrictions"]
 
 
 # --- what the source pass reads --------------------------------------------
 
-def test_an_owner_burn_of_someone_elses_balance_is_confirmed():
-    """TIME's actual declaration, read from the published source."""
-    source = ("function burn(address account, uint256 value) external onlyOwner "
+def test_an_owner_burn_of_someone_elses_balance_is_read():
+    """TIME's actual declaration, with its modifier and callee resolved."""
+    source = ("modifier onlyOwner() { require(msg.sender == owner); _; } "
+              "function _burn(address account, uint256 value) internal { } "
+              "function burn(address account, uint256 value) external onlyOwner "
               "{ _burn(account, value); }")
     reading = _read_with_source(source, "burn(address,uint256)")
-    assert reading["confirmed_powers"] == ["burn_others"]
+    assert reading["source_read_powers"] == ["burn_others"]
     assert reading["control"] == "role_gated"
 
 
 def test_a_burn_that_spends_an_allowance_is_not_that_power():
     """BLS's declaration. The holder approved it, so it cannot touch an
     unwilling one, whatever the function is called."""
-    source = ("function burn(address account, uint256 value) public virtual "
+    source = ("function _spendAllowance(address a, address b, uint256 v) internal { } "
+              "function _msgSender() internal returns (address) { } "
+              "function _burn(address account, uint256 value) internal { } "
+              "function burn(address account, uint256 value) public virtual "
               "{ _spendAllowance(account, _msgSender(), value); _burn(account, value); }")
-    assert _read_with_source(source, "burn(address,uint256)")["confirmed_powers"] == []
+    assert _read_with_source(source, "burn(address,uint256)")["source_read_powers"] == []
 
 
 def test_an_unrestricted_declaration_is_recorded_as_such():
-    source = "function mint(address to, uint256 amount) public { _mint(to, amount); }"
+    source = ("function _mint(address to, uint256 amount) internal { } "
+              "function mint(address to, uint256 amount) public { _mint(to, amount); }")
     reading = _read_with_source(source, "mint(address,uint256)")
-    assert reading["confirmed_powers"] == ["mint"]
+    assert reading["source_read_powers"] == ["mint"]
     assert reading["control"] == "unrestricted"
 
 
 def test_who_holds_the_role_is_never_claimed():
     """`role_gated` says a modifier is present. It does not say whose key."""
-    reading = _read_with_source("function pause() external onlyOwner { }", "pause()")
+    reading = _read_with_source(
+        "modifier onlyOwner() { _; } function pause() external onlyOwner { }", "pause()")
     assert reading["control"] == "role_gated"
     assert reading.get("controller_address") is None
 
@@ -269,7 +278,7 @@ def test_a_failed_source_fetch_confirms_nothing_and_says_so():
     finally:
         collector.requests.post, collector.requests.get = post, get
     assert reading["source_status"] == collector.STATUS_FETCH_FAILED
-    assert reading["confirmed_powers"] == []
+    assert reading["source_read_powers"] == []
     assert reading["possible_powers"] == ["mint"]
 
 
@@ -296,3 +305,51 @@ def test_every_declared_power_has_a_field():
 
 def test_the_old_name_still_resolves_for_anything_importing_it():
     assert set(collector.BACKDOOR_SIGNATURES) == set(collector.FUNCTION_SIGNATURES)
+
+
+# --- a restriction we could not read is a gap, not a power ------------------
+
+def test_an_inherited_modifier_leaves_the_power_unread():
+    """The case review named. `onlyOwner` comes from a base contract the
+    explorer did not flatten into this file, so what it enforces is unknown --
+    and a text scan that ignores that is claiming to have read something it
+    never saw."""
+    source = ("function _mint(address to, uint256 amount) internal { } "
+              "function mint(address to, uint256 amount) external onlyOwner "
+              "{ _mint(to, amount); }")
+    reading = _read_with_source(source, "mint(address,uint256)")
+    assert reading["source_read_powers"] == []
+    assert "mint(address,uint256)" in reading["unread_restrictions"]
+    assert "onlyowner" in reading["unread_restrictions"]["mint(address,uint256)"]
+
+
+def test_an_unresolved_internal_call_leaves_the_power_unread():
+    """A restriction can sit in a function the declaration calls rather than in
+    the declaration. If that function is not in this source, we have not read
+    the restriction."""
+    source = ("modifier onlyOwner() { _; } "
+              "function mint(address to, uint256 amount) external onlyOwner "
+              "{ _checkedMint(to, amount); }")
+    reading = _read_with_source(source, "mint(address,uint256)")
+    assert reading["source_read_powers"] == []
+    assert "_checkedmint" in reading["unread_restrictions"]["mint(address,uint256)"]
+
+
+def test_an_unread_restriction_keeps_the_function_visible():
+    """It must not vanish because we could not resolve it. Possible stays
+    possible and the gap is named."""
+    source = ("function mint(address to, uint256 amount) external onlyOwner { _mint(to, amount); }")
+    reading = _read_with_source(source, "mint(address,uint256)")
+    assert reading["possible_powers"] == ["mint"]
+    assert reading["possible_functions"] == ["mint(address,uint256)"]
+    assert reading["backdoor_risk_score"] == 0
+
+
+def test_an_allowance_spent_in_a_called_function_still_counts():
+    """SDOG's shape: burnFrom delegates to _burnFrom, and the allowance check
+    lives there. Reading only the declaration would have missed it."""
+    source = ("function _burnFrom(address a, uint256 v) internal "
+              "{ allowance(a, msg.sender); } "
+              "function burn(address account, uint256 value) public "
+              "{ _burnFrom(account, value); }")
+    assert _read_with_source(source, "burn(address,uint256)")["source_read_powers"] == []
