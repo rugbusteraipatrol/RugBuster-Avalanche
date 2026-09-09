@@ -593,6 +593,7 @@ FUNCTION_SIGNATURES = {
 
 # Kept under the old name so nothing that imports it breaks; it is now derived.
 BACKDOOR_SIGNATURES = {sig: name for sig, (name, _power) in FUNCTION_SIGNATURES.items()}
+FUNCTION_SIGNATURES_BY_NAME = {name: power for _sig, (name, power) in FUNCTION_SIGNATURES.items()}
 
 OWNERSHIP_MARKERS = {"8da5cb5b", "f2fde38b", "715018a6"}
 
@@ -616,7 +617,91 @@ assert _declared <= set(POWER_FIELDS), (
 )
 
 
-def detect_contract_backdoor_avax(contract_address: str) -> dict:
+ROUTESCAN_SOURCE_URL = (
+    "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api"
+    "?module=contract&action=getsourcecode&address={address}"
+)
+
+# Modifiers that gate a function on a role. Presence of one means the function
+# is not callable by anyone; it does not say who holds the role.
+ACCESS_MODIFIERS = (
+    "onlyowner", "onlyadmin", "ifadmin", "onlyrole", "onlygovernance",
+    "onlyminter", "onlyoperator", "onlymanager", "authorized", "onlydao",
+)
+
+# A burn that spends the caller's allowance cannot touch an unwilling holder.
+ALLOWANCE_MARKERS = ("_spendallowance", "allowance(")
+
+
+def _normalise_source(source: str) -> str:
+    """Explorer sources arrive with their escapes written out as text."""
+    return source.replace('\\r\\n', '\n').replace('\\n', '\n')
+
+
+def fetch_verified_source(contract_address: str) -> dict:
+    """The contract's verified source, if the explorer has one.
+
+    Unverified is the common case and is not a finding about the token. It is
+    the reason a power stays *possible* rather than becoming confirmed.
+    """
+    try:
+        response = requests.get(
+            ROUTESCAN_SOURCE_URL.format(address=contract_address),
+            timeout=RPC_TIMEOUT,
+            headers={"User-Agent": "rugbuster-source/1.0"},
+        )
+        result = (response.json().get("result") or [{}])[0]
+    except Exception as exc:
+        return {"status": STATUS_FETCH_FAILED, "reason": type(exc).__name__,
+                "source": "", "contract_name": ""}
+    source = result.get("SourceCode") or ""
+    if not source:
+        return {"status": STATUS_NOT_FOUND, "reason": "no verified source published",
+                "source": "", "contract_name": result.get("ContractName") or ""}
+    return {"status": STATUS_OK, "reason": "", "source": _normalise_source(source),
+            "contract_name": result.get("ContractName") or ""}
+
+
+def confirm_powers_from_source(source: str, possible: list[str]) -> dict:
+    """Read the declarations behind the selectors we matched.
+
+    A selector says four bytes appear in the bytecode. It does not say what the
+    function does, who may call it, or whether it checks anything -- and the
+    whole point of this pass is that we stopped pretending otherwise.
+
+    What this establishes, and only this: the function is declared in the
+    verified source, whether its declaration carries an access modifier, and
+    for a two-argument burn whether the body spends an allowance.
+
+    What it does not: who holds the role, whether the modifier is what it says,
+    or anything about a contract whose source is not published. Text matching
+    on Solidity is not compilation, so a confirmation here is a stronger claim
+    than a selector and a weaker one than an audit.
+    """
+    confirmed, unconfirmed = {}, {}
+    lowered = source.lower()
+    for name in possible:
+        signature = name.split("(")[0]
+        marker = f"function {signature}("
+        index = lowered.find(marker.lower())
+        if index < 0:
+            unconfirmed[name] = "declaration not found in the published source"
+            continue
+        body_start = lowered.find("{", index)
+        header = lowered[index:body_start if body_start > 0 else index + 200]
+        body = lowered[body_start:body_start + 600] if body_start > 0 else ""
+        gated = [m for m in ACCESS_MODIFIERS if m in header]
+        spends_allowance = any(m in body for m in ALLOWANCE_MARKERS)
+        confirmed[name] = {
+            "access": "role_gated" if gated else "unrestricted",
+            "modifiers": gated,
+            "spends_allowance": spends_allowance,
+        }
+    return {"confirmed": confirmed, "unconfirmed": unconfirmed}
+
+
+def detect_contract_backdoor_avax(contract_address: str,
+                                  confirm_from_source: bool = True) -> dict:
     result = {
         "has_backdoor": False,
         "backdoor_functions": [],
@@ -628,7 +713,14 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
         "has_burn_others": False,
         "is_proxy": False,
         "has_owner": False,
-        "powers": [],
+        # Three separate claims, and they were one field before.
+        "possible_functions": [],   # selectors matched in the bytecode
+        "possible_powers": [],      # what those functions would grant if they
+                                    # are what their names say
+        "confirmed_powers": [],     # read from published source
+        "control": "unknown",       # who holds the role, never established here
+        "powers": [],               # == confirmed_powers, kept for readers
+        "source_status": STATUS_NOT_QUERIED,
         "backdoor_risk_score": 0,
         # "no backdoor found" and "never managed to read the bytecode" were the
         # same output before this field existed. They are not the same claim.
@@ -657,19 +749,18 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
                 if sig not in bytecode_clean:
                     continue
                 result["backdoor_functions"].append(func_name)
+                result["possible_functions"].append(func_name)
                 if sig in PROXY_MARKERS:
                     result["is_proxy"] = True
                 if sig in OWNERSHIP_MARKERS:
                     result["has_owner"] = True
                 if power:
-                    result["powers"].append(power)
-                    result[POWER_FIELDS[power]] = True
+                    result["possible_powers"].append(power)
 
-            result["powers"] = sorted(set(result["powers"]))
-            # A function that grants the controller nothing is not a backdoor.
-            # This used to be "any known selector was found", which is how a
-            # plain ERC-20 burn made a bridge asset look backdoored.
-            result["has_backdoor"] = bool(result["powers"])
+            # Deliberately leaves confirmed_powers empty. A selector is four
+            # bytes in the bytecode: it does not say what the function does or
+            # who may call it. Only the source pass below can confirm anything.
+            result["possible_powers"] = sorted(set(result["possible_powers"]))
 
     except Exception as e:
         log.debug("  [V6] Bytecode analiza greška: %s", e)
@@ -679,7 +770,39 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
     # Count powers, once each. `is_proxy` used to be counted here alongside
     # has_upgrade_authority, which double-counted the same fact, and
     # implementation() -- a view getter -- could raise the score on its own.
-    result["backdoor_risk_score"] = min(len(result["powers"]) * 20, 100)
+    # Read the declarations behind the selectors, where the source is
+    # published. Nothing becomes a confirmed power without this.
+    if confirm_from_source and result["possible_functions"]:
+        source = fetch_verified_source(contract_address)
+        result["source_status"] = source["status"]
+        result["source_reason"] = source["reason"]
+        if source["status"] == STATUS_OK:
+            read = confirm_powers_from_source(source["source"], result["possible_functions"])
+            result["declarations"] = read["confirmed"]
+            result["undeclared"] = read["unconfirmed"]
+            accesses = set()
+            for name, detail in read["confirmed"].items():
+                power = FUNCTION_SIGNATURES_BY_NAME.get(name)
+                if not power:
+                    continue
+                # An allowance-spending burn cannot touch an unwilling holder,
+                # whatever its name suggests.
+                if power == POWER_BURN_OTHERS and detail["spends_allowance"]:
+                    continue
+                result["confirmed_powers"].append(power)
+                result[POWER_FIELDS[power]] = True
+                accesses.add(detail["access"])
+            result["confirmed_powers"] = sorted(set(result["confirmed_powers"]))
+            if accesses:
+                result["control"] = ("role_gated" if accesses == {"role_gated"}
+                                     else "mixed" if len(accesses) > 1 else "unrestricted")
+
+    result["powers"] = list(result["confirmed_powers"])
+    result["has_backdoor"] = bool(result["confirmed_powers"])
+    # Scored on what was confirmed. "The bytes for a mint function are present"
+    # and "the owner can mint" are different sentences, and this used to say
+    # the second on the evidence of the first.
+    result["backdoor_risk_score"] = min(len(result["confirmed_powers"]) * 20, 100)
     return result
 
 # ---------------------------------------------------------------------------
