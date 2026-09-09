@@ -31,6 +31,7 @@ from bridge import publish_score, publish_score_modules, send_telegram_alert  # 
 from risk_engine import LOCAL_ENGINE_VERSION, score_token  # noqa: E402
 from build_identity import build_identity  # noqa: E402
 from evidence import build_evidence  # noqa: E402
+from plain_language import describe  # noqa: E402
 from freshness import (  # noqa: E402
     MEMORY_CACHE_MAX_AGE,
     STORED_SCAN_MAX_AGE,
@@ -371,6 +372,10 @@ def with_freshness(payload: dict[str, Any], state: dict[str, Any]) -> dict[str, 
     # Built last, so the coverage dimension can see the freshness fields added
     # just above. Additive only: no verdict field is read or written here.
     enriched["evidence"] = build_evidence(enriched)
+    # A reader who stops at `label` is told which kind of answer this is:
+    # something found, or something we could not check. Restates fields built
+    # above; never changes one.
+    enriched.update(describe(enriched))
     return enriched
 
 
