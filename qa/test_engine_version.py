@@ -37,8 +37,8 @@ ENGINE_FILE = REPO_ROOT / "chains" / "avalanche" / "risk_engine.py"
 # Bump together with LOCAL_ENGINE_VERSION. Take the new value from the failure
 # message after reviewing the diff, never from a passing run of an unreviewed
 # change.
-EXPECTED_VERSION = "2026.09.1"
-EXPECTED_FINGERPRINT = "3d1fa69b9df5c3be"
+EXPECTED_VERSION = "2026.09.2"
+EXPECTED_FINGERPRINT = "dc4e01e7124fc1ad"
 
 
 def fingerprint_of(source: str) -> str:
@@ -95,8 +95,8 @@ def test_a_change_to_a_transitive_helper_is_detected(tmp_path):
 
 def test_a_change_to_a_scoring_threshold_is_detected():
     source = ENGINE_FILE.read_text(encoding="utf-8")
-    assert "creator_rug_rate >= 80" in source, "threshold changed; update this test"
-    mutated = source.replace("creator_rug_rate >= 80", "creator_rug_rate >= 60", 1)
+    assert "creator_prior_danger_rate >= 80" in source, "threshold changed; update this test"
+    mutated = source.replace("creator_prior_danger_rate >= 80", "creator_prior_danger_rate >= 60", 1)
     assert fingerprint_of(mutated) != engine_fingerprint()
 
 
