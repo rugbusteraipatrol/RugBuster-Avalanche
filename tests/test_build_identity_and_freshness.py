@@ -319,11 +319,16 @@ def test_a_failed_chain_read_is_never_reported_as_not_a_token():
     tell them apart."""
     import server
 
+    class _RaisingCall:
+        @staticmethod
+        def call():
+            raise ConnectionError("rpc")
+
     class _Failing:
         class functions:
             @staticmethod
             def name():
-                raise ConnectionError("rpc")
+                return _RaisingCall
 
     value, error = server.call_optional(_Failing, "name")
     assert value is None
@@ -368,14 +373,19 @@ def test_a_partly_throttled_read_is_retried_before_any_claim():
 
     calls = {"n": 0}
 
+    class _Call:
+        @staticmethod
+        def call():
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise ConnectionError("throttled")
+            return 18
+
     class _Recovers:
         class functions:
             @staticmethod
             def decimals():
-                calls["n"] += 1
-                if calls["n"] == 1:
-                    raise ConnectionError("throttled")
-                return 18
+                return _Call
 
     first, first_error = server.call_optional(_Recovers, "decimals")
     assert first is None and first_error == "ConnectionError"
