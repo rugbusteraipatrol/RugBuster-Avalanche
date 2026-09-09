@@ -922,6 +922,11 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         "data_contract_version": report.get("data_contract_version") or DATA_CONTRACT_VERSION,
         "completeness_pct": report.get("completeness_pct"),
         "missing_inputs": report.get("missing_inputs") or [],
+        # The load-bearing checks that were unreadable, which is why a clean
+        # verdict was withheld. The engine has computed this since 2026.09.1;
+        # it reached the report and then stopped at this projection, so a
+        # caller still saw INSUFFICIENT_DATA with no reason attached.
+        "blocking_data_gaps": list(report.get("blocking_data_gaps") or []),
         "verdict_is_conclusive": report.get("verdict_is_conclusive"),
     }
 

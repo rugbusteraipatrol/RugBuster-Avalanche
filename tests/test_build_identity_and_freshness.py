@@ -483,3 +483,30 @@ def test_a_field_the_contract_simply_does_not_expose_is_an_answer():
         _Web3, Web3.to_checksum_address("0x0000000000000000000000000000000000000002"))
     assert metadata["read_failed"] is False
     assert metadata["is_probable_erc20"] is False
+
+
+def test_the_public_response_carries_the_reason_a_verdict_was_withheld():
+    """Wiring it into the report was not enough: /score returns a projection,
+    and the field stopped there. A caller saw INSUFFICIENT_DATA with no reason,
+    which is the whole complaint."""
+    import server
+
+    report = {
+        "address": "0x0000000000000000000000000000000000000001",
+        "label": "INSUFFICIENT_DATA",
+        "blocking_data_gaps": ["holder_concentration"],
+        "rug_status": "INSUFFICIENT_DATA",
+    }
+    response = server.compact_score_response(report, "private_scoring_engine")
+    assert response["blocking_data_gaps"] == ["holder_concentration"]
+
+
+def test_the_field_is_present_even_when_nothing_was_blocking():
+    """Absent and empty are different answers, and a caller should not have to
+    tell them apart by whether a key exists."""
+    import server
+
+    response = server.compact_score_response(
+        {"address": "0x0000000000000000000000000000000000000001", "label": "GOOD"},
+        "private_scoring_engine")
+    assert response["blocking_data_gaps"] == []
