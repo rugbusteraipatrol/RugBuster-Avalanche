@@ -220,11 +220,17 @@ def test_burning_someone_elses_balance_is_a_power():
     """Found by asking what TIME's concrete risk was rather than what its label
     said. Its admin functions include burn(address,uint256) -- destroying a
     holder's tokens -- and the matcher had no entry for it at all."""
-    for name in ("burn(address,uint256)", "burnFrom(address,uint256)"):
-        reading = _read(name)
-        assert reading["powers"] == ["burn_others"], name
-        assert reading["has_burn_others"] is True
-        assert reading["backdoor_risk_score"] == 20
+    reading = _read("burn(address,uint256)")
+    assert reading["powers"] == ["burn_others"]
+    assert reading["has_burn_others"] is True
+    assert reading["backdoor_risk_score"] == 20
+
+
+def test_an_allowance_based_burn_is_not_a_power():
+    """burnFrom(address,uint256) spends the caller's allowance -- the holder
+    approved it. Grouping the two put SDOG and BLS in TIME's bracket on a
+    function that cannot touch an unwilling holder."""
+    assert _read("burnFrom(address,uint256)")["powers"] == []
 
 
 def test_burning_your_own_balance_is_still_not_a_power():
