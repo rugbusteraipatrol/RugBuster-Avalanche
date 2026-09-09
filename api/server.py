@@ -1920,8 +1920,17 @@ def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
                 for value in (name, symbol, decimals, total_supply)
             )
 
-    read_failed = bool(code_error) or (
-        bool(code) and bool(call_errors) and not has_readable_metadata
+    # Judge the fields the decision actually rests on. `is_probable_erc20`
+    # needs decimals and totalSupply; name and symbol only decorate it. An
+    # earlier version asked whether *any* field had been read, so a contract
+    # whose name came through and whose decimals did not was still declared
+    # "not a token" -- on two reads that failed.
+    #
+    # A field that is None with no error is an answer: the contract does not
+    # expose it. A field that is None with an error is not an answer at all.
+    read_failed = bool(code_error) or bool(code) and (
+        (decimals is None and bool(decimals_error))
+        or (total_supply is None and bool(supply_error))
     )
     is_probable_erc20 = bool(known) or (bool(code) and decimals is not None and total_supply is not None and has_readable_metadata)
     return {

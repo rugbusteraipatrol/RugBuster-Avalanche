@@ -398,3 +398,88 @@ def test_a_partly_throttled_read_is_retried_before_any_claim():
 def test_the_retry_pause_is_short_enough_to_serve_a_caller():
     import server
     assert 0 < server.RETRY_PAUSE_SECONDS <= 3
+
+
+def test_a_failure_on_a_deciding_field_is_unavailable_not_a_finding():
+    """`is_probable_erc20` rests on decimals and totalSupply. An earlier
+    version of this rule asked whether *any* field had been read, so a contract
+    whose name came through and whose decimals did not was still declared "not
+    a token" -- on two reads that failed. Seen in the local run."""
+    import server
+    from web3 import Web3
+
+    class _Field:
+        def __init__(self, value=None, error=None):
+            self.value, self.error = value, error
+
+        def call(self):
+            if self.error:
+                raise self.error
+            return self.value
+
+    class _Token:
+        class functions:
+            name = staticmethod(lambda: _Field("Some Token"))
+            symbol = staticmethod(lambda: _Field("SOME"))
+            decimals = staticmethod(lambda: _Field(error=ConnectionError("throttled")))
+            totalSupply = staticmethod(lambda: _Field(error=ConnectionError("throttled")))
+
+    class _Eth:
+        @staticmethod
+        def get_code(_address):
+            return b"\x60\x80"
+
+        @staticmethod
+        def contract(address=None, abi=None):
+            return _Token
+
+    class _Web3:
+        eth = _Eth
+
+    original_sleep = server.time.sleep
+    server.time.sleep = lambda _s: None
+    try:
+        metadata = server.get_onchain_metadata(
+            _Web3, Web3.to_checksum_address("0x0000000000000000000000000000000000000001"))
+    finally:
+        server.time.sleep = original_sleep
+
+    assert metadata["read_failed"] is True, (
+        "decimals and totalSupply both failed; nothing about the address was established"
+    )
+    assert metadata["read_errors"]["decimals"] == "ConnectionError"
+
+
+def test_a_field_the_contract_simply_does_not_expose_is_an_answer():
+    """None with no error is the contract answering. That is a finding and
+    must stay one, or every non-token becomes 'unavailable'."""
+    import server
+    from web3 import Web3
+
+    class _Empty:
+        def call(self):
+            return None
+
+    class _Token:
+        class functions:
+            name = staticmethod(lambda: _Empty())
+            symbol = staticmethod(lambda: _Empty())
+            decimals = staticmethod(lambda: _Empty())
+            totalSupply = staticmethod(lambda: _Empty())
+
+    class _Eth:
+        @staticmethod
+        def get_code(_address):
+            return b"\x60\x80"
+
+        @staticmethod
+        def contract(address=None, abi=None):
+            return _Token
+
+    class _Web3:
+        eth = _Eth
+
+    metadata = server.get_onchain_metadata(
+        _Web3, Web3.to_checksum_address("0x0000000000000000000000000000000000000002"))
+    assert metadata["read_failed"] is False
+    assert metadata["is_probable_erc20"] is False
