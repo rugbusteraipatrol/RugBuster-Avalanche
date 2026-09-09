@@ -24,6 +24,7 @@ change is what this prevents.
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -37,8 +38,8 @@ ENGINE_FILE = REPO_ROOT / "chains" / "avalanche" / "risk_engine.py"
 # Bump together with LOCAL_ENGINE_VERSION. Take the new value from the failure
 # message after reviewing the diff, never from a passing run of an unreviewed
 # change.
-EXPECTED_VERSION = "2026.09.2"
-EXPECTED_FINGERPRINT = "dc4e01e7124fc1ad"
+EXPECTED_VERSION = "2026.09.3"
+EXPECTED_FINGERPRINT = "25e1b91e57ed1bde"
 
 
 def fingerprint_of(source: str) -> str:
@@ -114,3 +115,47 @@ def test_the_cache_key_carries_both_versions():
     key = server.cache_key("0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7")
     assert server.DATA_CONTRACT_VERSION in key
     assert risk_engine.LOCAL_ENGINE_VERSION in key
+
+
+# --- the matcher is scoring input and was outside every gate ----------------
+#
+# `detect_contract_backdoor_avax` feeds v6_backdoor_risk_score to the engine,
+# and it lives in the collector, which no fingerprint covered. A change to what
+# a function is taken to mean could land without any version moving, which is
+# exactly how the substring rule survived long enough to report Wrapped AVAX as
+# holding a drain function.
+
+FUNCTION_TABLE_FINGERPRINT = "8f1862e73df381c2"
+
+
+def function_table_fingerprint() -> str:
+    sys.path.insert(0, str(REPO_ROOT / "chains" / "avalanche"))
+    import avax_collector_v6 as collector  # noqa: E402
+
+    canonical = json.dumps(
+        {
+            "signatures": {sig: [name, power]
+                           for sig, (name, power) in sorted(collector.FUNCTION_SIGNATURES.items())},
+            "power_fields": dict(sorted(collector.POWER_FIELDS.items())),
+            "proxy_markers": sorted(collector.PROXY_MARKERS),
+            "ownership_markers": sorted(collector.OWNERSHIP_MARKERS),
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
+def test_what_a_function_is_taken_to_mean_cannot_change_silently():
+    assert function_table_fingerprint() == FUNCTION_TABLE_FINGERPRINT, (
+        "The function table changed. Review the diff, then update "
+        "FUNCTION_TABLE_FINGERPRINT and bump LOCAL_ENGINE_VERSION together -- "
+        "this table is scoring input."
+    )
+
+
+def test_no_selector_is_listed_twice_under_different_names():
+    sys.path.insert(0, str(REPO_ROOT / "chains" / "avalanche"))
+    import avax_collector_v6 as collector  # noqa: E402
+
+    names = [name for name, _power in collector.FUNCTION_SIGNATURES.values()]
+    assert len(names) == len(set(names))

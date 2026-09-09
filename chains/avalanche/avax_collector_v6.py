@@ -501,25 +501,92 @@ def detect_cex_sweep_avax(deployer: str, deploy_timestamp: int) -> dict:
 # ---------------------------------------------------------------------------
 # V6 MODULE 1: Contract Backdoor Detection (EVM bytecode)
 # ---------------------------------------------------------------------------
-BACKDOOR_SIGNATURES = {
-    "8da5cb5b": "owner()",
-    "f2fde38b": "transferOwnership(address)",
-    "715018a6": "renounceOwnership()",
-    "42966c68": "burn(uint256)",
-    "40c10f19": "mint(address,uint256)",
-    "3ccfd60b": "withdraw()",
-    "2e1a7d4d": "withdraw(uint256)",
-    "51cff8d9": "withdrawToken(address)",
-    "3659cfe6": "upgradeTo(address)",
-    "4f1ef286": "upgradeToAndCall(address,bytes)",
-    "5c60da1b": "implementation()",
-    "8456cb59": "pause()",
-    "3f4ba83a": "unpause()",
-    "5c975abb": "paused()",
-    "044df020": "blacklist(address)",
-    "537df3b6": "unBlacklist(address)",
-    "fe575a87": "isBlacklisted(address)",
+# Each selector says what the function *is*, not what its name resembles.
+#
+# The previous version matched substrings of the human-readable name, and the
+# names lie in both directions:
+#
+#   burn(uint256)        set has_backdoor, because any known selector did.
+#                        It burns the caller's own balance. LINK.e -- a
+#                        Chainlink bridge asset scored GOOD -- was reported as
+#                        holding a controller power over holders on this alone.
+#   withdraw(uint256)    matched "withdraw" and set has_drain_function. On
+#                        Wrapped AVAX it is the unwrap: it burns the caller's
+#                        own wrapper and returns their own native token. The
+#                        chain's most canonical asset was reported as drainable.
+#   paused()             matched "pause" and set has_pause_function. It is a
+#                        view getter that returns a bool.
+#   isBlacklisted(addr)  matched "blacklist" and set has_blacklist. Also a view
+#                        getter.
+#   renounceOwnership()  matched nothing, correctly, but is worth naming: it
+#                        removes a power rather than granting one.
+#
+# So the power is declared per selector. `None` means the function is present
+# and grants the controller nothing over anyone else -- it is still reported
+# under backdoor_functions, because presence is a fact and suppression is not
+# what this table is for.
+#
+# What this still cannot do: a 4-byte selector is matched by searching the
+# bytecode for those bytes, so a coincidental byte sequence reads as a
+# function. That is a separate weakness, unfixed, and it argues for reading
+# these as "possible" rather than "present".
+POWER_MINT = "mint"
+POWER_SWEEP = "sweep"
+POWER_UPGRADE = "upgrade"
+POWER_PAUSE = "pause"
+POWER_BLACKLIST = "blacklist"
+
+# Structural markers: they indicate a proxy without themselves being a power.
+PROXY_MARKERS = {"3659cfe6", "4f1ef286", "5c60da1b"}
+
+FUNCTION_SIGNATURES = {
+    # selector: (name, power granted over other holders, or None)
+    "8da5cb5b": ("owner()", None),                              # view getter
+    # An owner exists. That is centralisation and it is reported, but on its
+    # own it grants nothing over anyone's balance -- what the owner can do is
+    # the powers list below. Counting it as a power put every scam token and
+    # every ordinary Ownable contract at the same 20.
+    "f2fde38b": ("transferOwnership(address)", None),
+    "715018a6": ("renounceOwnership()", None),                  # gives a power up
+    "42966c68": ("burn(uint256)", None),                        # caller's own balance
+    "40c10f19": ("mint(address,uint256)", POWER_MINT),
+    "3ccfd60b": ("withdraw()", None),                           # caller's own funds
+    "2e1a7d4d": ("withdraw(uint256)", None),                    # caller's own; the unwrap
+    "51cff8d9": ("withdrawToken(address)", POWER_SWEEP),        # sweeps arbitrary tokens
+    "3659cfe6": ("upgradeTo(address)", POWER_UPGRADE),
+    "4f1ef286": ("upgradeToAndCall(address,bytes)", POWER_UPGRADE),
+    "5c60da1b": ("implementation()", None),                     # view getter
+    "8456cb59": ("pause()", POWER_PAUSE),
+    "3f4ba83a": ("unpause()", POWER_PAUSE),
+    "5c975abb": ("paused()", None),                             # view getter
+    "044df020": ("blacklist(address)", POWER_BLACKLIST),
+    "537df3b6": ("unBlacklist(address)", POWER_BLACKLIST),
+    "fe575a87": ("isBlacklisted(address)", None),               # view getter
 }
+
+# Kept under the old name so nothing that imports it breaks; it is now derived.
+BACKDOOR_SIGNATURES = {sig: name for sig, (name, _power) in FUNCTION_SIGNATURES.items()}
+
+OWNERSHIP_MARKERS = {"8da5cb5b", "f2fde38b", "715018a6"}
+
+POWER_FIELDS = {
+    POWER_MINT: "has_mint_function",
+    POWER_SWEEP: "has_drain_function",
+    POWER_UPGRADE: "has_upgrade_authority",
+    POWER_PAUSE: "has_pause_function",
+    POWER_BLACKLIST: "has_blacklist",
+}
+
+# Checked at import, not at scan time. The first version of this table named a
+# power with no field behind it; the KeyError was raised inside the scan's
+# broad `except`, which reported it as "bytecode could not be read from RPC".
+# A misconfiguration became an outage message, and an outage message reads as
+# an absent signal -- the exact failure this module documents elsewhere.
+_declared = {power for _name, power in FUNCTION_SIGNATURES.values() if power}
+assert _declared <= set(POWER_FIELDS), (
+    f"FUNCTION_SIGNATURES names powers with no field: {sorted(_declared - set(POWER_FIELDS))}"
+)
+
 
 def detect_contract_backdoor_avax(contract_address: str) -> dict:
     result = {
@@ -531,6 +598,8 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
         "has_drain_function": False,
         "has_blacklist": False,
         "is_proxy": False,
+        "has_owner": False,
+        "powers": [],
         "backdoor_risk_score": 0,
         # "no backdoor found" and "never managed to read the bytecode" were the
         # same output before this field existed. They are not the same claim.
@@ -555,37 +624,33 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
 
         if bytecode and len(bytecode) > 10:
             bytecode_clean = bytecode.lower().replace("0x", "")
-            for sig, func_name in BACKDOOR_SIGNATURES.items():
-                if sig in bytecode_clean:
-                    result["backdoor_functions"].append(func_name)
-                    if "upgradeto" in func_name.lower() or "implementation" in func_name.lower():
-                        result["is_proxy"] = True
-                        result["has_upgrade_authority"] = True
-                    if "pause" in func_name.lower():
-                        result["has_pause_function"] = True
-                    if "mint" in func_name.lower():
-                        result["has_mint_function"] = True
-                    if "withdraw" in func_name.lower() or "drain" in func_name.lower():
-                        result["has_drain_function"] = True
-                    if "blacklist" in func_name.lower():
-                        result["has_blacklist"] = True
+            for sig, (func_name, power) in FUNCTION_SIGNATURES.items():
+                if sig not in bytecode_clean:
+                    continue
+                result["backdoor_functions"].append(func_name)
+                if sig in PROXY_MARKERS:
+                    result["is_proxy"] = True
+                if sig in OWNERSHIP_MARKERS:
+                    result["has_owner"] = True
+                if power:
+                    result["powers"].append(power)
+                    result[POWER_FIELDS[power]] = True
 
-            result["has_backdoor"] = len(result["backdoor_functions"]) > 0
+            result["powers"] = sorted(set(result["powers"]))
+            # A function that grants the controller nothing is not a backdoor.
+            # This used to be "any known selector was found", which is how a
+            # plain ERC-20 burn made a bridge asset look backdoored.
+            result["has_backdoor"] = bool(result["powers"])
 
     except Exception as e:
         log.debug("  [V6] Bytecode analiza greška: %s", e)
         result["status"] = STATUS_FETCH_FAILED
         result["status_reason"] = f"bytecode could not be read from RPC: {type(e).__name__}"
 
-    danger_count = sum([
-        result["has_upgrade_authority"],
-        result["has_mint_function"],
-        result["has_drain_function"],
-        result["has_pause_function"],
-        result["has_blacklist"],
-        result["is_proxy"],
-    ])
-    result["backdoor_risk_score"] = min(danger_count * 20, 100)
+    # Count powers, once each. `is_proxy` used to be counted here alongside
+    # has_upgrade_authority, which double-counted the same fact, and
+    # implementation() -- a view getter -- could raise the score on its own.
+    result["backdoor_risk_score"] = min(len(result["powers"]) * 20, 100)
     return result
 
 # ---------------------------------------------------------------------------

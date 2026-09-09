@@ -39,7 +39,7 @@ class DualScoreResult:
 # the rest of their window, because the cache key could not tell they had
 # changed. Bump it with any change to how a score is derived;
 # `qa/test_engine_version.py` fails if the file changes and this does not.
-LOCAL_ENGINE_VERSION = "2026.09.2"
+LOCAL_ENGINE_VERSION = "2026.09.3"
 
 
 def risk_status(score: int | None) -> str:
