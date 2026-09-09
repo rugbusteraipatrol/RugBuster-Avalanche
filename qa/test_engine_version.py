@@ -125,7 +125,7 @@ def test_the_cache_key_carries_both_versions():
 # exactly how the substring rule survived long enough to report Wrapped AVAX as
 # holding a drain function.
 
-FUNCTION_TABLE_FINGERPRINT = "8f1862e73df381c2"
+FUNCTION_TABLE_FINGERPRINT = "82a771018aabf657"
 
 
 def function_table_fingerprint() -> str:

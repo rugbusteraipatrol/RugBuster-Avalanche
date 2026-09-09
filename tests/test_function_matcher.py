@@ -188,3 +188,55 @@ def test_every_declared_power_has_a_field():
 def test_the_old_name_still_resolves_for_anything_importing_it():
     assert collector.BACKDOOR_SIGNATURES
     assert set(collector.BACKDOOR_SIGNATURES) == set(collector.FUNCTION_SIGNATURES)
+
+
+# --- the table must not be able to lie about itself ------------------------
+
+def test_every_selector_hashes_to_the_name_beside_it():
+    """Three of seventeen did not, and all three carried a power.
+
+        51cff8d9  labelled withdrawToken(address)  -> really withdraw(address)
+        044df020  labelled blacklist(address)      -> hashes to nothing I could
+        537df3b6  labelled unBlacklist(address)       identify
+
+    So `sweep` never fired on the function it named, and `blacklist` fired on
+    two byte sequences of unknown meaning. The names had been taken on trust
+    and the table was the only place they were written down.
+
+    Recomputing the selector is the whole check. A table that cannot be
+    verified against itself is a list of magic numbers.
+    """
+    from eth_utils import keccak
+
+    wrong = {
+        selector: (name, keccak(text=name)[:4].hex())
+        for selector, (name, _power) in collector.FUNCTION_SIGNATURES.items()
+        if keccak(text=name)[:4].hex() != selector
+    }
+    assert not wrong, f"selectors that do not hash to their own name: {wrong}"
+
+
+def test_burning_someone_elses_balance_is_a_power():
+    """Found by asking what TIME's concrete risk was rather than what its label
+    said. Its admin functions include burn(address,uint256) -- destroying a
+    holder's tokens -- and the matcher had no entry for it at all."""
+    for name in ("burn(address,uint256)", "burnFrom(address,uint256)"):
+        reading = _read(name)
+        assert reading["powers"] == ["burn_others"], name
+        assert reading["has_burn_others"] is True
+        assert reading["backdoor_risk_score"] == 20
+
+
+def test_burning_your_own_balance_is_still_not_a_power():
+    """The one-argument form. Same word, different function."""
+    assert _read("burn(uint256)")["powers"] == []
+
+
+def test_an_ambiguous_withdraw_grants_nothing_until_the_code_is_read():
+    """withdraw(address) may send the caller's own balance somewhere or sweep
+    the contract's. The name does not say, so neither do we."""
+    assert _read("withdraw(address)")["powers"] == []
+
+
+def test_the_real_withdrawToken_still_sweeps():
+    assert _read("withdrawToken(address)")["powers"] == ["sweep"]

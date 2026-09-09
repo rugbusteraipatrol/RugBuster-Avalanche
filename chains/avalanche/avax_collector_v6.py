@@ -535,6 +535,7 @@ POWER_SWEEP = "sweep"
 POWER_UPGRADE = "upgrade"
 POWER_PAUSE = "pause"
 POWER_BLACKLIST = "blacklist"
+POWER_BURN_OTHERS = "burn_others"
 
 # Structural markers: they indicate a proxy without themselves being a power.
 PROXY_MARKERS = {"3659cfe6", "4f1ef286", "5c60da1b"}
@@ -552,15 +553,41 @@ FUNCTION_SIGNATURES = {
     "40c10f19": ("mint(address,uint256)", POWER_MINT),
     "3ccfd60b": ("withdraw()", None),                           # caller's own funds
     "2e1a7d4d": ("withdraw(uint256)", None),                    # caller's own; the unwrap
-    "51cff8d9": ("withdrawToken(address)", POWER_SWEEP),        # sweeps arbitrary tokens
+    # Corrected on review. This selector was labelled withdrawToken(address),
+    # which is really 89476069. 51cff8d9 is withdraw(address), and what that
+    # does is not established from the name alone -- it may send the caller's
+    # own balance to an address, or sweep the contract's. It is reported and
+    # grants no power until something reads the code.
+    "51cff8d9": ("withdraw(address)", None),
+    # The real withdrawToken(address). This one takes tokens the contract holds
+    # on behalf of others.
+    "89476069": ("withdrawToken(address)", POWER_SWEEP),
     "3659cfe6": ("upgradeTo(address)", POWER_UPGRADE),
     "4f1ef286": ("upgradeToAndCall(address,bytes)", POWER_UPGRADE),
     "5c60da1b": ("implementation()", None),                     # view getter
     "8456cb59": ("pause()", POWER_PAUSE),
     "3f4ba83a": ("unpause()", POWER_PAUSE),
     "5c975abb": ("paused()", None),                             # view getter
-    "044df020": ("blacklist(address)", POWER_BLACKLIST),
-    "537df3b6": ("unBlacklist(address)", POWER_BLACKLIST),
+    # Corrected on review. 044df020 and 537df3b6 were labelled blacklist and
+    # unBlacklist; neither hashes to either name, and neither resolves to any
+    # signature I could identify. Two byte sequences of unknown meaning were
+    # granting a power. Removed rather than guessed at.
+    "f9f92be4": ("blacklist(address)", POWER_BLACKLIST),
+    "1a895266": ("unBlacklist(address)", POWER_BLACKLIST),
+    # Burning someone else's balance without their consent. Absent from this
+    # table entirely until a review asked what TIME's concrete risk was.
+    #
+    # Non-standard: ERC-20 has no two-argument burn, and implementations that
+    # add one almost always gate it on the owner. That is an inference from
+    # convention, not from reading the modifier, and it is the weakest link in
+    # this entry -- what is certain is that the function exists and that no
+    # standard requires the holder's consent for it.
+    "9dc29fac": ("burn(address,uint256)", POWER_BURN_OTHERS),
+    # Not a power. OpenZeppelin's ERC20Burnable burnFrom spends the caller's
+    # allowance -- the holder has to have approved it. Grouping it with
+    # burn(address,uint256) put SDOG and BLS in the same bracket as TIME on a
+    # function that cannot touch an unwilling holder.
+    "79cc6790": ("burnFrom(address,uint256)", None),
     "fe575a87": ("isBlacklisted(address)", None),               # view getter
 }
 
@@ -575,6 +602,7 @@ POWER_FIELDS = {
     POWER_UPGRADE: "has_upgrade_authority",
     POWER_PAUSE: "has_pause_function",
     POWER_BLACKLIST: "has_blacklist",
+    POWER_BURN_OTHERS: "has_burn_others",
 }
 
 # Checked at import, not at scan time. The first version of this table named a
@@ -597,6 +625,7 @@ def detect_contract_backdoor_avax(contract_address: str) -> dict:
         "has_mint_function": False,
         "has_drain_function": False,
         "has_blacklist": False,
+        "has_burn_others": False,
         "is_proxy": False,
         "has_owner": False,
         "powers": [],
