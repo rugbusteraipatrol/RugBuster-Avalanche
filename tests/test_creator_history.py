@@ -14,6 +14,7 @@ outage read as a clean record.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from unittest import mock
@@ -184,3 +185,79 @@ def test_the_user_facing_reason_does_not_claim_confirmed_rugs():
     joined = " ".join(result.reasons).lower()
     assert "rug rate" not in joined, "the reason still claims confirmed rug events"
     assert "flagged by this scanner" in joined
+
+
+# --- the collector says it too, or the rename only half happened -----------
+#
+# The rename landed in `api/` and in the risk engine, but the collector keeps
+# its own deployer figure and its own wording, and the API serves the text the
+# collector stored (`reasons` on the scan record). So after the rename a reader
+# could still be told "96.6% rug rate" -- by the other producer. These pin the
+# collector to the same words, and to the same name for the same number.
+
+def _collector():
+    import sys as _sys
+    _sys.path.insert(0, str(REPO_ROOT / "chains" / "avalanche"))
+    import avax_collector_v6
+
+    return avax_collector_v6
+
+
+def test_the_collector_reports_the_figure_under_the_honest_name():
+    collector = _collector()
+    stats = collector.get_creator_stats("")
+    assert "prior_danger_rate_pct" in stats
+    # `rug_rate` survives only as an alias for existing readers.
+    assert stats["rug_rate"] == stats["prior_danger_rate_pct"]
+
+
+def test_the_collector_reason_does_not_claim_confirmed_rugs():
+    collector = _collector()
+    _score, reasons = collector.calculate_rugbuster_avax_risk(
+        token_info={"holders_count": 5000},
+        cia_intel={},
+        v5={},
+        v6={},
+        creator_stats={"total": 30, "danger": 27, "prior_danger_rate_pct": 90.0,
+                       "rug_rate": 90.0, "status": "OK"},
+        deployer_balance=5.0,
+    )
+    joined = " ".join(reasons).lower()
+    assert "rug rate" not in joined, "the collector still claims confirmed rug events"
+    assert "flagged by this scanner" in joined
+
+
+def test_the_stored_training_record_does_not_claim_confirmed_rugs():
+    collector = _collector()
+    record = collector.build_training_record_v6(
+        contract_address="0xdead",
+        token_info={"name": "Example", "symbol": "EX", "holders_count": 10},
+        deployer="0xabc",
+        deploy_timestamp=0,
+        creator_stats={"total": 30, "danger": 27, "prior_danger_rate_pct": 90.0,
+                       "rug_rate": 90.0, "status": "OK"},
+        cia_intel={},
+        v5={},
+        v6={},
+        label="DANGER",
+        risk_flags=[],
+        risk_percent=88,
+    )
+    blob = json.dumps(record).lower()
+    assert "rug rate" not in blob, "the stored record still claims confirmed rug events"
+
+
+def test_the_collector_reads_the_new_name_when_the_alias_is_gone():
+    """The API's lookup returns no `rug_rate` at all. A collector that only
+    knew the old name would read every deployer as 0%."""
+    collector = _collector()
+    _score, reasons = collector.calculate_rugbuster_avax_risk(
+        token_info={"holders_count": 5000},
+        cia_intel={},
+        v5={},
+        v6={},
+        creator_stats={"total": 30, "danger": 27, "prior_danger_rate_pct": 90.0,
+                       "status": "OK"},
+        deployer_balance=5.0,
+    )
+    assert any("90.0%" in reason for reason in reasons)

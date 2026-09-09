@@ -304,17 +304,29 @@ def update_creator_history(creator: str, label: str):
         stats[label.lower()] += 1
     trim_ordered_cache(creator_history, MAX_CREATOR_HISTORY_ENTRIES)
 
+def _creator_rate(total: int, danger: int, rate: float) -> dict:
+    """Both names for the same figure.
+
+    `prior_danger_rate_pct` is what it is: the share of this deployer's tokens
+    that this scanner itself labelled DANGER. `rug_rate` is kept as an alias
+    only so existing readers keep working; it must not appear in anything a
+    user reads, because it claims confirmed rug events we never collected.
+    """
+    return {"total": total, "danger": danger,
+            "prior_danger_rate_pct": rate, "rug_rate": rate}
+
+
 def get_creator_stats(creator: str) -> dict:
     if not creator:
-        return {"total": 0, "danger": 0, "rug_rate": 0.0}
+        return _creator_rate(0, 0, 0.0)
     stats = creator_history.get(creator)
     if not stats:
-        return {"total": 0, "danger": 0, "rug_rate": 0.0}
+        return _creator_rate(0, 0, 0.0)
     creator_history.move_to_end(creator)
     total = stats["total"]
     danger = stats["danger"]
-    rug_rate = (danger / total * 100) if total > 0 else 0.0
-    return {"total": total, "danger": danger, "rug_rate": round(rug_rate, 1)}
+    rate = (danger / total * 100) if total > 0 else 0.0
+    return _creator_rate(total, danger, round(rate, 1))
 
 # ---------------------------------------------------------------------------
 # V5 MODULE 1: Cross-Chain Wallet Matching (shared state)
@@ -359,7 +371,7 @@ def detect_cross_chain_match(deploy_ts: int, tx_amounts: list, holder_count: int
 # V5 MODULE 2: Lifecycle Prediction
 # ---------------------------------------------------------------------------
 
-def predict_lifecycle(intel: dict, creator_rug_rate: float) -> dict:
+def predict_lifecycle(intel: dict, creator_prior_danger_rate: float) -> dict:
     result = {
         "estimated_rug_minutes": -1,
         "confidence": 0.0,
@@ -376,7 +388,7 @@ def predict_lifecycle(intel: dict, creator_rug_rate: float) -> dict:
     if signals >= 4:
         result.update({"estimated_rug_minutes": 15, "confidence": 0.87,
                         "prediction_text": "Rug expected within 15 minutes (87% confidence)"})
-    elif signals >= 3 and creator_rug_rate > 50:
+    elif signals >= 3 and creator_prior_danger_rate > 50:
         result.update({"estimated_rug_minutes": 45, "confidence": 0.72,
                         "prediction_text": "Rug expected within 45 minutes (72% confidence)"})
     elif signals >= 3:
@@ -1269,7 +1281,7 @@ def run_cia_analysis_avax(contract_address: str, deployer: str, deploy_timestamp
 
 def run_v5_analysis_avax(contract_address: str, deployer: str, deploy_timestamp: int,
                           name: str, ticker: str, tx_amounts: list, holder_count: int,
-                          cia_intel: dict, creator_rug_rate: float) -> dict:
+                          cia_intel: dict, creator_prior_danger_rate: float) -> dict:
     log.info("  [V5] Pokrenuta analiza...")
     v5 = {}
 
@@ -1287,7 +1299,7 @@ def run_v5_analysis_avax(contract_address: str, deployer: str, deploy_timestamp:
     if v5["cex_sweep"]["sweep_to_cex"]:
         log.warning("  [V5] CEX sweep detected -> %s", v5["cex_sweep"]["cex_destination"])
 
-    v5["lifecycle"] = predict_lifecycle(cia_intel, creator_rug_rate)
+    v5["lifecycle"] = predict_lifecycle(cia_intel, creator_prior_danger_rate)
     log.info("  [V5] Lifecycle: %s", v5["lifecycle"]["prediction_text"])
 
     return v5
@@ -1520,13 +1532,19 @@ def calculate_rugbuster_avax_risk(
     if xchain.get("cross_chain_match"):
         add(16, f"Cross-chain scam match {xchain.get('match_chains')}")
 
-    creator_rug_rate = float(creator_stats.get("rug_rate", 0) or 0)
-    if creator_rug_rate >= 80:
+    creator_prior_danger_rate = float(
+        creator_stats.get("prior_danger_rate_pct", creator_stats.get("rug_rate", 0)) or 0
+    )
+    _deployer_reason = (
+        f"Deployer history: {creator_prior_danger_rate:.1f}% of this deployer's "
+        "previously scanned tokens were flagged by this scanner"
+    )
+    if creator_prior_danger_rate >= 80:
         score = max(score, 88)
-        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
-    elif creator_rug_rate >= 40:
+        reasons.append(_deployer_reason)
+    elif creator_prior_danger_rate >= 40:
         score = max(score, 72)
-        reasons.append(f"Deployer history: {creator_rug_rate:.1f}% rug rate")
+        reasons.append(_deployer_reason)
 
     holders = int(token_info.get("holders_count", 0) or 0)
     if holders and holders < 10:
@@ -1592,12 +1610,17 @@ def build_training_record_v6(
         creator_risk = f"UNKNOWN - deployer history unavailable ({creator_status})"
     elif creator_stats["total"] == 0:
         creator_risk = "NEW - no previous tokens"
-    elif creator_stats["rug_rate"] >= 80:
-        creator_risk = f"HIGH RISK - {creator_stats['rug_rate']}% rug rate ({creator_stats['danger']}/{creator_stats['total']})"
-    elif creator_stats["rug_rate"] >= 40:
-        creator_risk = f"MODERATE RISK - {creator_stats['rug_rate']}% rug rate"
     else:
-        creator_risk = f"LOW RISK - {creator_stats['rug_rate']}% rug rate"
+        _rate = creator_stats.get(
+            "prior_danger_rate_pct", creator_stats.get("rug_rate", 0.0)
+        )
+        _seen = f"{_rate}% of {creator_stats['total']} prior tokens flagged by this scanner"
+        if _rate >= 80:
+            creator_risk = f"HIGH RISK - {_seen} ({creator_stats['danger']}/{creator_stats['total']})"
+        elif _rate >= 40:
+            creator_risk = f"MODERATE RISK - {_seen}"
+        else:
+            creator_risk = f"LOW RISK - {_seen}"
 
     input_text = f"""Token: {token_info.get('name', 'Unknown')} ({token_info.get('symbol', '')})
 Chain: AVAX (C-Chain)
@@ -1630,7 +1653,14 @@ Rug Velocity: score={vel.get('velocity_score', 0)} | Fast rug: {vel.get('is_fast
     cia_flags = f" CIA/V6 flags: {', '.join(risk_flags[:4])}." if risk_flags else ""
     native_flags = f" RugBuster AVAX Risk: {risk_percent}%. Reasons: {', '.join(avax_risk_reasons[:3])}."
     if label == "DANGER":
-        output = f"DANGER - High risk AVAX token.{native_flags}{cia_flags} Deployer rug rate: {creator_stats['rug_rate']}%."
+        _deployer_pct = creator_stats.get(
+            "prior_danger_rate_pct", creator_stats.get("rug_rate", 0.0)
+        )
+        output = (
+            f"DANGER - High risk AVAX token.{native_flags}{cia_flags} "
+            f"{_deployer_pct}% of this deployer's previously scanned tokens "
+            "were flagged by this scanner."
+        )
     elif label == "WARN":
         output = f"WARN - Moderate risk AVAX token.{native_flags}{cia_flags}"
     else:
@@ -1651,7 +1681,9 @@ Rug Velocity: score={vel.get('velocity_score', 0)} | Fast rug: {vel.get('is_fast
         "rugbuster_avax_score": risk_percent,
         "rugbuster_avax_reasons": avax_risk_reasons,
         "creator": deployer,
-        "creator_rug_rate": creator_stats["rug_rate"],
+        "creator_prior_danger_rate": creator_stats.get(
+            "prior_danger_rate_pct", creator_stats.get("rug_rate", 0.0)
+        ),
         # CIA
         "cia_funding_hops": funding.get("hop_count", 0),
         "cia_all_fresh_wallets": funding.get("all_fresh", False),
@@ -1690,7 +1722,7 @@ def append_to_dataset(record: dict, output_path: Path) -> None:
         with output_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
         log.info("  -> Snimljeno [%s][AVAX-V6] Rug rate: %s%%  Ukupno: %d",
-                 record["label"], record.get("creator_rug_rate", "N/A"), count_lines(output_path))
+                 record["label"], record.get("creator_prior_danger_rate", "N/A"), count_lines(output_path))
         save_to_postgres(record)
         publish_recent_scan_feed(record)
     except OSError as e:
@@ -2224,7 +2256,8 @@ def process_token_avax(token_data: dict, output_path: Path) -> dict | None:
     v5_intel = run_v5_analysis_avax(
         contract, deployer, deploy_timestamp,
         token_info.get("name", "Unknown"), token_info.get("symbol", ""),
-        tx_amounts, holder_count, cia_intel, creator_stats["rug_rate"]
+        tx_amounts, holder_count, cia_intel,
+        creator_stats.get("prior_danger_rate_pct", creator_stats.get("rug_rate", 0.0))
     )
     v6_intel = run_v6_analysis_avax(contract, deployer, deploy_timestamp)
 
@@ -2694,7 +2727,8 @@ def scan_single_avax(address: str) -> None:
     v5_intel = run_v5_analysis_avax(
         address, deployer, deploy_timestamp,
         token_info.get("name", "Unknown"), token_info.get("symbol", ""),
-        tx_amounts, holder_count, cia_intel, creator_stats["rug_rate"]
+        tx_amounts, holder_count, cia_intel,
+        creator_stats.get("prior_danger_rate_pct", creator_stats.get("rug_rate", 0.0))
     )
     v6_intel = run_v6_analysis_avax(address, deployer, deploy_timestamp)
 
