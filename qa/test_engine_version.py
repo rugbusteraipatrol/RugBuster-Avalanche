@@ -38,8 +38,8 @@ ENGINE_FILE = REPO_ROOT / "chains" / "avalanche" / "risk_engine.py"
 # Bump together with LOCAL_ENGINE_VERSION. Take the new value from the failure
 # message after reviewing the diff, never from a passing run of an unreviewed
 # change.
-EXPECTED_VERSION = "2026.09.3"
-EXPECTED_FINGERPRINT = "25e1b91e57ed1bde"
+EXPECTED_VERSION = "2026.09.4"
+EXPECTED_FINGERPRINT = "afc5f16ab724b97c"
 
 
 def fingerprint_of(source: str) -> str:
@@ -150,6 +150,29 @@ def test_what_a_function_is_taken_to_mean_cannot_change_silently():
         "The function table changed. Review the diff, then update "
         "FUNCTION_TABLE_FINGERPRINT and bump LOCAL_ENGINE_VERSION together -- "
         "this table is scoring input."
+    )
+
+
+# The source reader is scoring input too, and it sat outside both fingerprints:
+# the table above pins what a selector means, not what reading a declaration
+# may conclude. Its rules changed on review -- a definition found stopped
+# counting as a restriction understood -- and nothing would have noticed.
+SOURCE_READING_FINGERPRINT = "5d30eb0cf4c48993"
+
+
+def source_reading_fingerprint() -> str:
+    source = (REPO_ROOT / "chains" / "avalanche" / "avax_collector_v6.py").read_text(encoding="utf-8")
+    source = source.replace("\r\n", "\n")
+    start = source.index("# >>> source reading")
+    end = source.index("# <<< source reading")
+    return hashlib.sha256(source[start:end].encode("utf-8")).hexdigest()[:16]
+
+
+def test_what_reading_a_source_may_conclude_cannot_change_silently():
+    assert source_reading_fingerprint() == SOURCE_READING_FINGERPRINT, (
+        "The source reader changed. Review the diff, then update "
+        "SOURCE_READING_FINGERPRINT and bump LOCAL_ENGINE_VERSION together -- "
+        "what it establishes is scored."
     )
 
 

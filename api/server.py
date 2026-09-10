@@ -275,7 +275,7 @@ app = Flask(__name__)
 # integrator (or our own cache) can tell which rules produced a given verdict.
 # 2026.09.1 introduced NOT_QUERIED/FETCH_FAILED/NOT_FOUND per-module status,
 # completeness_pct, missing_inputs[] and verdict_is_conclusive.
-DATA_CONTRACT_VERSION = "2026.09.1"
+DATA_CONTRACT_VERSION = "2026.09.2"
 SCAN_CACHE_TTL_SECONDS = 180
 SCAN_CACHE: dict[str, dict[str, Any]] = {}
 PORTFOLIO_SCAN_WORKERS = 3
@@ -927,6 +927,9 @@ def compact_score_response(report: dict[str, Any], source: str) -> dict[str, Any
         # it reached the report and then stopped at this projection, so a
         # caller still saw INSUFFICIENT_DATA with no reason attached.
         "blocking_data_gaps": list(report.get("blocking_data_gaps") or []),
+        # Missing, and reported, but not read by this verdict -- so not
+        # withholding it. Each entry names why.
+        "non_blocking_data_gaps": list(report.get("non_blocking_data_gaps") or []),
         "verdict_is_conclusive": report.get("verdict_is_conclusive"),
     }
 
@@ -1187,19 +1190,50 @@ def flatten_intel_for_scoring(cia: dict[str, Any], v6: dict[str, Any], creator_s
     }
 
 
+def token_read_decision(onchain: dict[str, Any]) -> tuple[str, str]:
+    """What a metadata read entitles us to say about an address.
+
+    Returns ("token", ""), ("unavailable", reason) or ("not_a_token", evidence).
+
+    NOT_A_TOKEN is a claim about the contract, so it needs evidence about the
+    contract. Exactly one kind is accepted: the node answered eth_getCode
+    without error and there is no code at the address -- an externally owned
+    account, or nothing at all, on the network that was queried. That is a
+    reading, not a failure. (On the wrong network it is a true reading of the
+    wrong chain, which is why the evidence names the network.)
+
+    Nothing else qualifies. A contract whose decimals or totalSupply did not
+    come back has not been shown to lack them -- not after one attempt, not
+    after two, with or without an error. web3 raises the same error for a
+    missing function and for a node that returned nothing, so two failures are
+    two failures.
+    """
+    errors = onchain.get("read_errors") or {}
+    if errors.get("code"):
+        return "unavailable", f"contract code could not be read: code={errors['code']}"
+    if onchain.get("is_probable_erc20"):
+        return "token", ""
+    if not onchain.get("is_contract"):
+        return "not_a_token", "no contract code at this address on the network queried"
+    failed = ", ".join(f"{field}={error}" for field, error in errors.items() if error)
+    if failed:
+        return "unavailable", f"The chain could not be read for this address: {failed}"
+    return "unavailable", (
+        "the address has contract code, but decimals and totalSupply returned no "
+        "value; an ERC-20 interface was neither established nor ruled out"
+    )
+
+
 def build_remote_scoring_payload(address: str) -> tuple[dict[str, Any], dict[str, Any]]:
     checksum = Web3.to_checksum_address(address)
     web3 = get_web3()
     validate_known_token_metadata(web3)
     onchain = get_onchain_metadata(web3, checksum)
-    if onchain.get("read_failed"):
-        raise TokenReadUnavailable(
-            "The chain could not be read for this address: "
-            + ", ".join(f"{field}={error}" for field, error
-                        in (onchain.get("read_errors") or {}).items() if error)
-        )
-    if not onchain.get("is_probable_erc20"):
-        raise NotTokenAddress("Address does not expose a readable ERC-20 token interface")
+    decision, detail = token_read_decision(onchain)
+    if decision == "unavailable":
+        raise TokenReadUnavailable(detail)
+    if decision == "not_a_token":
+        raise NotTokenAddress(detail)
 
     try:
         token_info = collector_get_token_info_avax(checksum)
@@ -1362,6 +1396,7 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
         # way to tell which check was missing. It is copied into the report, so
         # it is stored with the report and survives a cache hit.
         "blocking_data_gaps": list(result.get("blocking_data_gaps") or []),
+        "non_blocking_data_gaps": list(result.get("non_blocking_data_gaps") or []),
         "has_liquidity_evidence": token_info.get("has_liquidity_evidence"),
         "liquidity_usd": token_info.get("liquidity_usd"),
         "fdv": token_info.get("fdv"),
@@ -1411,6 +1446,7 @@ def insufficient_data_report(address: str, reason: str) -> dict[str, Any]:
         "label": "INSUFFICIENT_DATA",
         "risk_engine": "rugbuster_private_scoring_engine",
         "blocking_data_gaps": [reason],
+        "non_blocking_data_gaps": [],
         "risk_percent": None,
         "rug_score": None,
         "rug_status": "INSUFFICIENT_DATA",
@@ -1883,10 +1919,9 @@ def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
     # output. They are opposite claims: one is about our reach, the other about
     # the contract. A rate-limited RPC used to reach the caller as NOT_A_TOKEN.
     #
-    # The distinction that can actually be drawn here: if we could not read the
-    # code, or every metadata call failed while the address does have code,
-    # nothing was established and the caller must be told so. If the code was
-    # read and simply exposes no ERC-20 interface, that is a finding.
+    # This function reports what was read and what failed. What may be
+    # concluded from that is decided in `token_read_decision`, and only an
+    # address with no code is ever called not a token.
     call_errors = [e for e in (name_error, symbol_error, decimals_error, supply_error) if e]
 
     # One attempt cannot separate the two. web3 raises the same
@@ -1896,10 +1931,11 @@ def get_onchain_metadata(web3: Web3, address: str) -> dict[str, Any]:
     # NOT_A_TOKEN. A first version of this fix required *all four* calls to
     # fail, and a partly-throttled read slipped straight back through.
     #
-    # What separates them is repetition: a contract without the function fails
-    # the same way every time, a throttled node usually does not. So the read
-    # is retried once before any claim is made about the address, and only a
-    # second failure is allowed to become a finding.
+    # A retry lets a throttled read recover. It does not turn a repeated
+    # failure into a finding: a contract without the function and a node that
+    # keeps failing look the same both times. An earlier version of this
+    # comment said a second failure could become a finding. The code never
+    # let it; the sentence was wrong.
     if code and call_errors and not (decimals is not None and total_supply is not None):
         time.sleep(RETRY_PAUSE_SECONDS)
         retry_name, retry_name_error = call_optional(token, "name")

@@ -163,7 +163,9 @@ def test_an_unrestricted_declaration_is_recorded_as_such():
 def test_who_holds_the_role_is_never_claimed():
     """`role_gated` says a modifier is present. It does not say whose key."""
     reading = _read_with_source(
-        "modifier onlyOwner() { _; } function pause() external onlyOwner { }", "pause()")
+        "function _pause() internal { } "
+        "modifier onlyOwner() { require(msg.sender == owner); _; } "
+        "function pause() external onlyOwner { _pause(); }", "pause()")
     assert reading["control"] == "role_gated"
     assert reading.get("controller_address") is None
 
@@ -320,7 +322,7 @@ def test_an_inherited_modifier_leaves_the_power_unread():
     reading = _read_with_source(source, "mint(address,uint256)")
     assert reading["source_read_powers"] == []
     assert "mint(address,uint256)" in reading["unread_restrictions"]
-    assert "onlyowner" in reading["unread_restrictions"]["mint(address,uint256)"]
+    assert "onlyOwner" in reading["unread_restrictions"]["mint(address,uint256)"]
 
 
 def test_an_unresolved_internal_call_leaves_the_power_unread():
@@ -332,7 +334,7 @@ def test_an_unresolved_internal_call_leaves_the_power_unread():
               "{ _checkedMint(to, amount); }")
     reading = _read_with_source(source, "mint(address,uint256)")
     assert reading["source_read_powers"] == []
-    assert "_checkedmint" in reading["unread_restrictions"]["mint(address,uint256)"]
+    assert "_checkedMint" in reading["unread_restrictions"]["mint(address,uint256)"]
 
 
 def test_an_unread_restriction_keeps_the_function_visible():

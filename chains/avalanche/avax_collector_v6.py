@@ -623,27 +623,487 @@ ROUTESCAN_SOURCE_URL = (
     "?module=contract&action=getsourcecode&address={address}"
 )
 
-# Modifiers that gate a function on a role. Presence of one means the function
-# is not callable by anyone; it does not say who holds the role.
-ACCESS_MODIFIERS = (
-    "onlyowner", "onlyadmin", "ifadmin", "onlyrole", "onlygovernance",
-    "onlyminter", "onlyoperator", "onlymanager", "authorized", "onlydao",
-)
+# >>> source reading
+#
+# What a published source can establish about a matched function, read by
+# narrow patterns. This is not a Solidity analyser and is not trying to be one.
+#
+# A reading ends in one of three outcomes:
+#
+#   established  the body matches a recognised implementation of the power,
+#                every modifier on it is read and understood, every condition
+#                in it is recognised, and every internal call is a known
+#                primitive defined in this source.
+#   ruled_out    the source proves the function cannot be used against an
+#                unwilling holder: a burn that spends the account's allowance
+#                to the caller, or that requires the account to be the caller.
+#   unresolved   anything else. Not a power and not a clearance: the function
+#                stays possible and the reason is named.
+#
+# Recognised, and nothing more:
+#
+#   caller checks   msg.sender / _msgSender() compared with owner, owner(),
+#                   _owner, admin, _getAdmin(); hasRole(...); the OpenZeppelin
+#                   _checkOwner / _checkRole helpers, read rather than trusted
+#                   by name; the TransparentUpgradeableProxy `ifAdmin` shape.
+#   self checks     the burned account compared with the caller.
+#   benign checks   the account compared with address(0); paused state.
+#   primitives      _mint, _burn, _pause, _unpause, _spendAllowance,
+#                   _upgradeTo, _upgradeToAndCall, _setImplementation, when
+#                   defined exactly once in the source.
+#
+# Not recognised, and therefore unresolved: a modifier defined elsewhere or
+# more than once; a modifier or condition that does anything else, including a
+# composite condition (`a || b`); any other internal call, however harmless its
+# name; a function declared more than once; a proxy's implementation contract,
+# which this never reads.
+#
+# The previous version counted a reading as resolved when the modifier's and
+# callee's *definitions* were present, and matched modifier names as
+# substrings of the header. Finding a definition is not understanding it: a
+# burn guarded by `require(account == msg.sender)` read as an unrestricted power
+# over every holder.
+#
+# Text is still not compilation. A resolved reading describes the source the
+# explorer published, taken to be the deployed code, and never says who holds
+# a role.
 
-# A burn that spends the caller's allowance cannot touch an unwilling holder.
-ALLOWANCE_MARKERS = ("_spendallowance", "allowance(")
+OUTCOME_ESTABLISHED = "established"
+OUTCOME_RULED_OUT = "ruled_out"
+OUTCOME_UNRESOLVED = "unresolved"
+
+CAPABILITY_COMPLETE = "COMPLETE"      # every possible power established or ruled out
+CAPABILITY_INCOMPLETE = "INCOMPLETE"  # something possible was left unsettled
+CAPABILITY_NOT_RUN = "NOT_RUN"        # the bytecode itself was not read
+
+_SENDER = r"(?:msg\.sender|_msgSender\(\s*\))"
+_PRIVILEGED = (r"(?:owner\(\s*\)|_getAdmin\(\s*\)|_admin\(\s*\)|admin\(\s*\)"
+               r"|_owner\b|owner\b|admin\b)")
+_CALLER_IS_PRIVILEGED = re.compile(
+    rf"{_SENDER}\s*(==|!=)\s*{_PRIVILEGED}|{_PRIVILEGED}\s*(==|!=)\s*{_SENDER}")
+_HAS_ROLE = re.compile(r"(!?)\s*hasRole\s*\((.*)\)", re.S)
+_PAUSED = re.compile(r"!?\s*_?paused(?:\s*\(\s*\))?")
+_IF_ADMIN = re.compile(
+    rf"\s*if\s*\(\s*{_SENDER}\s*==\s*{_PRIVILEGED}\s*\)\s*\{{\s*_\s*;\s*\}}"
+    r"\s*else\s*\{\s*_fallback\s*\(\s*\)\s*;\s*\}\s*")
+_GUARD = re.compile(r"\b(require|assert|if)\s*\(")
+_CALL = re.compile(r"(?<![\w.$])([a-z_]\w*)\s*\(")
+_NOT_A_CALL = frozenset({
+    "require", "assert", "revert", "if", "for", "while", "return", "returns",
+    "emit", "address", "payable", "bool", "string", "keccak256", "sha256",
+    "abi", "type", "super", "new", "unchecked", "delete",
+})
+_READ_ONLY_CALLS = frozenset({
+    "owner", "balanceOf", "hasRole", "allowance", "totalSupply", "decimals",
+    "paused", "_msgSender", "_msgData",
+})
+_ROLE_CHECKS = frozenset({"_checkOwner", "_checkRole"})
+_PAUSE_CHECKS = frozenset({"_requireNotPaused", "_requirePaused"})
+_PRIMITIVES = frozenset({
+    "_mint", "_burn", "_pause", "_unpause", "_spendAllowance",
+    "_upgradeTo", "_upgradeToAndCall", "_setImplementation",
+})
+_HEADER_WORDS = frozenset({
+    "public", "external", "internal", "private", "view", "pure", "payable",
+    "virtual", "override", "returns", "memory", "calldata", "storage",
+})
+_TYPE_ALIASES = {"uint": "uint256", "int": "int256"}
+
+
+def _strip_comments_and_strings(text: str) -> str:
+    """Comments removed and string literals emptied: a brace, a `function` or
+    a `//` inside either would otherwise be read as code."""
+    out, i, n = [], 0, len(text)
+    while i < n:
+        ch = text[i]
+        if ch in "\"'":
+            quote, i = ch, i + 1
+            while i < n and text[i] != quote:
+                i += 2 if text[i] == "\\" else 1
+            out.append(quote + quote)
+            i += 1
+            continue
+        if text.startswith("//", i):
+            end = text.find("\n", i)
+            i = n if end < 0 else end
+            continue
+        if text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+            out.append(" ")
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
 
 
 def _normalise_source(source: str) -> str:
-    """Explorer sources arrive with their escapes written out as text."""
-    return source.replace('\\r\\n', '\n').replace('\\n', '\n')
+    """Explorer source as plain Solidity, whichever of its shapes arrived.
+
+    Routescan returns flattened text, standard-JSON input wrapped in double
+    braces, or the same without them, and escapes are sometimes written out.
+    """
+    text = (source or "").strip()
+    candidates = []
+    if text.startswith("{{") and text.endswith("}}"):
+        candidates.append(text[1:-1])
+    if text.startswith("{"):
+        candidates.append(text)
+    for candidate in candidates:
+        try:
+            bundle = json.loads(candidate)
+        except ValueError:
+            continue
+        sources = bundle.get("sources") if isinstance(bundle, dict) else None
+        if isinstance(sources, dict):
+            text = "\n".join(str((entry or {}).get("content") or "")
+                             for entry in sources.values())
+            break
+    if "\n" not in text and "\\n" in text:
+        text = text.replace("\\r\\n", "\n").replace("\\n", "\n").replace('\\"', '"')
+    return _strip_comments_and_strings(text)
+
+
+def _matching(text: str, start: int, opener: str, closer: str) -> int:
+    depth = 0
+    for index in range(start, len(text)):
+        if text[index] == opener:
+            depth += 1
+        elif text[index] == closer:
+            depth -= 1
+            if depth == 0:
+                return index
+    return -1
+
+
+def _split_arguments(arguments: str) -> list[str]:
+    parts, depth, current = [], 0, []
+    for ch in arguments:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        if ch == "," and depth == 0:
+            parts.append("".join(current).strip())
+            current = []
+        else:
+            current.append(ch)
+    parts.append("".join(current).strip())
+    return [part for part in parts if part]
+
+
+def _strip_parens(expression: str) -> str:
+    expression = expression.strip()
+    while (expression.startswith("(")
+           and _matching(expression, 0, "(", ")") == len(expression) - 1):
+        expression = expression[1:-1].strip()
+    return expression
+
+
+def _parameters(params: str) -> tuple[list[str], list[str]]:
+    types, names = [], []
+    for part in _split_arguments(params):
+        words = part.split()
+        types.append(_TYPE_ALIASES.get(words[0], words[0]))
+        tail = [w for w in words[1:]
+                if w not in ("memory", "calldata", "storage", "payable", "indexed")]
+        names.append(tail[-1] if tail else "")
+    return types, names
+
+
+def _declarations(text: str, name: str) -> list[dict]:
+    """Every function called `name` that has a body to read."""
+    found = []
+    for match in re.finditer(rf"\bfunction\s+{re.escape(name)}\s*\(", text):
+        open_paren = match.end() - 1
+        close_paren = _matching(text, open_paren, "(", ")")
+        if close_paren < 0:
+            continue
+        brace = text.find("{", close_paren)
+        semicolon = text.find(";", close_paren)
+        if brace < 0 or 0 <= semicolon < brace:
+            continue  # an interface or abstract declaration: nothing to read
+        body_end = _matching(text, brace, "{", "}")
+        if body_end < 0:
+            continue
+        types, names = _parameters(text[open_paren + 1:close_paren])
+        found.append({
+            "types": types,
+            "params": [n for n in names if n],
+            "header": text[close_paren + 1:brace],
+            "body": text[brace + 1:body_end],
+        })
+    return found
+
+
+def _header_modifiers(header: str) -> list[str]:
+    """Modifier names, as whole identifiers. `onlyOwnerOrMinter` is not
+    `onlyOwner`, and `unauthorized` is not `authorized`."""
+    header = re.sub(r"\breturns\s*\([^)]*\)", " ", header)
+    header = re.sub(r"\boverride\s*\([^)]*\)", " ", header)
+    return [m.group(1)
+            for m in re.finditer(r"\b([A-Za-z_]\w*)\s*(?:\([^)]*\))?", header)
+            if m.group(1) not in _HEADER_WORDS]
+
+
+def _calls(body: str) -> list[str]:
+    cleaned = re.sub(r"\b(?:emit|revert)\s+\w+", " ", body)
+    return sorted({
+        m.group(1) for m in _CALL.finditer(cleaned)
+        if m.group(1) not in _NOT_A_CALL
+        and not re.fullmatch(r"u?int\d*|bytes\d*", m.group(1))
+    })
+
+
+def _classify_condition(condition: str, params: list[str], must_hold: bool) -> str | None:
+    """What a guard establishes, or None when it is not a pattern read here.
+
+    `must_hold` is True for `require(condition)`, where execution continues
+    when the condition is true, and False for `if (condition) revert`, where it
+    continues when the condition is false. Polarity matters: `account !=
+    msg.sender` in a require is the opposite of a self check.
+    """
+    c = _strip_parens(condition)
+    if "&&" in c or "||" in c or "?" in c:
+        return None
+
+    def holds(op: str) -> str:
+        return op if must_hold else ("!=" if op == "==" else "==")
+
+    match = _CALLER_IS_PRIVILEGED.fullmatch(c)
+    if match:
+        return "role" if holds(match.group(1) or match.group(2)) == "==" else None
+    match = _HAS_ROLE.fullmatch(c)
+    if match:
+        return "role" if bool(match.group(1)) != must_hold else None
+    if _PAUSED.fullmatch(c):
+        return "condition"
+    for param in params:
+        p = re.escape(param)
+        match = re.fullmatch(rf"{p}\s*(==|!=)\s*{_SENDER}|{_SENDER}\s*(==|!=)\s*{p}", c)
+        if match:
+            return "self" if holds(match.group(1) or match.group(2)) == "==" else None
+        match = re.fullmatch(
+            rf"{p}\s*(==|!=)\s*address\(\s*0\s*\)|address\(\s*0\s*\)\s*(==|!=)\s*{p}", c)
+        if match:
+            return "zero_address" if holds(match.group(1) or match.group(2)) == "!=" else None
+    return None
+
+
+def _read_guards(body: str, params: list[str]) -> tuple[list[str], list[str]]:
+    """Every require / assert / if in a body, classified or left unrecognised."""
+    kinds, unrecognised = [], []
+    for match in _GUARD.finditer(body):
+        open_paren = match.end() - 1
+        close_paren = _matching(body, open_paren, "(", ")")
+        inner = body[open_paren + 1:close_paren] if close_paren > 0 else ""
+        if match.group(1) == "if":
+            if close_paren < 0 or not re.match(r"\s*(?:\{\s*)?revert\b", body[close_paren + 1:]):
+                unrecognised.append(f"if ({inner.strip()[:100]})")
+                continue
+            kind = _classify_condition(inner, params, must_hold=False)
+        else:
+            arguments = _split_arguments(inner)
+            kind = _classify_condition(arguments[0] if arguments else "", params, must_hold=True)
+        if kind:
+            kinds.append(kind)
+        else:
+            unrecognised.append(f"{match.group(1)}({inner.strip()[:100]})")
+    return kinds, unrecognised
+
+
+def _check_helper_is_understood(text: str, name: str, kind: str) -> bool:
+    """_checkOwner, _checkRole, _requireNotPaused: read, not trusted by name."""
+    definitions = _declarations(text, name)
+    if not definitions:
+        return False
+    matched = False
+    for definition in definitions:
+        kinds, unrecognised = _read_guards(definition["body"], definition["params"])
+        if unrecognised:
+            return False
+        others = [c for c in _calls(definition["body"])
+                  if c not in _READ_ONLY_CALLS and c != name]
+        if others:
+            return False
+        matched = matched or kind in kinds
+    return matched
+
+
+def _read_modifier(text: str, name: str) -> tuple[str, str]:
+    """('role' | 'none' | 'condition' | 'unresolved', reason)."""
+    bodies = []
+    for match in re.finditer(rf"\bmodifier\s+{re.escape(name)}\b\s*(?:\([^)]*\))?[^{{;]*\{{", text):
+        end = _matching(text, match.end() - 1, "{", "}")
+        if end > 0:
+            bodies.append(text[match.end():end])
+    if not bodies:
+        return "unresolved", f"modifier {name} is not defined in the published source"
+    if len(bodies) > 1:
+        return "unresolved", f"modifier {name} is defined more than once"
+    body = bodies[0]
+    if re.fullmatch(r"\s*_\s*;\s*", body):
+        return "none", ""
+    if _IF_ADMIN.fullmatch(body):
+        return "role", ""
+
+    work = re.sub(r"(?<![\w.])_\s*;", " ", body)
+    kinds, unrecognised = _read_guards(work, [])
+    if unrecognised:
+        return "unresolved", f"modifier {name}: condition not recognised: {unrecognised[0]}"
+    for call in _calls(work):
+        if call in _READ_ONLY_CALLS:
+            continue
+        if call in _ROLE_CHECKS and _check_helper_is_understood(text, call, "role"):
+            kinds.append("role")
+        elif call in _PAUSE_CHECKS and _check_helper_is_understood(text, call, "condition"):
+            kinds.append("condition")
+        else:
+            return "unresolved", f"modifier {name} calls {call}(), which is not read"
+    if "role" in kinds:
+        return "role", ""
+    if kinds and set(kinds) <= {"condition", "zero_address"}:
+        return "condition", ""
+    return "unresolved", f"modifier {name} does something this reader does not recognise"
+
+
+def _implements(power: str, body: str, params: list[str]) -> bool:
+    """The body does what the power names, by one recognised shape."""
+    if power == POWER_MINT:
+        return bool(re.search(r"\b_mint\s*\(", body))
+    if power == POWER_PAUSE:
+        return bool(re.search(r"\b_(?:un)?pause\s*\(\s*\)|\b_?paused\s*=\s*(?:true|false)\b", body))
+    if power == POWER_UPGRADE:
+        return bool(re.search(r"\b_upgradeTo(?:AndCall)?\s*\(|\b_setImplementation\s*\(", body))
+    if power == POWER_BLACKLIST:
+        return any(re.search(rf"\w\s*\[\s*{re.escape(p)}\s*\]\s*=\s*(?:true|false)\b"
+                             rf"|\bdelete\s+\w+\s*\[\s*{re.escape(p)}\s*\]", body)
+                   for p in params)
+    if power == POWER_SWEEP:
+        return bool(re.search(r"\.\s*(?:safeTransfer|transfer)\s*\(", body)
+                    and re.search(r"balanceOf\s*\(\s*address\s*\(\s*this\s*\)\s*\)", body))
+    return False
+
+
+def _first_arguments(body: str, callee: str) -> list[str]:
+    """The first argument of every call to `callee` in a body."""
+    found = []
+    for match in re.finditer(rf"(?<![\w.]){re.escape(callee)}\s*\(", body):
+        close = _matching(body, match.end() - 1, "(", ")")
+        if close < 0:
+            found.append("")
+            continue
+        arguments = _split_arguments(body[match.end():close])
+        found.append(arguments[0] if arguments else "")
+    return found
+
+
+def _spends_allowance_of(body: str, account: str) -> bool:
+    a = re.escape(account)
+    return bool(
+        re.search(rf"\b_spendAllowance\s*\(\s*{a}\s*,\s*{_SENDER}\s*,", body)
+        or re.search(rf"\b_?allowances?\s*\[\s*{a}\s*\]\s*\[\s*{_SENDER}\s*\]\s*-=", body)
+    )
+
+
+def _read_function(text: str, function_name: str, power: str) -> dict:
+    name, _, argument_list = function_name.partition("(")
+    wanted = [_TYPE_ALIASES.get(t, t) for t in argument_list.rstrip(")").split(",") if t]
+    reading = {"outcome": OUTCOME_UNRESOLVED, "basis": "", "access": "unknown",
+               "modifiers": [], "calls": [], "reasons": []}
+
+    declarations = [d for d in _declarations(text, name) if d["types"] == wanted]
+    if not declarations:
+        reading["reasons"].append("declaration not found in the published source")
+        return reading
+    if len(declarations) > 1:
+        reading["reasons"].append("declared more than once; which body is deployed is not established")
+        return reading
+
+    declaration = declarations[0]
+    body, params = declaration["body"], declaration["params"]
+    reasons, call_reasons = reading["reasons"], []
+    role = False
+
+    reading["modifiers"] = _header_modifiers(declaration["header"])
+    for modifier in reading["modifiers"]:
+        kind, why = _read_modifier(text, modifier)
+        if kind == "role":
+            role = True
+        elif kind == "unresolved":
+            reasons.append(why)
+
+    kinds, unrecognised = _read_guards(body, params)
+    reasons.extend(f"condition not recognised: {u}" for u in unrecognised)
+    role = role or "role" in kinds
+
+    reading["calls"] = _calls(body)
+    for call in reading["calls"]:
+        if call in _READ_ONLY_CALLS:
+            continue
+        if call in _ROLE_CHECKS:
+            if _check_helper_is_understood(text, call, "role"):
+                role = True
+            else:
+                call_reasons.append(f"{call}() is called and its check is not recognised")
+        elif call in _PAUSE_CHECKS:
+            if not _check_helper_is_understood(text, call, "condition"):
+                call_reasons.append(f"{call}() is called and its check is not recognised")
+        elif call in _PRIMITIVES:
+            count = len(_declarations(text, call))
+            if count == 0:
+                call_reasons.append(f"{call}() is not defined in the published source")
+            elif count > 1:
+                call_reasons.append(f"{call}() is defined more than once; an override may add behaviour")
+        else:
+            call_reasons.append(f"{call}() is called and not read; a restriction may sit there")
+    reasons.extend(call_reasons)
+
+    if power == POWER_BURN_OTHERS:
+        targets = _first_arguments(body, "_burn")
+        if not targets:
+            reasons.append("no _burn(...) call: what the body destroys is not established")
+        elif len(set(targets)) > 1:
+            reasons.append("burns more than one account expression")
+        else:
+            target = targets[0]
+            if not call_reasons:
+                # Proof that the function cannot touch an unwilling holder
+                # holds whatever the modifiers do, since a modifier can only
+                # narrow who may call it. It does not hold past a call we have
+                # not read, which could burn anyone.
+                if re.fullmatch(_SENDER, target):
+                    return _ruled_out(reading, "burns only the caller's own balance")
+                if target in params and _spends_allowance_of(body, target):
+                    return _ruled_out(reading, "spends the account's allowance to the caller: the holder approved it")
+                if target in params and "self" in _read_guards(body, [target])[0]:
+                    return _ruled_out(reading, "requires the account to be the caller")
+            if target not in params and not re.fullmatch(_SENDER, target):
+                reasons.append(f"burns {target[:60]}, which is not traced to an argument")
+    elif not _implements(power, body, params):
+        reasons.append(f"the body does not match a recognised {power} implementation")
+
+    if reasons:
+        return reading
+    reading["outcome"] = OUTCOME_ESTABLISHED
+    reading["access"] = "role_gated" if role else "unrestricted"
+    reading["basis"] = (f"{function_name} implements {power}; every modifier, condition "
+                        "and internal call on it was read")
+    return reading
+
+
+def _ruled_out(reading: dict, basis: str) -> dict:
+    reading["outcome"] = OUTCOME_RULED_OUT
+    reading["basis"] = basis
+    reading["reasons"] = []
+    return reading
 
 
 def fetch_verified_source(contract_address: str) -> dict:
     """The contract's verified source, if the explorer has one.
 
     Unverified is the common case and is not a finding about the token. It is
-    the reason a power stays *possible* rather than becoming confirmed.
+    the reason a power stays *possible* rather than becoming established.
     """
     try:
         response = requests.get(
@@ -651,119 +1111,73 @@ def fetch_verified_source(contract_address: str) -> dict:
             timeout=RPC_TIMEOUT,
             headers={"User-Agent": "rugbuster-source/1.0"},
         )
-        result = (response.json().get("result") or [{}])[0]
+        rows = response.json().get("result")
     except Exception as exc:
         return {"status": STATUS_FETCH_FAILED, "reason": type(exc).__name__,
                 "source": "", "contract_name": ""}
-    source = result.get("SourceCode") or ""
+    # An explorer error arrives as a string in `result`, not as a list.
+    if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
+        return {"status": STATUS_FETCH_FAILED, "reason": "unexpected explorer response",
+                "source": "", "contract_name": ""}
+    source = rows[0].get("SourceCode") or ""
     if not source:
         return {"status": STATUS_NOT_FOUND, "reason": "no verified source published",
-                "source": "", "contract_name": result.get("ContractName") or ""}
-    return {"status": STATUS_OK, "reason": "", "source": _normalise_source(source),
-            "contract_name": result.get("ContractName") or ""}
-
-
-def _find_declaration(lowered: str, signature: str) -> tuple[int, int, int]:
-    """Index of a function declaration, its body start and its body end."""
-    index = lowered.find("function " + signature.lower() + "(")
-    if index < 0:
-        return -1, -1, -1
-    body_start = lowered.find("{", index)
-    if body_start < 0:
-        return index, -1, -1
-    depth = 0
-    for i in range(body_start, len(lowered)):
-        if lowered[i] == "{":
-            depth += 1
-        elif lowered[i] == "}":
-            depth -= 1
-            if depth == 0:
-                return index, body_start, i
-    return index, body_start, -1
-
-
-INTERNAL_CALL = re.compile(r"\b(_[a-z][a-zA-Z0-9_]*)\s*\(")
-
-
-def _spends_allowance(lowered: str, body: str, calls: list[str]) -> bool:
-    """Allowance spent in the body, or in something the body calls."""
-    if any(marker in body for marker in ALLOWANCE_MARKERS):
-        return True
-    for call in calls:
-        start = lowered.find("function " + call + "(")
-        if start < 0:
-            continue
-        _i, b_start, b_end = _find_declaration(lowered, call)
-        if b_start < 0 or b_end < 0:
-            continue
-        if any(marker in lowered[b_start:b_end + 1] for marker in ALLOWANCE_MARKERS):
-            return True
-    return False
+                "source": "", "contract_name": rows[0].get("ContractName") or ""}
+    return {"status": STATUS_OK, "reason": "", "source": source,
+            "contract_name": rows[0].get("ContractName") or ""}
 
 
 def confirm_powers_from_source(source: str, possible: list[str]) -> dict:
-    """Read the declarations behind the selectors, and say what stayed unread.
+    """Read the declarations behind the matched selectors.
 
-    A selector says four bytes appear in the bytecode. This reads the source
-    for the function those bytes name -- and finding the text is not the same
-    as understanding it. Two things are routinely hidden from a text scan:
-
-      a modifier whose body is defined elsewhere, or inherited from a base
-      contract the explorer did not flatten into this file;
-
-      a restriction inside a function that the declaration calls, rather than
-      in the declaration itself.
-
-    So a reading counts only when every access modifier on the declaration is
-    defined in this same source and every internal call in its body is too. An
-    unresolved reading does not become a power: it is reported as a possible
-    function with an unread restriction, which is a gap in what we checked
-    rather than a finding about the token.
-
-    Even a resolved reading is a text match and not compilation, and it never
-    establishes who holds a role.
+    Only functions that would grant a power are read; a view getter or the
+    caller's own burn has nothing to establish. Each reading ends established,
+    ruled out, or unresolved -- see the block comment above for exactly which
+    patterns count, and why everything else is left unresolved.
     """
-    lowered = source.lower()
+    text = _normalise_source(source)
     readings: dict[str, dict] = {}
     unread: dict[str, str] = {}
-
     for name in possible:
-        signature = name.split("(")[0]
-        index, body_start, body_end = _find_declaration(lowered, signature)
-        if index < 0:
-            unread[name] = "declaration not found in the published source"
+        power = FUNCTION_SIGNATURES_BY_NAME.get(name)
+        if not power:
             continue
-        if body_start < 0 or body_end < 0:
-            unread[name] = "declaration found but its body could not be delimited"
-            continue
-
-        header = lowered[index:body_start]
-        body = lowered[body_start:body_end + 1]
-
-        modifiers = [word for word in ACCESS_MODIFIERS if word in header]
-        unresolved_modifiers = [
-            word for word in modifiers if "modifier " + word not in lowered
-        ]
-        calls = sorted(set(INTERNAL_CALL.findall(body)))
-        unresolved_calls = [
-            call for call in calls if "function " + call + "(" not in lowered
-        ]
-        resolved = not unresolved_modifiers and not unresolved_calls
-
-        readings[name] = {
-            "access": "role_gated" if modifiers else "unrestricted",
-            "modifiers": modifiers,
-            "calls": calls,
-            "unresolved_modifiers": unresolved_modifiers,
-            "unresolved_calls": unresolved_calls,
-            "resolved": resolved,
-            "spends_allowance": _spends_allowance(lowered, body, calls),
-        }
-        if not resolved:
-            unread[name] = ("restriction not resolved: "
-                            + ", ".join(unresolved_modifiers + unresolved_calls))
-
+        reading = _read_function(text, name, power)
+        readings[name] = reading
+        if reading["outcome"] == OUTCOME_UNRESOLVED:
+            unread[name] = "; ".join(reading["reasons"]) or "not resolved"
     return {"readings": readings, "unread": unread}
+
+
+def settle_capability(result: dict) -> None:
+    """Whether the contract check finished, stated beside what it found.
+
+    COMPLETE means every possible power at this address was established or
+    ruled out. A proxy is never complete: its bytecode delegates to an
+    implementation contract whose functions this does not read, so "nothing
+    found" there would describe the wrapper and not the token.
+    """
+    if result.get("status") != STATUS_OK:
+        result["capability_check"] = CAPABILITY_NOT_RUN
+        result["unconfirmed_powers"] = []
+        return
+    established = set(result.get("source_read_powers") or [])
+    ruled_out = result.get("ruled_out_functions") or {}
+    unconfirmed = {
+        FUNCTION_SIGNATURES_BY_NAME[name]
+        for name in result.get("possible_functions") or []
+        if FUNCTION_SIGNATURES_BY_NAME.get(name)
+        and FUNCTION_SIGNATURES_BY_NAME[name] not in established
+        and name not in ruled_out
+    }
+    result["unconfirmed_powers"] = sorted(unconfirmed)
+    if result.get("is_proxy"):
+        result.setdefault("unread_restrictions", {})["proxy implementation"] = (
+            "this address is a proxy; the implementation contract's functions were not read")
+    unsettled = bool(unconfirmed) or bool(result.get("is_proxy"))
+    result["capability_check"] = CAPABILITY_INCOMPLETE if unsettled else CAPABILITY_COMPLETE
+
+# <<< source reading
 
 
 def detect_contract_backdoor_avax(contract_address: str,
@@ -783,15 +1197,14 @@ def detect_contract_backdoor_avax(contract_address: str,
         "possible_functions": [],   # selectors matched in the bytecode
         "possible_powers": [],      # what those functions would grant if they
                                     # are what their names say
-        # Named for what it is. It was `confirmed_powers`, and that name
-        # claimed more than a text scan can deliver: a modifier can be
-        # inherited and a restriction can sit in a called function. This is
-        # what was read in the published source with every modifier and
-        # internal call resolved in that same source.
+        # Established from the published source: see the source-reading block.
         "source_read_powers": [],
-        "unread_restrictions": {},  # what stayed unresolved, per function
+        "ruled_out_functions": {},  # read, and proven unable to reach a holder
+        "unread_restrictions": {},  # possible, and left unresolved, with why
+        "unconfirmed_powers": [],   # possible powers neither established nor ruled out
+        "capability_check": CAPABILITY_NOT_RUN,
         "control": "unknown",       # who holds the role, never established here
-        "powers": [],               # == confirmed_powers, kept for readers
+        "powers": [],               # == source_read_powers, kept for readers
         "source_status": STATUS_NOT_QUERIED,
         "backdoor_risk_score": 0,
         # "no backdoor found" and "never managed to read the bytecode" were the
@@ -829,9 +1242,9 @@ def detect_contract_backdoor_avax(contract_address: str,
                 if power:
                     result["possible_powers"].append(power)
 
-            # Deliberately leaves confirmed_powers empty. A selector is four
-            # bytes in the bytecode: it does not say what the function does or
-            # who may call it. Only the source pass below can confirm anything.
+            # A selector is four bytes in the bytecode: it does not say what
+            # the function does or who may call it. Only the source pass below
+            # can establish anything.
             result["possible_powers"] = sorted(set(result["possible_powers"]))
 
     except Exception as e:
@@ -839,12 +1252,8 @@ def detect_contract_backdoor_avax(contract_address: str,
         result["status"] = STATUS_FETCH_FAILED
         result["status_reason"] = f"bytecode could not be read from RPC: {type(e).__name__}"
 
-    # Count powers, once each. `is_proxy` used to be counted here alongside
-    # has_upgrade_authority, which double-counted the same fact, and
-    # implementation() -- a view getter -- could raise the score on its own.
-    # Read the declarations behind the selectors, where the source is
-    # published. Nothing becomes a confirmed power without this.
-    if confirm_from_source and result["possible_functions"]:
+    # Only a function that would grant a power is worth an explorer call.
+    if confirm_from_source and result["possible_powers"]:
         source = fetch_verified_source(contract_address)
         result["source_status"] = source["status"]
         result["source_reason"] = source["reason"]
@@ -853,34 +1262,28 @@ def detect_contract_backdoor_avax(contract_address: str,
             result["declarations"] = read["readings"]
             result["unread_restrictions"] = read["unread"]
             accesses = set()
-            for name, detail in read["readings"].items():
-                power = FUNCTION_SIGNATURES_BY_NAME.get(name)
-                if not power:
-                    continue
-                # An allowance-spending burn cannot touch an unwilling holder,
-                # whatever its name suggests.
-                if power == POWER_BURN_OTHERS and detail["spends_allowance"]:
-                    continue
-                if not detail["resolved"]:
-                    # A restriction we could not read is a gap in our check. It
-                    # does not become a power, and it does not disappear: it
-                    # stays in unread_restrictions.
-                    continue
-                result["source_read_powers"].append(power)
-                result[POWER_FIELDS[power]] = True
-                accesses.add(detail["access"])
+            for name, reading in read["readings"].items():
+                power = FUNCTION_SIGNATURES_BY_NAME[name]
+                if reading["outcome"] == OUTCOME_ESTABLISHED:
+                    result["source_read_powers"].append(power)
+                    result[POWER_FIELDS[power]] = True
+                    accesses.add(reading["access"])
+                elif reading["outcome"] == OUTCOME_RULED_OUT:
+                    result["ruled_out_functions"][name] = reading["basis"]
             result["source_read_powers"] = sorted(set(result["source_read_powers"]))
             if accesses:
                 result["control"] = ("role_gated" if accesses == {"role_gated"}
                                      else "mixed" if len(accesses) > 1 else "unrestricted")
 
+    settle_capability(result)
     result["powers"] = list(result["source_read_powers"])
     result["has_backdoor"] = bool(result["source_read_powers"])
-    # Scored on what was confirmed. "The bytes for a mint function are present"
-    # and "the owner can mint" are different sentences, and this used to say
-    # the second on the evidence of the first.
+    # Scored on what was established. "The bytes for a mint function are
+    # present" and "the owner can mint" are different sentences, and this used
+    # to say the second on the evidence of the first.
     result["backdoor_risk_score"] = min(len(result["source_read_powers"]) * 20, 100)
     return result
+
 
 # ---------------------------------------------------------------------------
 # V6 MODULE 2: Holder Concentration Risk
