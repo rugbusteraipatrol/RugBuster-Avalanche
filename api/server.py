@@ -1388,7 +1388,7 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
     rug_risk = result.get("rug_risk") or {}
     market_risk = result.get("market_liquidity_risk") or {}
     score = result.get("risk_score")
-    return {
+    report = {
         "address": Web3.to_checksum_address(address),
         "token_name": token_info.get("name") or "Unknown",
         "symbol": token_info.get("symbol") or "Unknown",
@@ -1445,20 +1445,15 @@ def report_from_remote_engine(address: str, result: dict[str, Any], context: dic
         "v5": context.get("v5") or {},
         "v6": context.get("v6") or {},
         "creator_stats": context.get("creator_stats") or {},
-        "syndicate_ai_verdict": syndicate_verdict_from_report(
-            {
-                "rug_status": rug_risk.get("status"),
-                "rug_score": rug_risk.get("score"),
-                "speculation_status": market_risk.get("status"),
-                "speculation_score": market_risk.get("score"),
-                "risk_flags": risk_flags,
-                "rug_reasons": rug_risk.get("reasons") or [],
-                "speculation_reasons": market_risk.get("reasons") or [],
-            }
-        ),
         "network": NETWORKS[resolve_network()]["label"],
         "source": "private_scoring_engine",
     }
+    # Built from the whole report. It was built from a trimmed copy holding
+    # only scores and reasons, so a verdict the engine withheld -- USDt on
+    # contract_capability -- still read "rug risk LOW" in the one sentence
+    # the page shows, whatever the template knew about gaps.
+    report["syndicate_ai_verdict"] = syndicate_verdict_from_report(report)
+    return report
 
 
 def insufficient_data_report(address: str, reason: str) -> dict[str, Any]:

@@ -220,3 +220,21 @@ def test_reassuring_ai_text_is_discarded_when_the_verdict_was_withheld(server, m
     with _mock_deepseek(server, "Deep liquidity and low risk; looks safe."):
         verdict = server.fetch_deepseek_verdict(_withheld_report())
     assert "Not enough data" in verdict
+
+
+def test_a_fresh_engine_report_carries_the_withheld_sentence(server):
+    """report_from_remote_engine built the sentence from a trimmed copy with no
+    gaps in it, so a withheld verdict still read "rug risk LOW" live."""
+    result = {
+        "verdict": "INSUFFICIENT_DATA",
+        "blocking_data_gaps": ["contract_capability"],
+        "rug_risk": {"status": "LOW", "score": 18, "reasons": []},
+        "market_liquidity_risk": {"status": "LOW", "score": 10, "reasons": []},
+        "risk_factors": [],
+    }
+    report = server.report_from_remote_engine(
+        "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", result,
+        {"token": {"name": "TetherToken", "symbol": "USDt"}})
+    assert report["syndicate_ai_verdict"].startswith("Not enough data")
+    compact = server.compact_score_response(report, "private_scoring_engine")
+    assert compact["ai_verdict"].startswith("Not enough data")
