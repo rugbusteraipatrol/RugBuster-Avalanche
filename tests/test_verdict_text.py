@@ -177,3 +177,46 @@ def test_public_score_response_is_sane_for_a_complete_scan(server):
     assert compact["completeness_pct"] == 100
     assert compact["verdict_is_conclusive"] is True
     assert compact["missing_inputs"] == []
+
+
+# --- a verdict withheld with every module OK ------------------------------------
+#
+# USDt after the capability rules: no module failed, rug and speculation LOW,
+# and the engine withheld GOOD on contract_capability. The template and the AI
+# context read only FETCH_FAILED modules, so both saw a clean, complete scan.
+
+def _withheld_report() -> dict:
+    report = _complete_report()
+    report.update({
+        "label": "INSUFFICIENT_DATA",
+        "verdict_is_conclusive": False,
+        "blocking_data_gaps": ["contract_capability"],
+        "non_blocking_data_gaps": [{"gap": "holder_concentration", "reason": "not an input"}],
+    })
+    return report
+
+
+def test_template_names_a_withheld_verdict(server):
+    text = server.syndicate_verdict_from_report(_withheld_report())
+    assert "Not enough data" in text
+    assert "what a matched contract function can do" in text
+    assert "100%" not in text
+    assert "Try again" not in text
+
+
+def test_ai_context_carries_a_withheld_verdict(server):
+    context = server.build_ai_scan_context(_withheld_report())
+    assert context["checks_that_could_not_run"] == ["what a matched contract function can do"]
+
+
+def test_a_non_blocking_gap_does_not_read_as_a_failed_check(server):
+    report = _complete_report()
+    report["non_blocking_data_gaps"] = [{"gap": "holder_concentration", "reason": "not an input"}]
+    assert server.unreadable_checks(report) == []
+
+
+def test_reassuring_ai_text_is_discarded_when_the_verdict_was_withheld(server, monkeypatch):
+    monkeypatch.setattr(server, "DEEPSEEK_API_KEY", "test-key")
+    with _mock_deepseek(server, "Deep liquidity and low risk; looks safe."):
+        verdict = server.fetch_deepseek_verdict(_withheld_report())
+    assert "Not enough data" in verdict

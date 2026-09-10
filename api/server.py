@@ -755,18 +755,37 @@ def plain_module_name(module: str) -> str:
     return MODULE_PLAIN_NAMES.get(module, module.replace("_", " "))
 
 
-def unreadable_checks(report: dict[str, Any]) -> list[str]:
-    """Checks we tried to run and could not, in plain words.
+# Plain words for gaps the engine withholds a clean verdict on that are not
+# module names.
+WITHHELD_GAP_NAMES = {
+    "contract_capability": "what a matched contract function can do",
+    "holders_count": "how many holders it has",
+}
 
-    Only FETCH_FAILED. A NOT_FOUND is a fact about the token (no pool, no
-    holders) and belongs in the verdict as a finding, not as an apology for
-    missing evidence.
+
+def unreadable_checks(report: dict[str, Any]) -> list[str]:
+    """Checks that did not run or did not finish, in plain words.
+
+    FETCH_FAILED modules, plus every gap the engine withheld a clean verdict
+    on. The second half is needed because a verdict can be withheld while every
+    module reports OK -- a possible contract power neither established nor
+    ruled out. Without it the template and the AI summarised such a token from
+    its LOW scores as though it had passed.
+
+    A NOT_FOUND is a fact about the token (no pool, no holders) and belongs in
+    the verdict as a finding, not as an apology for missing evidence. Gaps the
+    engine marks non-blocking are not listed either.
     """
-    return [
+    checks = [
         plain_module_name(str(item.get("module") or ""))
         for item in (report.get("missing_inputs") or [])
         if item.get("status") == "FETCH_FAILED"
     ]
+    for gap in report.get("blocking_data_gaps") or []:
+        name = WITHHELD_GAP_NAMES.get(str(gap)) or plain_module_name(str(gap))
+        if name not in checks:
+            checks.append(name)
+    return checks
 
 
 # Reasons that describe our own checking rather than the token. They belong in
@@ -816,11 +835,16 @@ def syndicate_verdict_from_report(report: dict[str, Any]) -> str:
     blocked = unreadable_checks(report)
     if blocked:
         checked = report.get("completeness_pct")
+        # "Try again" only helps when something failed to fetch. A contract
+        # function we cannot read will read the same way in a minute.
+        fetch_failed = any(item.get("status") == "FETCH_FAILED"
+                           for item in (report.get("missing_inputs") or []))
         return (
             "Not enough data to judge this token. Could not check "
             + ", ".join(blocked)
-            + (f" (only {checked}% of checks completed)" if checked is not None else "")
-            + ". This is not a pass and not a warning -- the checks did not complete. Try again shortly."
+            + (f" (only {checked}% of checks completed)" if checked is not None and checked < 100 else "")
+            + ". This is not a pass and not a warning -- the checks did not complete."
+            + (" Try again shortly." if fetch_failed else "")
         )[:240]
 
     rug_status = str(report.get("rug_status") or "UNKNOWN").upper()
