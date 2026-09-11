@@ -201,7 +201,7 @@ AVAX_TELEGRAM_CHAT_ID=@RugBusterAvax
 RECENT_SCAN_FEED_URL=https://web-production-376bf.up.railway.app/api/recent-scans
 RECENT_SCAN_INGEST_TOKEN=
 DEEPSEEK_API_KEY=
-DEEPSEEK_MODEL=deepseek-flash
+DEEPSEEK_MODEL=deepseek-chat
 
 MAX_TOKENS_PER_DAY=120
 MAX_EUR_TOTAL=20
