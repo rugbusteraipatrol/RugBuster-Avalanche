@@ -106,6 +106,21 @@ def _headline(payload: dict[str, Any]) -> tuple[str, str]:
     v6 = payload.get("v6") if isinstance(payload.get("v6"), dict) else {}
     backdoor = v6.get("backdoor") if isinstance(v6.get("backdoor"), dict) else {}
 
+    # DYP, 2026-09-11: every check ran (completeness 100%, no blocking gap) and
+    # the verdict was still withheld, because no live pool was found and the
+    # market reading has no score. "Too little was readable" described a scan
+    # that read everything; say what actually held the verdict back.
+    if (label == "INSUFFICIENT_DATA"
+            and not (payload.get("blocking_data_gaps") or [])
+            and payload.get("has_liquidity_evidence") is False
+            and speculation in {"", "UNKNOWN"}):
+        return (
+            "The contract and holder checks ran, but no live market was found "
+            "on supported Avalanche venues, so market risk could not be "
+            "measured and no verdict is given. That is our answer, not a clean "
+            "bill of health.",
+            REFUSAL,
+        )
     if label == "INSUFFICIENT_DATA" or payload.get("verdict_is_conclusive") is False:
         return (
             "Too little was readable to judge this token. That is our answer, "
